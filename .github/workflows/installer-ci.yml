@@ -1,0 +1,124 @@
+name: Installer CI
+
+on:
+  pull_request:
+    paths:
+      - 'deploy/**'
+      # test_nginx_conf.bats asserts on these confs, so a PR that touches only
+      # them — re-hardcoding a port, or dropping back to a bare $host — must
+      # still run this workflow, or the regression test never fires.
+      - 'docker/nginx/**'
+      - 'src/database/migrations/**'
+      - '.github/workflows/installer-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/**'
+      - 'docker/nginx/**'
+      - 'src/database/migrations/**'
+
+# Concurrency: cancel older runs of the same PR/branch when a new commit is pushed.
+concurrency:
+  group: installer-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck on installer scripts
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: 'deploy'
+          severity: error
+          # Allow info-level findings (e.g. SC1091 dynamic source)
+          additional_files: |
+            deploy/installer/install.sh
+            deploy/installer/update.sh
+            deploy/installer/assetatlas-cli
+            deploy/build/build-online.sh
+            deploy/build/build-offline.sh
+            deploy/build/build-monitoring-pack.sh
+
+  build-artifacts:
+    name: Build installer artifacts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build online artifact
+        run: |
+          ./deploy/build/build-online.sh dist/online.sh
+          ls -lh dist/online.sh
+          # Validate it's a valid self-extracting script
+          head -3 dist/online.sh | grep -q '^#!/usr/bin/env bash'
+      - name: Upload online artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: online-installer
+          path: dist/online.sh
+          retention-days: 7
+
+  e2e-install-online:
+    name: E2E install (Ubuntu, online)
+    runs-on: ubuntu-24.04
+    needs: build-artifacts
+    # Depends on release.yml having published all five app images to ghcr.io —
+    # assetatlas-{api,ui,mcp,scheduler,teams-bridge}: the install below pulls
+    # them anonymously, so every one of them must stay publicly readable; there
+    # is no registry auth here to fall back on.
+    # Hosted on purpose — a throwaway runner IS the clean machine under test, and
+    # the hardcoded ports below would collide on the shared fleet (#983).
+    # A stalled pull or a health check that never converges would otherwise hang
+    # until GitHub's 360-minute default; the whole job takes ~7 minutes.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: online-installer
+          path: dist
+      - name: Make installer executable
+        run: chmod +x dist/online.sh
+      - name: Free up disk for Docker
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h
+      - name: Install bats + jq (for support tools)
+        run: sudo apt-get update -qq && sudo apt-get install -y jq
+      - name: E2E install (inline — mirrors e2e_install_online.sh)
+        env:
+          INSTALL_DIR: /tmp/aa-e2e
+          HTTPS_PORT: 18443
+          HTTP_PORT: 18080
+          # GitHub-hosted ubuntu-24.04 runners have ~7GB RAM and ~32GB disk.
+          # Production threshold is 8GB RAM / 20GB disk; lower for CI smoke.
+          INSTALLER_MIN_RAM_GB: "4"
+          INSTALLER_MIN_DISK_GB: "10"
+        run: |
+          # NOTE: this deliberately does NOT call deploy/tests/e2e/e2e_install_online.sh.
+          # That script (the slow local runner) rebuilds its own artifact via build-online.sh;
+          # here we inline the equivalent install + health-poll against the pre-built
+          # dist/online.sh from the build-artifacts job, purely for speed. The two are
+          # equivalent-but-separate runners of the same smoke test — keep them in sync.
+          mkdir -p /tmp/aa-e2e
+          # --system is a kept no-op: system-wide is the only install mode, so
+          # the flag decides nothing — it is passed here to pin that it stays
+          # accepted (existing docs and automation carry it). euid is non-root
+          # (`runner`), and INSTALL_DIR above is what keeps the install out of
+          # /opt.
+          dist/online.sh --unattended --system --no-monitoring --no-systemd
+          # Verify health
+          for _ in $(seq 1 30); do
+              curl -fsk "https://localhost:18443/api/health/live" >/dev/null 2>&1 && exit 0
+              sleep 2
+          done
+          echo "FAIL: health check timeout" >&2
+          docker compose -f /tmp/aa-e2e/docker-compose.yml logs --tail=100 >&2 || true
+          exit 1
+      - name: Capture container logs on failure
+        if: failure()
+        run: docker compose -f /tmp/aa-e2e/docker-compose.yml logs >&2 || true

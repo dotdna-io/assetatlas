@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "query_time": 0.025,
+    "pagination": {
+      "offset": "scroll-token-page2",
+      "total": 3
+    },
+    "powered_by": "device-api",
+    "trace_id": "aaaa-bbbb-cccc-1111"
+  },
+  "resources": [
+    {
+      "device_id": "dev-001",
+      "cid": "cust-001",
+      "hostname": "DESKTOP-WIN001",
+      "machine_domain": "contoso.local",
+      "local_ip": "10.0.1.10",
+      "external_ip": "203.0.113.1",
+      "mac_address": "AA:BB:CC:DD:EE:01",
+      "platform_name": "Windows",
+      "os_version": "Windows 11",
+      "product_type_desc": "Workstation",
+      "serial_number": "SN-001",
+      "system_manufacturer": "Dell Inc.",
+      "agent_version": "7.10.18012.0",
+      "status": "normal",
+      "first_seen": "2024-01-15T08:00:00Z",
+      "last_seen": "2026-03-18T10:00:00Z",
+      "tags": ["SensorGroupingTags/Production"]
+    },
+    {
+      "device_id": "dev-002",
+      "cid": "cust-001",
+      "hostname": "LAPTOP-MAC002",
+      "local_ip": "10.0.1.20",
+      "external_ip": "203.0.113.2",
+      "mac_address": "AA:BB:CC:DD:EE:02",
+      "platform_name": "Mac",
+      "os_version": "macOS Ventura 13.6",
+      "product_type_desc": "Workstation",
+      "serial_number": "SN-002",
+      "system_manufacturer": "Apple Inc.",
+      "agent_version": "7.10.18012.0",
+      "status": "normal",
+      "first_seen": "2024-02-01T12:00:00Z",
+      "last_seen": "2026-03-18T09:00:00Z",
+      "tags": ["SensorGroupingTags/Engineering"]
+    }
+  ],
+  "errors": []
+}

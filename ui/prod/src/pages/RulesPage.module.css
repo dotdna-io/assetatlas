@@ -1,0 +1,69 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.page {
+  max-width: var(--content-max-width);
+}
+
+.actionBar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.actionBarSpacer {
+  flex: 1;
+}
+
+.filterSelect {
+  height: 36px;
+  padding: 0 28px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.filterSelect:focus {
+  border-color: var(--accent);
+}
+
+.filterSelect option {
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+}
+
+:global(body:not(.dark-mode)) .filterSelect {
+  color-scheme: light;
+}
+
+:global(body.dark-mode) .filterSelect {
+  color-scheme: dark;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+}
+
+.sectionTitleLogo {
+  width: 16px;
+  height: auto;
+  display: block;
+}

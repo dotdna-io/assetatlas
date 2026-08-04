@@ -1,0 +1,23 @@
+groups:
+  - name: assetatlas-system
+    interval: 30s
+    rules:
+      - alert: system-api-error-rate
+        expr: |
+          sum(rate(assetatlas_http_request_total{status=~"5.."}[5m]))
+            /
+          sum(rate(assetatlas_http_request_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API 5xx error rate above 1%
+          description: "AssetAtlas API 5xx rate: {{ $value | humanizePercentage }} over 5m."
+      - alert: system-scheduler-stalled
+        expr: (time() - assetatlas_scheduler_last_heartbeat_seconds) > 600
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Scheduler heartbeat stale > 10 min
+          description: "Scheduler hasn't heartbeated in {{ $value | humanizeDuration }}."

@@ -1,0 +1,62 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Report marketplace page */
+
+.header {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.searchInput {
+  grid-column: 1;
+  width: 100%;
+}
+
+.sortSelect {
+  grid-column: 2;
+  justify-self: start;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.createBtn {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.loadingWrap {
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
+}
+
+.empty {
+  text-align: center;
+  padding: 80px 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.errorMsg {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}

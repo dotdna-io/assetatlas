@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "id": "agent-003",
+      "computerName": "SERVER-LIN001",
+      "serialNumber": "SN-003",
+      "osType": "linux",
+      "osName": "Ubuntu 22.04",
+      "machineType": "server",
+      "modelName": "Dell PowerEdge R740",
+      "isActive": true,
+      "isDecommissioned": false,
+      "activeThreats": 0,
+      "networkInterfaces": []
+    }
+  ],
+  "pagination": {
+    "nextCursor": null,
+    "totalItems": 3
+  }
+}

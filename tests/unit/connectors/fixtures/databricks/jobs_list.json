@@ -1,0 +1,31 @@
+{
+  "jobs": [
+    {
+      "job_id": 111,
+      "created_time": 1700000000000,
+      "creator_user_name": "user@example.com",
+      "run_as_user_name": "user@example.com",
+      "settings": {
+        "name": "ETL-daily-ingest",
+        "description": "Daily data ingestion pipeline",
+        "format": "MULTI_TASK",
+        "max_concurrent_runs": 1,
+        "schedule": {
+          "quartz_cron_expression": "0 0 6 * * ?",
+          "timezone_id": "UTC"
+        }
+      }
+    },
+    {
+      "job_id": 222,
+      "created_time": 1700100000000,
+      "creator_user_name": "admin@example.com",
+      "settings": {
+        "name": "ML-training-weekly",
+        "format": "MULTI_TASK",
+        "max_concurrent_runs": 2
+      }
+    }
+  ],
+  "has_more": false
+}

@@ -1,0 +1,7 @@
+{
+  "success": true,
+  "data": {
+    "access_token": "test-armis-token-abc123",
+    "expiration_utc": "2099-12-31T23:59:59+00:00"
+  }
+}

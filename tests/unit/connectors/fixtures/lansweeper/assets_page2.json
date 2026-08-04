@@ -1,0 +1,50 @@
+{
+  "data": {
+    "site": {
+      "assetResources": {
+        "total": 3,
+        "items": [
+          {
+            "key": "asset-003",
+            "url": "https://app.lansweeper.com/asset/asset-003",
+            "siteId": "site-001",
+            "assetBasicInfo": {
+              "name": "SERVER-LIN003",
+              "type": "Linux",
+              "subType": "Server",
+              "ipAddress": "10.0.2.50",
+              "mac": "AA:BB:CC:DD:EE:03",
+              "fqdn": "server-lin003.contoso.local",
+              "domain": "contoso.local",
+              "userName": "",
+              "userDomain": "",
+              "description": "Web server",
+              "firstSeen": "2024-03-10T06:00:00Z",
+              "lastSeen": "2026-03-18T11:00:00Z",
+              "lastChanged": "2026-03-18T06:00:00Z",
+              "lastActiveScan": "2026-03-18T05:00:00Z"
+            },
+            "operatingSystem": {
+              "caption": "Red Hat Enterprise Linux 9.2",
+              "version": "9.2",
+              "buildNumber": ""
+            },
+            "assetCustom": {
+              "manufacturer": "HPE",
+              "model": "ProLiant DL380 Gen10",
+              "serialNumber": "SN-003",
+              "location": "Data Center",
+              "department": "IT Operations",
+              "contact": "",
+              "stateName": "Active",
+              "warrantyDate": "2028-03-10",
+              "dnsName": "server-lin003",
+              "lastPatched": "2026-03-15T02:00:00Z"
+            }
+          }
+        ],
+        "pagination": {}
+      }
+    }
+  }
+}

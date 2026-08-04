@@ -1,0 +1,13 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        {"name": "Computer", "type": "string"}
+      ],
+      "rows": [
+        ["test-computer"]
+      ]
+    }
+  ]
+}

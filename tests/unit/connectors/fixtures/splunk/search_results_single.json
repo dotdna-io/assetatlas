@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "host": "DESKTOP-WIN001",
+      "ip": "10.0.1.10",
+      "mac": "AA:BB:CC:DD:EE:01",
+      "serial": "SN-001",
+      "os": "Windows 11",
+      "_time": "2026-03-18T10:00:00.000+00:00"
+    }
+  ]
+}

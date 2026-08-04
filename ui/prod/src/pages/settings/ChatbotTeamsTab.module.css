@@ -1,0 +1,321 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Master switch sits standalone above the grid so it reads as a tab-level
+   toggle, matching EmailSettingsTab. Label and effective-state line stack
+   beside the control, mirroring CategorySettings' .masterToggle so the
+   Teams switch reads like the LDAP/OIDC ones (#1227). */
+.enableRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.enableRow input {
+  /* Nudge the checkbox onto the label's first baseline. */
+  margin-top: 3px;
+}
+
+.enableText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.enableLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  /* The row is no longer one big <label>, so keep the affordance on the text
+     that still is one — the note beside it must not toggle the bridge. */
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+/* Same weight and colours as CategorySettings' .masterToggleNote /
+   .masterToggleWarn. */
+.enableNote {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.enableWarn {
+  color: var(--warning);
+}
+
+/* ── Two-column layout: config (≈half) on the left, how-to on the right.
+   Stacks to a single column under 900px so the form stays readable. ── */
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Glossy cards ─────────────────────────────────────────── */
+
+.configCard,
+.howtoCard {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+
+.configCard {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sub-section inside the config card — Azure Bot credentials sits above
+   Messaging endpoint with a thin divider between them. */
+.cardSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+.cardSection:first-child {
+  padding-top: 0;
+}
+
+.cardSection + .cardSection {
+  border-top: 1px solid var(--border);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* ── Form rows ─────────────────────────────────────────────── */
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.row label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.row input,
+.secretRow input,
+.endpointInput {
+  height: 36px;
+  padding: 0 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast);
+}
+
+.row input:focus,
+.secretRow input:focus,
+.endpointInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.row input:disabled,
+.secretRow input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.secretRow,
+.endpointRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.secretRow input,
+.endpointInput {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Read-only preview slot — same shape as the input so the layout doesn't
+   jump when toggling between view and edit modes. */
+.secretPreview {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secretPreview code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+}
+
+.secretPreviewEmpty {
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
+/* Eye-inside-input wrapper — input grows to fill the row, the eye sits
+   absolutely-positioned inside the input's right padding. */
+.secretInputWrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.secretInputWithEye {
+  padding-right: 36px !important;
+}
+
+.secretEyeBtn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.secretEyeBtn:hover {
+  color: var(--text-primary);
+}
+
+/* Borderless 36px icon buttons (edit pencil, cancel ×) — only the glyph
+   is visible. Same convention as the chatbot configuration page. */
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.iconBtn:hover {
+  color: var(--text-primary);
+}
+
+.iconBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.endpointInput {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
+.warning {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-sm);
+  color: var(--warning);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Card footer (Test connection + Download Teams app) ─────── */
+
+.cardActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.success {
+  margin: var(--space-3) 0 0;
+  color: var(--success);
+  font-size: var(--font-size-sm);
+}
+
+.failure {
+  margin: var(--space-3) 0 0;
+  color: var(--error);
+  font-size: var(--font-size-sm);
+}
+
+/* ── How-to sidebar ────────────────────────────────────────── */
+
+.howtoCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.howtoList {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.howtoList li b {
+  color: var(--text-primary);
+  font-weight: 600;
+}

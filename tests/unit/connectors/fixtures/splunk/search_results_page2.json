@@ -1,0 +1,11 @@
+{
+  "results": [
+    {
+      "host": "LAPTOP-MAC001",
+      "ip": "10.0.3.30",
+      "mac": "AA:BB:CC:DD:EE:03",
+      "serial": "SN-003",
+      "os": "macOS 14"
+    }
+  ]
+}

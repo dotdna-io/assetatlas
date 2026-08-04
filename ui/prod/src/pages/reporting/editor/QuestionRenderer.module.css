@@ -1,0 +1,169 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* QuestionRenderer — dynamic chart config form */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Section */
+
+.section {
+  margin-bottom: 4px;
+}
+
+.section + .section {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.sectionTitle {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin: 0 0 10px;
+}
+
+/* Field */
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.fieldLabel {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+/* Toggle fields render with label on the left and switch on the right
+   on a single line, each toggle on its own row. */
+.toggleField {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toggleField .fieldLabel {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+/* Shared input / select styles */
+
+.input,
+.select {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--font-family);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--accent);
+}
+
+/* Hide native number-input spin buttons — they render as a stacked
+   chevron "chip" on the right of the field and prevent free typing
+   in some browsers. The input remains type="number" so it still
+   restricts non-numeric input. */
+.input[type='number']::-webkit-inner-spin-button,
+.input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+/* Checkbox group (multi-field-select) */
+
+.checkboxGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.checkboxCategory {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+  margin: 4px 0 2px;
+}
+
+.checkboxCategory:first-child {
+  margin-top: 0;
+}
+
+.checkboxLabel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.checkboxHint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  margin-bottom: 4px;
+}
+
+/* + Add Filter button — match input-bg so the settings panel reads as one
+   consistent surface (selects, filter rows, and add-filter all white in light
+   mode). Dark mode inherits the default secondary-button glass overlay. */
+:global(body:not(.dark-mode)) .addFilterBtn {
+  background-color: var(--input-bg);
+}
+
+:global(body:not(.dark-mode)) .addFilterBtn:hover:not(:disabled) {
+  background-color: var(--input-bg);
+  border-color: var(--accent);
+}
+
+/* Filter builder placeholder */
+
+.filterPlaceholder {
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}

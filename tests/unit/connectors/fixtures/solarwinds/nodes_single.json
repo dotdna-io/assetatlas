@@ -1,0 +1,26 @@
+{
+  "totalRows": 1,
+  "results": [
+    {
+      "NodeID": 1,
+      "ObjectSubType": "SNMP",
+      "IPAddress": "10.0.1.1",
+      "IPAddressType": "IPv4",
+      "Caption": "core-switch-01",
+      "NodeDescription": "Cisco IOS Software, C3750 Software",
+      "DNS": "core-switch-01.corp.com",
+      "SysName": "core-switch-01",
+      "Vendor": "Cisco",
+      "Location": "Building A, Floor 1",
+      "StatusDescription": "Up",
+      "MachineType": "net.snmp.switch",
+      "IsServer": false,
+      "CPUCount": 1,
+      "CPULoad": 12,
+      "TotalMemory": 268435456,
+      "MemoryUsed": 134217728,
+      "PercentMemoryUsed": 50.0,
+      "SerialNumber": "FDO1234A5BC"
+    }
+  ]
+}

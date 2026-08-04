@@ -1,0 +1,112 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.wrap {
+  padding: var(--space-3) var(--space-4);
+  /* Transparent so the panel's glass surface flows through — input
+     box itself becomes the focal element, not the wrapper. */
+  background: transparent;
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.textarea {
+  flex: 1;
+  resize: none;
+  min-height: 38px;
+  max-height: 140px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-md);
+  /* Glossy chrome treatment — light-on-top wash + opaque base + subtle
+     ambient lift so the box reads as a polished input puck. */
+  background:
+    linear-gradient(160deg,
+      rgba(255, 255, 255, 0.7) 0%,
+      rgba(255, 255, 255, 0.25) 40%,
+      rgba(0, 0, 0, 0.02) 100%
+    ),
+    #ffffff;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  box-shadow:
+    0 4px 14px -4px rgba(60, 65, 80, 0.18),
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+:global(body.dark-mode) .textarea {
+  border-color: rgba(16, 185, 129, 0.30);
+  background:
+    linear-gradient(160deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0) 45%
+    ),
+    #15151a;
+  box-shadow:
+    0 4px 14px -4px rgba(0, 0, 0, 0.55),
+    0 1px 3px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20);
+}
+
+.textarea:focus-visible {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow:
+    0 4px 16px -4px rgba(16, 185, 129, 0.35),
+    0 0 0 3px rgba(16, 185, 129, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+}
+
+:global(body.dark-mode) .textarea:focus-visible {
+  border-color: rgba(16, 185, 129, 0.65);
+  box-shadow:
+    0 4px 18px -4px rgba(16, 185, 129, 0.45),
+    0 0 0 3px rgba(16, 185, 129, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20);
+}
+
+.textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.send {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid rgba(16, 185, 129, 0.40);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(180deg, #34d399 0%, #047857 100%);
+  color: white;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  height: 36px;
+  box-shadow:
+    0 2px 6px rgba(16, 185, 129, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.30);
+  transition: filter var(--transition-base), box-shadow var(--transition-base);
+}
+
+.send:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow:
+    0 4px 10px rgba(16, 185, 129, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

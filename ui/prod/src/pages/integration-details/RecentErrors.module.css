@@ -1,0 +1,27 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.section {
+  composes: glossyCard from '../../styles/shared.module.css';
+  margin-top: var(--space-6);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  padding: var(--space-3) var(--space-4);
+}
+.sectionTitle {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-3);
+}
+.errorCard {
+  border-left: 3px solid var(--error);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-3);
+}
+.errorCard:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.timestamp { font-size: var(--font-size-xs); color: var(--text-tertiary); }
+.message { font-size: var(--font-size-sm); color: var(--text-primary); margin-top: var(--space-1); }

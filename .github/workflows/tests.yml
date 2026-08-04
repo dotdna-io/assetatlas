@@ -1,0 +1,380 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to a PR makes the in-flight run's verdict irrelevant, and on a
+# shared self-hosted runner that obsolete run still competes for the same
+# capacity as the run we actually care about. Main pushes are deliberately exempt so every
+# commit that lands keeps its own green check.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# ── RUNNER ESCAPE HATCH ───────────────────────────────────────────────────────
+# Every job resolves `runs-on` from the CI_RUNNER *repository variable*
+# (Settings -> Secrets and variables -> Actions -> Variables):
+#
+#   CI_RUNNER = fleet               -> [self-hosted, dotdna-ci] (org fleet, opt-in)
+#   CI_RUNNER = anything else/unset -> ubuntu-latest            (GitHub-hosted, default)
+#
+# Why GitHub-hosted by default: `runs-on: [self-hosted, ...]` has NO automatic
+# fallback, so it must never be the default in a PUBLIC repo. A fork has no fleet, so
+# its PR jobs would QUEUE until GitHub cancels them at 24h — and self-hosted runners
+# must never execute untrusted fork code. dotdna sets CI_RUNNER=fleet on its own repo
+# to use the fleet; every fork (and anyone who leaves it unset) gets GitHub-hosted
+# automatically. Keep the expression identical across tests.yml and release.yml.
+#
+# installer-ci.yml deliberately stays GitHub-hosted: it proves a CLEAN-machine
+# install, which a persistent shared VM would weaken, and it binds fixed ports
+# 18443/18080 that would collide across parallel runners.
+#
+# `cache:` keys off the SAME variable, because the two runner types want
+# opposite things. Hosted runners are ephemeral, so GitHub's pip cache pays for
+# itself. The fleet is the reverse: all 8 runners execute as one user and share
+# one already-warm ~/.cache/pip on disk, so restoring the hosted cache is pure
+# loss — a measured 3.18 GB blob over the VM's ~10 MB/s uplink, ~250s median
+# per job (#1268), to enable a pip install that then takes ~2s from the local
+# cache. The blob is that big because the shared cache accumulates every wheel
+# ever installed on the VM. Python itself is
+# pre-baked into /opt/hostedtoolcache on the fleet, so setup-python stays.
+#
+# The `cache:` expression is NOT the mirror of the `runs-on:` one, and the
+# difference is load-bearing: GHA `&&`/`||` return operand VALUES, not booleans,
+# so `A && '' || B` always yields B — `''` is falsy and the `||` falls through.
+# That exact form sat at every `cache:` site below resolving to 'pip' on the
+# fleet on every run, with this comment asserting caching was off. `runs-on:` is
+# unaffected only because its `&&` branch yields a non-empty array, which is
+# truthy. Inverting the test — `!= 'fleet' && 'pip' || ''` — puts the falsy
+# empty string LAST, where `||` cannot swallow it. Empty string = caching off;
+# setup-python treats the input as falsy.
+# ──────────────────────────────────────────────────────────────────────────────
+
+jobs:
+  python-unit:
+    name: pytest (unit)
+    runs-on: ${{ vars.CI_RUNNER == 'fleet' && fromJSON('["self-hosted","dotdna-ci"]') || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    env:
+      # Mirror the env vars tests/conftest.py sets via os.environ.setdefault
+      # so module-import-time reads (BaseConfig.DATABASE_URL,
+      # encryption.get_encryption_key) succeed under CI's clean shell.
+      # SECRET_KEY / JWT_SECRET_KEY are NOT here on purpose — TestConfig
+      # uses literal values for those (src/api/config.py). The Fernet
+      # ASSETATLAS_ENCRYPTION_KEY is generated per-run in a step below (never
+      # committed — it protects nothing, the tests encrypt/decrypt in-memory).
+      DATABASE_URL: postgresql://test:test@localhost:5434/assetatlas_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          # Off on the fleet, on for hosted — see RUNNER ESCAPE HATCH above.
+          cache: ${{ vars.CI_RUNNER != 'fleet' && 'pip' || '' }}
+      - name: Install runtime + test dependencies
+        # requirements-prod.txt is the runtime image baseline; layering
+        # requirements-test.txt on top covers pytest itself. Skipping the
+        # full requirements.txt keeps CI fast — the heavyweight ML stack
+        # isn't exercised by unit tests.
+        #
+        # `-c constraints-prod.txt` pins the transitive closure to the versions
+        # the base image ships (#1262), and it is load-bearing HERE above all:
+        # the fleet's 8 runners share one persistent site-packages, so a bare
+        # `pip install -r` reports "already satisfied" for anything still
+        # clearing its `>=` floor and never upgrades. That is why these jobs
+        # stayed green for three releases while a COLD resolve of the same
+        # manifest was already broken by mcp 2.0.0.
+        #
+        # The venv is not optional, and it is what MAKES the constraint usable.
+        # `already satisfied` is also the only reason three concurrent jobs could
+        # ever share one interpreter safely: a no-op cannot collide. Under `-c` a
+        # stale shared copy no longer satisfies the requirement, so all three
+        # jobs start rewriting the SAME ~16 packages on the SAME
+        # /opt/hostedtoolcache site-packages at the same moment, and pip — which
+        # takes no cross-process lock — loses the race. Observed on the first
+        # run: `Rolling back uninstall of openai`, `OSError ... openai-2.52.0
+        # .dist-info/INSTALLER<tmp>: No such file or directory`, and `Ignoring
+        # invalid distribution ~andas` left behind by a neighbour mid-uninstall.
+        # A workspace venv is per-runner and per-job (checkout's `git clean
+        # -ffdx` drops any stale one), so there is no shared state left to race
+        # over — and the runner finally performs a real resolve instead of
+        # inheriting whatever the previous job on that host installed last.
+        #
+        # uv does the install, not pip (#1268). The pip form of this step
+        # measured ~35-38s of a ~60s hard-gate job on the fleet's warm cache,
+        # and uv is already the tool constraints-prod.txt is compiled with —
+        # same resolver family compiling and installing the pin set. Before
+        # this merged, uv was verified ON THE FLEET to resolve the `-c` set
+        # identically to pip (empty `pip list --format=freeze` diff of two
+        # venvs installed each way). uv itself is installed INTO the venv —
+        # never the fleet's shared site-packages, the same #1262 rule the
+        # venv serves — and targets the venv explicitly via `--python` rather
+        # than relying on VIRTUAL_ENV/.venv discovery. uv keeps its own cache
+        # (~/.cache/uv), separate from pip's and likewise shared by all 8
+        # runners; it starts COLD, so the first run after this change is the
+        # slow one, not the representative one.
+        #
+        # $GITHUB_PATH applies to LATER steps only, hence the explicit
+        # .venv/bin/... here and the bare `python`/`pytest` below.
+        run: |
+          python -m venv .venv
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          .venv/bin/python -m pip install uv
+          .venv/bin/uv pip install --python .venv/bin/python -r requirements-prod.txt -r requirements-test.txt -c constraints-prod.txt
+      - name: Generate an ephemeral test encryption key
+        # cryptography is installed above (runtime dep). Fresh Fernet key per run.
+        run: echo "ASSETATLAS_ENCRYPTION_KEY=$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" >> "$GITHUB_ENV"
+      - name: Run pytest (unit only, default markers)
+        # Integration and embedding markers are excluded by default in
+        # pyproject.toml; we additionally skip teams_bridge tests because
+        # they need optional botbuilder packages not in the prod image.
+        # This skip does NOT mean the bridge is ungated: the load-bearing
+        # guard — the AST walk asserting src/teams_bridge/ imports nothing
+        # from the rest of src/, which is what keeps its slim image runnable —
+        # lives in tests/unit/test_app_image_contents.py and runs in the
+        # pipeline-domain hard gate below. Put bridge invariants there, not
+        # under tests/unit/teams_bridge/ where they would never run.
+        # continue-on-error surfaces the ~750 pre-existing test-isolation
+        # failures (audit #596 H7) as CI signal without blocking merges
+        # while the blueprint test suites are stabilised in a separate PR.
+        # Scope is deliberately tests/unit ONLY. continue-on-error applies to
+        # the whole command, so the deterministic module suites that used to
+        # ride along here inherited a job that could not fail — a real
+        # regression sat behind a green check for four months (#992). They are
+        # hard-gated in `pipeline-domain` below; do not re-add them here (#997).
+        continue-on-error: true
+        run: pytest tests/unit --ignore=tests/unit/teams_bridge -q
+      - name: Drop the workspace venv
+        # The fleet's workspaces are PERSISTENT: nothing removes .venv when the
+        # job ends, and checkout only cleans at the START of the next run on
+        # that same runner — which for a runner that stops being scheduled is
+        # never. Three jobs x ~1 GB x 8 runners is several GB parked on a VM
+        # that already carries a multi-GB shared pip cache and every image the
+        # release build leaves behind. Cheap to reclaim here.
+        if: always()
+        run: rm -rf .venv
+
+  pipeline-domain:
+    name: pipeline + delivery domain (hard gate)
+    runs-on: ${{ vars.CI_RUNNER == 'fleet' && fromJSON('["self-hosted","dotdna-ci"]') || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    # DO NOT RENAME: `name:` above is the check context the `required-checks`
+    # ruleset matches literally (#1000), so renaming silently de-requires this
+    # gate. It stays as-is even though the suites below now reach past pipeline
+    # and delivery into tag_rules and assets (#1001) — re-requiring a new name
+    # is a repo-settings change, not a code one.
+    #
+    # No `env:` block, unlike `python-unit` / `chat-parity`: these suites are
+    # self-sufficient. The asset_generation, tag_rules and assets tests read no
+    # import-time config, and alert_delivery/tests/conftest.py sets DATABASE_URL
+    # and ASSETATLAS_ENCRYPTION_KEY itself precisely because it is collected
+    # without tests/conftest.py as an ancestor. All four are verified green
+    # standalone under a scrubbed environment, so mirroring the neighbours' env
+    # here would be cargo cult.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          # Off on the fleet, on for hosted — see RUNNER ESCAPE HATCH above.
+          cache: ${{ vars.CI_RUNNER != 'fleet' && 'pip' || '' }}
+      - name: Install runtime + test dependencies
+        # Same dep set as `python-unit` and `chat-parity`: these suites import
+        # the pipeline and delivery packages, which sit on the runtime baseline.
+        # `-c constraints-prod.txt` + workspace venv for the reasons spelled out
+        # in `python-unit`: without the constraint the fleet's warm
+        # site-packages are never re-resolved, and without the venv the three
+        # jobs race each other rewriting them. uv does the install (verified on
+        # the fleet to resolve `-c` identically to pip) — full rationale in
+        # `python-unit`.
+        run: |
+          python -m venv .venv
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          .venv/bin/python -m pip install uv
+          .venv/bin/uv pip install --python .venv/bin/python -r requirements-prod.txt -r requirements-test.txt -c constraints-prod.txt
+      - name: Run module suites (pipeline, delivery, tag rules, assets)
+        # HARD gate (no continue-on-error), same rationale as `chat-parity`:
+        # these 1086 tests are deterministic, DB-free, network-free and green in
+        # random order, so they block merges WITHOUT dragging in the ~750
+        # pre-existing isolation failures that force `pytest (unit)` to stay
+        # advisory (#596 H7). ~6s of runtime buys back the blind spot that hid
+        # a broken test_multi_run_persistence.py for four months (#992, #997).
+        # tag_rules (103) and assets (23) joined in #1001: they sit in
+        # pyproject's `testpaths`, but every job here passes explicit paths,
+        # which makes pytest ignore `testpaths` — so NO job ran them at all.
+        #
+        # test_schema_full_migration_stamp.py is here rather than left to
+        # `pytest (unit)` for the same reason the suites above are: it guards the
+        # schema-full.sql <-> migrations dual-write invariant, and a guard that
+        # only warns cannot enforce an invariant. It is DB-free and runs in
+        # milliseconds. This job's `name:` is a required check context — do NOT
+        # rename it; adding paths to the command is fine.
+        #
+        # test_app_image_contents.py joins on the same rule (#1099): it guards
+        # that the app image actually ships the files the running code reads.
+        # Both bugs it covers (#1092, #1093) were silent in production for
+        # months, so leaving its regression tests in the advisory `pytest (unit)`
+        # job would reproduce exactly the blind spot they exist to close.
+        #
+        # test_settings_schema.py (#1228) and test_mcp/test_context.py (#1235)
+        # join for the reason the blind spot itself produced: both sat RED on
+        # main long enough to drift — the MCP tool count against 34 while 37
+        # were registered — because nothing turns red when an advisory job
+        # fails. test_context.py now asserts the read-only tool surface that
+        # #1158's `aa_` API-key grant rests on, and test_settings_schema.py
+        # guards the settings_schema <-> Pydantic-Literal contract; neither
+        # guard is worth anything while it can rot unnoticed. Both are DB-free,
+        # network-free and self-sufficient under this job's scrubbed
+        # environment (tests/conftest.py setdefaults DATABASE_URL and
+        # ASSETATLAS_ENCRYPTION_KEY), and add 63 tests / ~0.6s.
+        #
+        # test_workflow_expressions.py (#1268) joins on the same rule: it guards
+        # that no workflow reintroduces the `A && '' || B` idiom that kept the
+        # fleet's pip cache silently enabled, and a guard left in the advisory
+        # `pytest (unit)` job could rot there unnoticed. It is a text scan of
+        # .github/workflows — DB-free, network-free, milliseconds.
+        run: pytest src/modules/asset_generation/tests src/modules/alert_delivery/tests src/modules/tag_rules/tests src/modules/assets/tests tests/unit/test_schema_full_migration_stamp.py tests/unit/test_app_image_contents.py tests/unit/settings/test_settings_schema.py tests/unit/test_mcp/test_context.py tests/unit/test_workflow_expressions.py -q
+      - name: Drop the workspace venv
+        # Persistent fleet workspaces — see `python-unit`.
+        if: always()
+        run: rm -rf .venv
+
+  chat-parity:
+    name: chat↔UI parity (hard gate)
+    runs-on: ${{ vars.CI_RUNNER == 'fleet' && fromJSON('["self-hosted","dotdna-ci"]') || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    env:
+      # Mirror the import-time env `python-unit` sets: BaseConfig.DATABASE_URL
+      # and encryption.get_encryption_key are read at import. The parity pure
+      # lane never actually connects to the DB — it runs over mocked services
+      # (blueprint_app) and a MagicMock adapter (the static catalog).
+      DATABASE_URL: postgresql://test:test@localhost:5434/assetatlas_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          # Off on the fleet, on for hosted — see RUNNER ESCAPE HATCH above.
+          cache: ${{ vars.CI_RUNNER != 'fleet' && 'pip' || '' }}
+      - name: Install runtime + test dependencies
+        # Same dep set as `python-unit`: blueprint_app builds the whole app, so
+        # the pure lane needs the full runtime import chain. This exact set is
+        # already proven to run the parity file green. `-c constraints-prod.txt`
+        # + workspace venv for the reasons spelled out in `python-unit`; uv
+        # does the install (verified on the fleet to resolve `-c` identically
+        # to pip) — full rationale in `python-unit`.
+        run: |
+          python -m venv .venv
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          .venv/bin/python -m pip install uv
+          .venv/bin/uv pip install --python .venv/bin/python -r requirements-prod.txt -r requirements-test.txt -c constraints-prod.txt
+      - name: Generate an ephemeral test encryption key
+        # Fresh Fernet key per run (never committed); cryptography installed above.
+        run: echo "ASSETATLAS_ENCRYPTION_KEY=$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" >> "$GITHUB_ENV"
+      - name: Run parity contract (pure DB-free lane)
+        # HARD gate (no continue-on-error): the pure lane is deterministic and
+        # already green, so it blocks merges WITHOUT dragging in the ~750
+        # pre-existing test-isolation failures that force `pytest (unit)` to stay
+        # advisory (#596). A new `/api` GET read endpoint mapped in neither
+        # ENDPOINT_TO_TOOL nor EXCLUDED_ENDPOINTS — or a removed/renamed tool —
+        # turns this job RED. `-m "not integration"` is explicit so the gate
+        # stays on the pure lane even if the pyproject default marker set changes.
+        run: pytest tests/unit/chat/test_ui_chat_parity_contract.py -m "not integration" -q
+      - name: Drop the workspace venv
+        # Persistent fleet workspaces — see `python-unit`.
+        if: always()
+        run: rm -rf .venv
+
+  lint:
+    name: flake8 + black --check
+    runs-on: ${{ vars.CI_RUNNER == 'fleet' && fromJSON('["self-hosted","dotdna-ci"]') || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          # Off on the fleet, on for hosted — see RUNNER ESCAPE HATCH above.
+          cache: ${{ vars.CI_RUNNER != 'fleet' && 'pip' || '' }}
+      - name: Install lint tooling
+        run: pip install flake8 black
+      - name: flake8 (real-bug indicators only)
+        # F811 redefined, F821 undefined, F601 always-true comparison,
+        # W605 invalid escape, E9 syntax/runtime errors. F401 (unused
+        # imports, ~165) and F841 (unused locals, ~44) are intentionally
+        # excluded — they're the legacy backlog the audit flagged as
+        # too noisy to block CI on, tracked for a separate cleanup PR
+        # alongside the H1 black reformat.
+        run: flake8 --select=F811,F821,F601,W605,E9 src/
+      - name: black --check (warning-only — H1 backlog)
+        # Full repo reformat is tracked under #596 H1 (637 unformatted
+        # files). Run continues regardless so the warning surfaces in
+        # the job summary without blocking the merge.
+        continue-on-error: true
+        run: black --check src/
+
+  public-mirror-gate:
+    name: public mirror scrub gate
+    # Dev repo only. This workflow is itself mirrored, but scripts/publish is
+    # deliberately never mirrored — scrub.py lists customer names and IPs as
+    # replacement data, so shipping it would re-leak everything it removes. Run
+    # on the public repo the job therefore dies with `publish.sh: No such file or
+    # directory`, which is what it did for every release after the mirror push
+    # was unblocked. Same guard as release.yml and update-reference-bundles.yml.
+    if: ${{ github.repository == 'dotdna-io/dotdna-assetatlas' }}
+    runs-on: ${{ vars.CI_RUNNER == 'fleet' && fromJSON('["self-hosted","dotdna-ci"]') || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # publish.sh exports a tracked tree with `git archive <ref>`, for which
+          # a shallow clone would be enough — but it also runs changelog.py,
+          # which walks every release tag back to the first public version and
+          # exits on a shallow checkout rather than generating an empty history.
+          # `filter: blob:none` fetches the commit graph without file contents,
+          # which is all the walk reads (subjects + tag dates).
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Scrub + gate the tree that would be mirrored
+        # The same scrub + HARD gates publish-public.yml runs, brought forward to
+        # PR time. That workflow fires ONLY on a release tag, so before this job
+        # a PR adding a customer reference passed every check, merged, and broke
+        # the mirror at release — in a workflow nobody watches. It stayed broken
+        # for six consecutive releases that way.
+        #
+        # Gate 6 (gitleaks/trufflehog) self-skips without docker and is advisory
+        # anyway, so this needs no extra tooling and adds well under a minute.
+        run: bash scripts/publish/publish.sh HEAD "$RUNNER_TEMP/public-tree"
+
+  ts-unit:
+    name: vitest + tsc
+    runs-on: ${{ vars.CI_RUNNER == 'fleet' && fromJSON('["self-hosted","dotdna-ci"]') || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ui/prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ui/prod/package-lock.json
+      - run: npm ci
+      - name: TypeScript compile check
+        run: npx tsc --noEmit
+      - name: Vitest (warning-only — H4 backlog)
+        # 3 known-flaky tests are tracked under #596 H4. continue-on-error
+        # surfaces the failure without blocking the merge; the previous
+        # `|| echo` form broke YAML parsing because the parenthesised
+        # warning text confused bash quoting.
+        continue-on-error: true
+        run: npx vitest run

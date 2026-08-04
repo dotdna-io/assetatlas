@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "query_time": 0.012,
+    "pagination": {
+      "total": 3
+    },
+    "powered_by": "device-api",
+    "trace_id": "aaaa-bbbb-cccc-2222"
+  },
+  "resources": [
+    {
+      "device_id": "dev-003",
+      "cid": "cust-001",
+      "hostname": "SERVER-LIN003",
+      "local_ip": "10.0.2.50",
+      "external_ip": "203.0.113.3",
+      "mac_address": "AA:BB:CC:DD:EE:03",
+      "platform_name": "Linux",
+      "os_version": "RHEL 9.2",
+      "product_type_desc": "Server",
+      "serial_number": "SN-003",
+      "system_manufacturer": "HPE",
+      "agent_version": "7.08.17200.0",
+      "status": "normal",
+      "first_seen": "2024-03-10T06:00:00Z",
+      "last_seen": "2026-03-18T11:00:00Z",
+      "tags": []
+    }
+  ],
+  "errors": []
+}

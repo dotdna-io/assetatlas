@@ -1,0 +1,31 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/field-registry/SynonymsModal.module.css */
+.intro {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+}
+
+.empty {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: rgba(148, 163, 184, 0.12);
+  white-space: nowrap;
+}

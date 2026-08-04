@@ -1,0 +1,211 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.panel {
+  /* Flatten badges (Badge + DataSourceBadge) inside the panel so the
+     glossy chips don't compete with the inverted chat surface. The
+     badge components read these vars (see Badge.module.css). */
+  --badge-gloss-image: none;
+  --badge-gloss-shadow: none;
+
+  position: fixed;
+  bottom: calc(var(--space-6) + 96px); /* clear the bubble (40 bottom + 56 height) */
+  right: var(--space-6);
+  /* Scale with the viewport so the panel occupies a similar fraction of
+     the screen for everyone. Middle value is calibrated to 662×764 on a
+     MBA13 default scaling at 90% browser zoom (~1633×979 CSS pixels);
+     floor/ceiling keep it usable on small laptops and 4K displays. */
+  width: clamp(420px, 41vw, 760px);
+  height: clamp(560px, 78vh, 880px);
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  /* Smoothly grow when the history sidebar opens so it doesn't squish
+     the main content. */
+  transition: width 0.25s ease;
+  /* Inverted surface + glass treatment dialed back from the card
+     recipe (smaller specular glare, lower-alpha edges) so the chrome
+     doesn't wash out the header text or compete with messages.
+     Opaque base so content stays readable. */
+  background:
+    radial-gradient(ellipse 70% 40% at 5% -8%, rgba(255, 255, 255, 0.80) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 45% at 100% 100%, rgba(70, 75, 85, 0.16) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(208, 213, 222, 0.65) 100%),
+    #d8dce3;
+  border: 2px solid rgba(16, 185, 129, 0.55);
+  border-radius: var(--radius-lg);
+  /* Subtle brand-green halo + heavy ambient depth shadow. The border
+     already carries the sharp brand edge, so the halo here is dialled
+     down to a soft hint of colour around the panel rather than a
+     second visible ring. */
+  box-shadow:
+    0 0 20px -2px rgba(16, 185, 129, 0.08),
+    0 28px 64px -10px rgba(0, 0, 0, 0.28),
+    0 10px 28px -6px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 1px 0 0 rgba(255, 255, 255, 0.55),
+    inset -1px 0 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.45);
+  overflow: hidden;
+  z-index: 999;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  /* Hollowed-well effect: a slightly darker tone + multi-edge inset
+     shadows so the conversation area reads as a recessed pocket sunk
+     into the panel surface. The header rests on the rim above, the
+     input on the rim below. */
+  background: rgba(0, 0, 0, 0.035);
+  box-shadow:
+    inset 0 1px 0 rgba(0, 0, 0, 0.08),
+    inset 0 12px 20px -10px rgba(0, 0, 0, 0.18),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.55);
+}
+
+:global(body.dark-mode) .body {
+  background: rgba(0, 0, 0, 0.20);
+  box-shadow:
+    inset 0 1px 0 rgba(0, 0, 0, 0.35),
+    inset 0 14px 22px -10px rgba(0, 0, 0, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.loading {
+  padding: var(--space-6);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* Dark mode — same recipe but with darker depth + dim specular */
+:global(body.dark-mode) .panel {
+  background:
+    radial-gradient(ellipse 65% 40% at 0% 0%, rgba(255, 255, 255, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 40% at 100% 100%, rgba(0, 0, 0, 0.20) 0%, transparent 70%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(0, 0, 0, 0.05) 100%),
+    var(--card-bg);
+  box-shadow:
+    0 0 22px -2px rgba(16, 185, 129, 0.10),
+    0 32px 72px -12px rgba(0, 0, 0, 0.75),
+    0 12px 28px -6px rgba(0, 0, 0, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 1px 0 0 rgba(255, 255, 255, 0.04),
+    inset -1px 0 0 rgba(0, 0, 0, 0.10);
+}
+
+/* Top edge chrome highlight — sits inside the rounded top corners */
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.95) 50%, transparent 100%);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+/* Bottom edge highlight — light-mode metallic touch only */
+.panel::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.7) 50%, transparent 100%);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+:global(body.dark-mode) .panel::before {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.30) 50%, transparent 100%);
+}
+
+:global(body.dark-mode) .panel::after {
+  content: none;
+}
+
+/* History sidebar open — grow the panel by exactly the sidebar width
+   (192px, see ConversationList.module.css) so the main pane keeps its
+   full breathing room at every viewport size. The panel is anchored
+   right, so the extra width extends leftward. */
+.panelWithSidebar {
+  width: clamp(612px, calc(41vw + 192px), 952px);
+}
+
+/* ---- Super-subtle scrollbars inside the panel ----
+   Applies to the message list, the conversation sidebar, and any
+   embedded scrolling region (markdown tables, artifact tables). Track
+   is transparent at rest; thumb is barely visible until the user
+   hovers the panel, then the scroll target itself.
+
+   Horizontal scrollbars on inline tables only need minimal scroll, so
+   they get a slimmer track than the main vertical scrollbar. */
+.panel ::-webkit-scrollbar {
+  width: 6px;
+  height: 4px;
+}
+
+.panel ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel ::-webkit-scrollbar-thumb {
+  background-color: rgba(120, 120, 130, 0.10);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.panel:hover ::-webkit-scrollbar-thumb {
+  background-color: rgba(120, 120, 130, 0.22);
+}
+
+.panel ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(120, 120, 130, 0.4);
+}
+
+/* Where vertical + horizontal scrollbars meet (e.g., artifact table
+   that scrolls both axes), the corner element shows a small square —
+   make it transparent so it disappears into the background. */
+.panel ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox equivalent — applied to any descendant that scrolls. */
+.panel * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 130, 0.15) transparent;
+}
+
+/* No-active-session start state (first-ever use, empty history). */
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.emptyText {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}

@@ -1,0 +1,100 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/enrichment/DatasetTable.module.css */
+
+/* ---------------------------------------------------------------------------
+   Card wrapper (glossy card pattern)
+--------------------------------------------------------------------------- */
+
+.tableWrapper {
+  composes: glossyCard from '../../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Table
+--------------------------------------------------------------------------- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.headerRow th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  border-bottom: 2px solid rgba(255,255,255,0.06);
+  white-space: nowrap;
+}
+
+:global(body:not(.dark-mode)) .headerRow th {
+  border-bottom-color: rgba(0,0,0,0.1);
+}
+
+.dataRow td {
+  padding: 12px;
+  color: var(--text-primary);
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+:global(body:not(.dark-mode)) .dataRow td {
+  border-bottom-color: rgba(0,0,0,0.05);
+}
+
+.dataRow:last-child td {
+  border-bottom: none;
+}
+
+.dataRow:hover td {
+  background: rgba(255,255,255,0.02);
+}
+
+:global(body:not(.dark-mode)) .dataRow:hover td {
+  background: rgba(0,0,0,0.02);
+}
+
+/* ---------------------------------------------------------------------------
+   Column-specific styles
+--------------------------------------------------------------------------- */
+
+.nameCell {
+  font-weight: 500;
+}
+
+.monoCell {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+}
+
+.dateCell {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.centerCol {
+  text-align: center !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Actions
+--------------------------------------------------------------------------- */
+
+/* Flex, matching every other actions cell in settings. Inline layout
+   baseline-aligns the buttons, and an inline-flex button takes its baseline
+   from its first child — so the moment Apply's success flash puts an icon
+   before the label, the baseline moves and Delete drops ~3px beside it. */
+.actionsCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}

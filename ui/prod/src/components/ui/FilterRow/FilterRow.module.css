@@ -1,0 +1,137 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 8px;
+}
+
+.select,
+.input {
+  height: 34px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  padding: 0 var(--space-2);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.select:focus,
+.input:focus {
+  border-color: var(--accent);
+}
+
+.select {
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.input {
+  flex: 2;
+  min-width: 180px;
+}
+
+.removeBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.removeBtn:hover {
+  color: var(--error);
+}
+
+/* between (From/To) + within_last (amount/unit) group: occupies the same row
+   slot as a single value control; children flex within it instead of each
+   claiming the full .input min-width. */
+.rangeGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 2;
+  min-width: 0;
+}
+
+.rangeGroup .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.rangeSep {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+.chipInput {
+  flex: 2;
+  min-width: 180px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  padding: 2px var(--space-2);
+}
+
+.chipInput:focus-within {
+  border-color: var(--accent);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-subtle, rgba(var(--accent-rgb), 0.12));
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px 1px 6px;
+  font-size: var(--font-size-sm);
+}
+
+.chipText {
+  line-height: 1.4;
+}
+
+.chipRemove {
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.chipRemove:hover {
+  color: var(--error);
+}
+
+.chipEntry {
+  flex: 1;
+  min-width: 60px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  height: 28px;
+}

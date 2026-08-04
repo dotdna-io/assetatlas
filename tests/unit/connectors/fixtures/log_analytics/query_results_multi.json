@@ -1,0 +1,17 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        {"name": "Computer", "type": "string"},
+        {"name": "ComputerIP", "type": "string"},
+        {"name": "OSType", "type": "string"}
+      ],
+      "rows": [
+        ["DESKTOP-WIN001", "10.0.1.10", "Windows"],
+        ["SERVER-LIN001", "10.0.2.20", "Linux"],
+        ["LAPTOP-MAC001", "10.0.3.30", "macOS"]
+      ]
+    }
+  ]
+}

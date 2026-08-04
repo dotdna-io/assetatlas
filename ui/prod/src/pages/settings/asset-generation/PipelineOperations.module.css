@@ -1,0 +1,289 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* PipelineOperations.module.css */
+
+.card {
+  composes: glossyCard from '../../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  /* Match SettingsSection's vertical rhythm so this card sits at the
+     same gap from the next "Pipeline Schedule" section below. */
+  margin-bottom: 14px;
+}
+
+/* ---------------------------------------------------------------------------
+   Header row with Run Now button
+--------------------------------------------------------------------------- */
+
+/* Status message ("Pipeline triggered") — padded down from the card's top
+   edge. InlineStatus carries its own bottom margin for spacing to the header. */
+.statusBar {
+  padding: 12px 20px 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.headerInfo h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.headerInfo p {
+  margin: 2px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------------------
+   Live status panel
+--------------------------------------------------------------------------- */
+
+.statusPanel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: rgba(59, 130, 246, 0.06);
+  border-top: 1px solid rgba(59, 130, 246, 0.12);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.12);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.pulseDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--info);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.statusLabel {
+  font-weight: 600;
+  color: var(--info);
+}
+
+.sep {
+  width: 1px;
+  height: 16px;
+  background: rgba(255,255,255,0.08);
+}
+
+:global(body:not(.dark-mode)) .sep {
+  background: rgba(0,0,0,0.1);
+}
+
+.statusDetail strong {
+  color: var(--text-primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Run History table
+--------------------------------------------------------------------------- */
+
+.historyTitle {
+  padding: 16px 20px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.table thead th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+:global(body:not(.dark-mode)) .table thead th {
+  border-bottom-color: rgba(0,0,0,0.08);
+}
+
+.table .textRight {
+  text-align: right;
+}
+
+/* Run row */
+
+.runRow {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.runRow:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+:global(body:not(.dark-mode)) .runRow:hover {
+  background: rgba(0,0,0,0.02);
+}
+
+.runRow td {
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+:global(body:not(.dark-mode)) .runRow td {
+  border-bottom-color: rgba(0,0,0,0.04);
+}
+
+/* The "Removed" column sits flush against the card's right edge with
+   the default 12px padding — bump the last cell (and matching header)
+   so the value isn't kissing the border. */
+.table thead th:last-child,
+.runRow td:last-child {
+  padding-right: 24px;
+}
+
+.chevron {
+  display: inline-block;
+  font-size: 10px;
+  margin-right: 8px;
+  transition: transform 0.2s ease;
+  color: var(--text-tertiary);
+}
+
+.chevronExpanded {
+  composes: chevron;
+  transform: rotate(90deg);
+}
+
+/* Trigger source — plain colored text rather than a chip, so it reads
+   at the same scale as the other values in the row instead of looking
+   like a smaller pill. */
+.badgeManual {
+  font-weight: 500;
+  color: var(--info);
+}
+
+.badgeSchedule {
+  font-weight: 500;
+  color: #8b5cf6;
+}
+
+.statusBadge {
+  font-weight: 500;
+}
+
+.statusRunning { color: var(--info); }
+.statusCompleted { color: var(--success); }
+.statusFailed { color: var(--error); }
+.statusPending { color: var(--text-tertiary); }
+.statusCancelled { color: var(--text-tertiary); }
+
+/* Count colors */
+.countGreen { color: var(--success); font-weight: 500; }
+.countBlue { color: var(--info); font-weight: 500; }
+.countOrange { color: var(--warning); font-weight: 500; }
+.countRed { color: var(--error); font-weight: 500; }
+/* Merges are identity consolidations, not departures — neutral, not alarming. */
+.countMerged { color: var(--text-secondary); font-weight: 500; }
+
+/* Detail row (expanded) */
+
+.detailRow td {
+  padding: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+:global(body:not(.dark-mode)) .detailRow td {
+  border-bottom-color: rgba(0,0,0,0.04);
+}
+
+.detailRow {
+  display: none;
+}
+
+.detailRowVisible {
+  composes: detailRow;
+  display: table-row;
+}
+
+/* Empty */
+
+.empty {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   Pagination
+--------------------------------------------------------------------------- */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 20px;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+:global(body:not(.dark-mode)) .pagination {
+  border-top-color: rgba(0,0,0,0.06);
+}
+
+.pageInfo {
+  color: var(--text-secondary);
+}
+
+.paginationBtn {
+  padding: 4px 10px;
+  font-size: var(--font-size-sm);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+:global(body:not(.dark-mode)) .paginationBtn {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.08);
+}
+
+.paginationBtn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+}
+
+:global(body:not(.dark-mode)) .paginationBtn:hover:not(:disabled) {
+  background: rgba(0,0,0,0.08);
+}
+
+.paginationBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

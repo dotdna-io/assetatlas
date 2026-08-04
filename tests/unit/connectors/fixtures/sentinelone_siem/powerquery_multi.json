@@ -1,0 +1,14 @@
+{
+  "status": "success",
+  "columns": [
+    {"name": "endpoint.name"},
+    {"name": "endpoint.ip"},
+    {"name": "endpoint.os"}
+  ],
+  "values": [
+    ["DESKTOP-WIN001", "10.0.1.100", "Windows 10 Pro"],
+    ["LAPTOP-MAC001", "10.0.1.101", "macOS 13"],
+    ["SERVER-LIN001", "10.0.1.102", "Ubuntu 22.04"]
+  ],
+  "matchingEvents": 3
+}

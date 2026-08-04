@@ -1,0 +1,45 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Holds the colored bar + the count that follows it. */
+.barZone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Colored bar only — no background track. Width is set inline (proportional
+   to the largest category). */
+.bar {
+  height: 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  min-width: 3px; /* keep tiny (but non-zero) categories visible */
+}
+
+.count {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}

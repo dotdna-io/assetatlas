@@ -1,0 +1,44 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mc-line" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="mc-area" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:0.02" />
+    </linearGradient>
+  </defs>
+
+  <!-- Sparkline area -->
+  <path d="M 12,80 L 12,55 L 28,50 L 44,58 L 60,38 L 72,42 L 72,80 Z" fill="url(#mc-area)" />
+
+  <!-- Sparkline -->
+  <polyline points="12,55 28,50 44,58 60,38 72,42"
+    fill="none" stroke="url(#mc-line)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- End dot -->
+  <circle cx="72" cy="42" r="3.5" fill="white" stroke="#3B82F6" stroke-width="2" />
+
+  <!-- Big number -->
+  <text x="98" y="52"
+    font-family="Arial, sans-serif"
+    font-size="24"
+    font-weight="300"
+    fill="#3B82F6"
+    text-anchor="middle"
+    dominant-baseline="middle">8.7K</text>
+
+  <!-- Bottom stats line -->
+  <line x1="12" y1="88" x2="108" y2="88" stroke="#E5E7EB" stroke-width="1" />
+
+  <!-- Stat labels -->
+  <text x="18" y="100" font-family="Arial, sans-serif" font-size="7" fill="#9CA3AF">Jul</text>
+  <text x="18" y="110" font-family="Arial, sans-serif" font-size="8" font-weight="600" fill="#374151">6.2K</text>
+
+  <text x="60" y="100" font-family="Arial, sans-serif" font-size="7" fill="#9CA3AF" text-anchor="middle">Peak</text>
+  <text x="60" y="110" font-family="Arial, sans-serif" font-size="8" font-weight="600" fill="#374151" text-anchor="middle">9.1K</text>
+
+  <text x="102" y="100" font-family="Arial, sans-serif" font-size="7" fill="#9CA3AF" text-anchor="end">Jan</text>
+  <text x="102" y="110" font-family="Arial, sans-serif" font-size="8" font-weight="600" fill="#3B82F6" text-anchor="end">8.7K</text>
+</svg>

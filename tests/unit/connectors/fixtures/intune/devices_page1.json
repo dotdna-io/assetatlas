@@ -1,0 +1,33 @@
+{
+  "value": [
+    {
+      "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "deviceName": "DESKTOP-WIN001",
+      "userPrincipalName": "john.doe@contoso.com",
+      "managedDeviceOwnerType": "company",
+      "serialNumber": "SN-001",
+      "manufacturer": "Dell",
+      "model": "OptiPlex 7090",
+      "operatingSystem": "Windows",
+      "osVersion": "10.0.19041.1",
+      "complianceState": "compliant",
+      "lastSyncDateTime": "2026-03-18T10:00:00Z",
+      "enrolledDateTime": "2024-01-15T08:00:00Z"
+    },
+    {
+      "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "deviceName": "LAPTOP-MAC002",
+      "userPrincipalName": "jane.smith@contoso.com",
+      "managedDeviceOwnerType": "company",
+      "serialNumber": "SN-002",
+      "manufacturer": "Apple",
+      "model": "MacBook Pro 14",
+      "operatingSystem": "macOS",
+      "osVersion": "14.2.1",
+      "complianceState": "compliant",
+      "lastSyncDateTime": "2026-03-17T14:30:00Z",
+      "enrolledDateTime": "2024-02-20T09:00:00Z"
+    }
+  ],
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?$skiptoken=page2token"
+}

@@ -1,0 +1,22 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Track circle -->
+  <circle cx="60" cy="60" r="42" fill="none" stroke="#E5E7EB" stroke-width="6" />
+
+  <!-- Red segment (0-33%, starting from top) -->
+  <path d="M 60 18 A 42 42 0 0 1 96.4 81" fill="none" stroke="#EF4444" stroke-width="6" stroke-linecap="butt" />
+
+  <!-- Amber segment (33-66%) -->
+  <path d="M 96.4 81 A 42 42 0 0 1 23.6 81" fill="none" stroke="#F59E0B" stroke-width="6" stroke-linecap="butt" />
+
+  <!-- Green segment (66-75%) -->
+  <path d="M 23.6 81 A 42 42 0 0 1 18 60" fill="none" stroke="#10B981" stroke-width="6" stroke-linecap="butt" />
+
+  <!-- Center text -->
+  <text x="60" y="62"
+    font-family="Arial, sans-serif"
+    font-size="28"
+    font-weight="300"
+    fill="#374151"
+    text-anchor="middle"
+    dominant-baseline="middle">75%</text>
+</svg>

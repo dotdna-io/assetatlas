@@ -1,0 +1,12 @@
+{
+  "result": [
+    {
+      "sys_id": "mfg-001",
+      "name": "Dell Inc."
+    },
+    {
+      "sys_id": "mfg-002",
+      "name": "Hewlett Packard Enterprise"
+    }
+  ]
+}

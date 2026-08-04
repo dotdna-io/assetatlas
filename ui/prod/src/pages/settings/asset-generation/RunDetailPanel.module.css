@@ -1,0 +1,352 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* RunDetailPanel.module.css */
+
+.panel {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.error {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   Pipeline data-flow row. Single horizontal chain of cards with → arrows
+   between them, vertically centered with the cards. Each card carries
+   one step's value+label; the arrow sits as a sibling element so flex
+   centering aligns it on the cards' midline.
+--------------------------------------------------------------------------- */
+
+.metrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.metric {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 16px;
+  min-width: 96px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+:global(body:not(.dark-mode)) .metric {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.metricValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.metricLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+}
+
+.metricGood .metricValue { color: var(--success); }
+.metricInfo .metricValue { color: var(--info); }
+.metricWarn .metricValue { color: var(--warning); }
+.metricError .metricValue { color: var(--error); }
+
+/* The arrow sits between two metric cards in the flex row. align-items
+   center on .metrics handles the vertical alignment so the glyph lands
+   on the cards' midline regardless of card height. */
+.metricArrow {
+  font-size: 18px;
+  color: var(--text-tertiary);
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------------------
+   Error callout
+--------------------------------------------------------------------------- */
+
+.errorCallout {
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--error);
+  font-size: var(--font-size-sm);
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------------------------------------------------------------------------
+   Section headings inside panel
+--------------------------------------------------------------------------- */
+
+.sectionHeading {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Data Sources table
+--------------------------------------------------------------------------- */
+
+.batchTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.batchTable th {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Default header alignment is left for the row-label column. Numeric
+   columns and Status get explicit alignment via .textRight/.textCenter
+   below. Setting alignment as a separate rule (instead of inside the
+   `.batchTable th` block) keeps specificity equal so the column-class
+   selectors below can override without needing extra weight. */
+.batchTable th,
+.batchTable td {
+  text-align: left;
+}
+
+:global(body:not(.dark-mode)) .batchTable th {
+  border-bottom-color: rgba(0,0,0,0.08);
+}
+
+.batchTable td {
+  padding: 6px 10px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+:global(body:not(.dark-mode)) .batchTable td {
+  border-bottom-color: rgba(0,0,0,0.04);
+}
+
+/* Numeric columns (Records, Share, Assets, Excluded) right-align so
+   the digits stack on the same right edge for easy comparison. Status
+   keeps center alignment — it's a single glyph, not a number. The
+   "Integration" name column stays left-aligned (the row label).
+   Selectors target both <th> and <td> by element + class so we beat
+   the default `.batchTable th, .batchTable td { text-align: left }`
+   on specificity, not just source order. */
+.batchTable th.textRight,
+.batchTable td.textRight {
+  text-align: right;
+}
+
+.batchTable th.textCenter,
+.batchTable td.textCenter {
+  text-align: center;
+}
+
+.sourceName {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.sourceType {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.06);
+  color: var(--text-tertiary);
+  margin-left: 6px;
+}
+
+:global(body:not(.dark-mode)) .sourceType {
+  background: rgba(0,0,0,0.05);
+}
+
+.sourceError {
+  font-size: 11px;
+  color: var(--error);
+  margin-top: 2px;
+}
+
+.textWarn {
+  color: var(--warning);
+}
+
+.emptyDetail {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   Stage timings — vertical stack of expandable phase rows; expanding a row
+   reveals the per-stage bar list scoped to that phase. Phases that contain
+   slow stages auto-expand.
+--------------------------------------------------------------------------- */
+
+.phases {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.phaseRow {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+:global(body:not(.dark-mode)) .phaseRow {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.phaseSummary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.phaseSummary::-webkit-details-marker { display: none; }
+
+.phaseSummary::before {
+  content: '▶';
+  display: inline-block;
+  width: 10px;
+  font-size: 9px;
+  color: var(--text-tertiary);
+  transition: transform 0.15s ease;
+}
+
+.phaseRow[open] > .phaseSummary::before {
+  transform: rotate(90deg);
+}
+
+.phaseName {
+  flex: 1;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.phaseDuration {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Phase status as plain colored text — replaces the Badge chip so the
+   row reads cleanly. Uppercase + slight letter-spacing keeps it
+   scannable at a glance. */
+.phaseStatus {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.statusSuccess { color: var(--success); }
+.statusError   { color: var(--error); }
+.statusInfo    { color: var(--info, var(--accent)); }
+
+.phaseBody {
+  padding: 4px 12px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+:global(body:not(.dark-mode)) .phaseBody {
+  border-top-color: rgba(0, 0, 0, 0.04);
+}
+
+.stageList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stageItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stageName {
+  width: 180px;
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stageTrack {
+  flex: 1;
+  height: 14px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+:global(body:not(.dark-mode)) .stageTrack {
+  background: rgba(0,0,0,0.04);
+}
+
+.stageFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--info));
+  border-radius: 3px;
+  min-width: 2px;
+  transition: width 0.3s ease;
+}
+
+.stageFillSlow {
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+
+.stageDur {
+  width: 60px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-family: monospace;
+}
+
+.slowBadge {
+  flex-shrink: 0;
+}

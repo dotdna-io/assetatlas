@@ -1,0 +1,185 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.section {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.sectionHeading {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 16px;
+}
+
+.sectionDescription {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin: 0 0 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.input {
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.banner {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid var(--warning);
+  color: var(--text-primary);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  font-size: var(--font-size-sm);
+}
+
+.error {
+  color: var(--error);
+  font-size: var(--font-size-sm);
+  margin-top: 8px;
+}
+
+.success {
+  color: var(--success);
+  font-size: var(--font-size-sm);
+  margin-top: 8px;
+}
+
+.methodList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.methodRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.methodRow:first-child {
+  border-top: none;
+}
+
+.methodMeta {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.methodInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.methodLabel {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.methodActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.renameInput {
+  padding: 4px 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  width: 200px;
+}
+
+.renameInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.addAnother {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* Center the QR + manual-secret row in the enrollment wizard. The shared
+   MfaEnrollment.module.css aligns these to flex-start; we override here
+   without touching the shared module. */
+.qrBlockCentered {
+  align-items: center;
+}
+
+.secretRowCentered {
+  justify-content: center;
+}
+
+/* One-time code: centred, matching the enrollment and sign-in code fields. */
+.codeInput {
+  composes: input;
+  text-align: center;
+}

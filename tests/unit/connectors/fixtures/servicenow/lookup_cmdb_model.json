@@ -1,0 +1,18 @@
+{
+  "result": [
+    {
+      "sys_id": "model-001",
+      "name": "OptiPlex 7090",
+      "display_name": "Dell OptiPlex 7090",
+      "manufacturer": "mfg-001",
+      "model_number": "7090"
+    },
+    {
+      "sys_id": "model-002",
+      "name": "PowerEdge R740",
+      "display_name": "Dell PowerEdge R740",
+      "manufacturer": "mfg-002",
+      "model_number": "R740"
+    }
+  ]
+}

@@ -1,0 +1,305 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  background: var(--bg-primary);
+}
+
+.container {
+  width: 100%;
+  max-width: 420px;
+}
+
+.card {
+  composes: glossyCardHero from '../styles/shared.module.css';
+  border-radius: 16px;
+  padding: 40px;
+}
+
+/* Dark mode: keep the gloss, move it. The hero tier's top-left corner
+   kiss reads as a white smudge here — a corner highlight implies a light
+   source off to one side, and a lone card centered over a flat background
+   has nothing to justify one. A wide, shallow sheen along the top edge
+   reads as lit from above instead, which is the one direction that needs
+   no explanation. Dimmer than the hero default (0.05 vs 0.09) because it
+   covers far more of the card. Light mode keeps its own glare unchanged —
+   white-on-white reads as sheen, not a stain. */
+/* Dark mode: the pre-liquid-glass glossy card (as it was before 3010433d),
+   restored by preference — soft 160° white wash over a faint film, heavier
+   blur, no specular hairlines. Light mode keeps the hero glass. */
+:global(body.dark-mode) .card {
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.03) 30%,
+      rgba(255, 255, 255, 0) 60%
+    ),
+    rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.02);
+}
+
+:global(body.dark-mode) .card::before,
+:global(body.dark-mode) .card::after {
+  background: none;
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.logo img {
+  max-width: 76.5%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Dark mode: lift the logo so the grey "AssetAtlas" wordmark reads lighter
+   against the dark card. Light mode is left as-is. */
+:global(body.dark-mode) .logo img {
+  filter: brightness(1.3);
+}
+
+.error {
+  color: var(--error);
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 8px;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+.input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  transition: all var(--transition-base);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+/* One-time code: centered. A six-digit code pinned to the left edge of a
+   full-width field reads as stranded — unlike a username, the value never
+   grows to fill the box. */
+.codeInput {
+  composes: input;
+  text-align: center;
+}
+
+.passwordWrapper {
+  position: relative;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.passwordToggle:hover {
+  color: var(--text-secondary);
+}
+
+.forgotPassword {
+  text-align: right;
+  margin-bottom: 24px;
+}
+
+.forgotPassword a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+}
+
+.forgotPassword a:hover {
+  text-decoration: underline;
+}
+
+.submitBtn {
+  width: 100%;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* SSO button — heavy glassy treatment: arc top-highlight + 180° fade,
+   inset highlights top + bottom for the lacquered feel. Default has no
+   blue at all; on hover only the border and the text turn blue (no
+   drop shadow, no background tint shift). */
+.ssoBtn {
+  width: 100%;
+  padding: 14px 24px;
+  /* Subtle accent border at rest; hover takes it to the full accent. */
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  border-radius: 8px;
+  background:
+    radial-gradient(ellipse 130% 80% at 50% -20%, rgba(255, 255, 255, 0.14) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.10) 100%);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: border-color var(--transition-base), color var(--transition-base), transform var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.10);
+}
+
+.ssoBtn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.ssoBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+:global(body:not(.dark-mode)) .ssoBtn {
+  border-color: rgba(var(--accent-rgb), 0.35);
+  background:
+    radial-gradient(ellipse 130% 80% at 50% -20%, rgba(255, 255, 255, 0.85) 0%, transparent 65%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.15) 50%, rgba(0, 0, 0, 0.05) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+}
+
+:global(body:not(.dark-mode)) .ssoBtn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Provider logo — bigger now and rendered straight against the button
+   surface. Vendor PNGs in /logos are already transparent. */
+.ssoIcon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.ssoIconStroke {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.ssoDivider {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  margin: 16px 0;
+  position: relative;
+}
+
+.ssoDivider::before,
+.ssoDivider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 20px);
+  height: 1px;
+  background: var(--border);
+}
+
+.ssoDivider::before {
+  left: 0;
+}
+
+.ssoDivider::after {
+  right: 0;
+}
+

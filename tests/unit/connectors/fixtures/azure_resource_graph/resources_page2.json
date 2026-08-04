@@ -1,0 +1,25 @@
+{
+  "totalRecords": 3,
+  "count": 1,
+  "data": [
+    {
+      "id": "/subscriptions/sub-002/resourceGroups/rg-dev/providers/Microsoft.HybridCompute/machines/arc-server-01",
+      "name": "arc-server-01",
+      "type": "microsoft.hybridcompute/machines",
+      "location": "westus2",
+      "resourceGroup": "rg-dev",
+      "subscriptionId": "sub-002",
+      "computerName": "arc-server-01",
+      "osType": "Linux",
+      "osName": "Red Hat Enterprise Linux 9.1",
+      "osVersion": "9.1",
+      "vmSize": "",
+      "powerState": "",
+      "provisioningState": "Succeeded",
+      "vmId": "",
+      "privateIPAddress": "192.168.1.50",
+      "publicIpAddress": "",
+      "tags": {"environment": "dev"}
+    }
+  ]
+}

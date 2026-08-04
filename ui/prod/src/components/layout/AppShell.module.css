@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.shell {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.main {
+  margin-left: var(--sidebar-expanded-width);
+  flex: 1;
+  padding: 40px 66px 24px 36px;
+  max-width: var(--content-max-width);
+  width: calc(100% - var(--sidebar-expanded-width));
+  box-sizing: border-box;
+  overflow-x: hidden;
+  min-width: 0;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Ambient backdrop — faint environment light behind every page so the
+   liquid-glass cards (.glossyCard) have something to transmit; over a
+   flat --bg-primary the blur would return the same flat colour and the
+   glass reads as paint. The homepage stacks its stronger lime aurora
+   on top (dashboard.module.css). position: fixed — it is lighting,
+   not content, so it must not scroll away; its edges end at the
+   viewport so no feather mask is needed. Static: never animate
+   backdrop-filter or this layer (chevron clip-path recomposite bug,
+   see dashboard.module.css). */
+.main::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* Glow centres sit at ~65%/12% so they fall inside the content
+     column on wide monitors (content is left-aligned under
+     --content-max-width; at 85% the glow landed past its edge). */
+  background:
+    radial-gradient(ellipse 50% 42% at 65% 0%, rgba(90, 125, 205, 0.10) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 45% at 12% 88%, rgba(120, 140, 190, 0.06) 0%, transparent 68%);
+}
+
+/* Dark mode: no ambient layer — the background stays plain black and the
+   glass lives on the cards alone. Their translucent gradients and borders
+   carry the look; every tint we tried here (lime, violet) read as a colour
+   cast on the page. Light keeps the blue/slate pair above, which the
+   lighter surfaces need for the blur to transmit anything. */
+:global(body.dark-mode) .main::before {
+  background: none;
+}

@@ -1,0 +1,648 @@
+# AssetAtlas — Unified Production Compose
+#
+# SELinux volume labels. Every bind mount of a path this stack owns carries `:z`.
+# Without it a podman host with SELinux enforcing — RHEL out of the box, i.e. the
+# primary production topology — denies the container all access to the mount, and
+# the failure is unusually opaque: the db entrypoint prints only
+# `chmod: /var/lib/postgresql/data: Permission denied` in a crash loop, and the
+# denials are dontaudit-suppressed so `ausearch` reports NOTHING. Because api
+# gates on `timescaledb: service_healthy`, `compose up -d` then hangs forever
+# rather than failing (#1325).
+#
+# `:z` (shared) and never `:Z` (private): `logs`, `chromadb` and `metrics-forwarder`
+# are each mounted by TWO services, and `:Z` gives each container its own MCS
+# category, so whichever relabels second locks the first one out. Docker accepts
+# `:z` and ignores it when SELinux is absent, so this is safe on the Ubuntu/Docker
+# path and needs no per-runtime templating.
+#
+# Deliberately NOT labelled: the monitoring overlay's host mounts (`/`, `/proc`,
+# `/sys`, `/var/run`, `/dev/disk`, `/var/lib/docker`). `:z` there would recursively
+# relabel the host's own filesystem. Named volumes need no suffix — the runtime
+# labels those itself.
+#
+# Works for both online (internet-connected) and offline (air-gapped) deployments:
+#
+#   Online:  vendor images pulled from public registries; app images pulled
+#            from the upstream ghcr.io/dotdna-io/... by default. Forks
+#            must override every API_IMAGE / SCHEDULER_IMAGE / MCP_IMAGE /
+#            UI_IMAGE / TEAMS_BRIDGE_IMAGE in their .env to
+#            point at their own registry — issue #596 BLOCKER-6 tracks
+#            making the installer derive these at install-time so the
+#            compose default doesn't matter.
+#   Offline: caller sets API_IMAGE / SCHEDULER_IMAGE / MCP_IMAGE / UI_IMAGE to
+#            localhost/... (images already loaded from tar) AND sets
+#            DB_IMAGE / REDIS_IMAGE / NGINX_IMAGE / PGADMIN_IMAGE for vendor images.
+#            The offline install.sh exports these vars automatically before compose up.
+#
+# Persistent data lives under DATA_DIR (default: ./data-volumes).
+# On offline/RHEL installs the installer sets DATA_DIR to a stable path.
+#
+# Usage (online):
+#   docker compose -f deploy/compose/docker-compose.yml up -d
+#
+# Usage (offline — images already loaded):
+#   API_IMAGE=localhost/assetatlas-backend:latest \
+#   SCHEDULER_IMAGE=localhost/assetatlas-backend:latest \
+#   MCP_IMAGE=localhost/assetatlas-mcp:latest \
+#   UI_IMAGE=localhost/assetatlas-ui:latest \
+#   DB_IMAGE=localhost/assetatlas-db:latest \
+#   REDIS_IMAGE=localhost/assetatlas-redis:latest \
+#   NGINX_IMAGE=localhost/assetatlas-nginx:latest \
+#   PGADMIN_IMAGE=localhost/assetatlas-pgadmin:latest \
+#   docker compose -f deploy/compose/docker-compose.yml up -d
+#
+# Optional stacks:
+#   Monitoring:  docker compose -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.monitoring.yml up -d
+#   pgAdmin:     add --profile tools
+#   Forwarding:  add --profile forwarding to push the app's /metrics to an
+#                external Prometheus-native endpoint (Grafana/Mimir/Thanos/
+#                VictoriaMetrics) via a bundled Prometheus agent. Set
+#                METRICS_REMOTE_WRITE_URL (+ optional auth / external labels) in
+#                .env. Runs standalone — does NOT need the monitoring overlay.
+#                See deploy/lib/env.sh for the variables it reads.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # PostgreSQL with TimescaleDB extension
+  timescaledb:
+    # Every vendor image here and in the monitoring overlay names its registry on
+    # purpose. Podman resolves a SHORT name only through the
+    # unqualified-search-registries list in /etc/containers/registries.conf, and a
+    # stock Ubuntu ships that list empty — so podman-compose answers
+    # `short-name "nginx:1.27-alpine" did not resolve to an alias and no
+    # unqualified-search registries are defined` and db/redis/nginx never start.
+    # Docker normalises the prefix away again (an image pulled as
+    # `redis:7.4-alpine` answers to `docker.io/library/redis:7.4-alpine`), and so
+    # does `podman load`, which is how an air-gapped host's storage names them.
+    # Shortening these back breaks rootless Podman installs.
+    image: ${DB_IMAGE:-docker.io/timescale/timescaledb:2.17.2-pg16}
+    container_name: assetatlas-db
+    restart: unless-stopped
+    logging: *default-logging
+    command: postgres -c max_connections=200
+    environment:
+      POSTGRES_DB: assetatlas
+      POSTGRES_USER: assetatlas
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TIMESCALEDB_TELEMETRY: 'off'
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "${DB_EXTERNAL_PORT:-5434}:5432"
+    volumes:
+      # `:z` on every app bind mount below — see the note at the top of this file.
+      - ${DATA_DIR:-./data-volumes}/postgres:/var/lib/postgresql/data:z
+      # schema-full.sql bootstraps the DB on first init; bootstrap_if_empty in
+      # apply_migrations marks all migrations as already applied. Regen procedure
+      # in deploy/lib/migrate.sh.
+      - ./database/schema-full.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro,z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assetatlas -d assetatlas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    networks:
+      - assetatlas-network
+
+  # Redis Cache
+  redis:
+    image: ${REDIS_IMAGE:-docker.io/library/redis:7.4-alpine}
+    container_name: assetatlas-redis
+    restart: unless-stopped
+    logging: *default-logging
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - ${DATA_DIR:-./data-volumes}/redis:/data:z
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - assetatlas-network
+
+  # Flask REST API (Gunicorn, 4 workers)
+  api:
+    image: ${API_IMAGE:-ghcr.io/dotdna-io/assetatlas-api:latest}
+    container_name: assetatlas-api
+    restart: unless-stopped
+    logging: *default-logging
+    # No `command:` and no PROMETHEUS_MULTIPROC_DIR here, both on purpose
+    # (#1128). Everything the Prometheus multiprocess setup needs — the `-c`
+    # flag, the config file it names, and the env var itself — lives inside the
+    # image, because compose and the image do not arrive together: an online
+    # install applies the bundle's compose but pulls `:latest`. Requiring
+    # anything here that only a newer image provides kills the api outright
+    # (gunicorn aborting on a missing config, or every worker dying with
+    # FileNotFoundError on a directory nothing created). An older image simply
+    # runs its own older CMD instead.
+    environment:
+      DATABASE_URL: postgresql://assetatlas:${DB_PASSWORD}@timescaledb:5432/assetatlas
+      REDIS_URL: redis://redis:6379/0
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ASSETATLAS_ENCRYPTION_KEY: ${ASSETATLAS_ENCRYPTION_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://localhost}
+      SCHEDULER_MODE: disabled
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
+      LOG_DIR: /app/logs
+      TAG_RULES_AUTO_EXECUTE: ${TAG_RULES_AUTO_EXECUTE:-true}
+      # Reference-data update bundles (Settings -> Data -> Reference Data).
+      # GitHub repo whose Releases hold MAC-vendor / OS-EOL bundles. The code
+      # default is a non-existent placeholder so misconfigured forks fail loudly;
+      # without this set, "Check for updates" reports "upstream unavailable".
+      REFERENCE_BUNDLE_REPO: ${REFERENCE_BUNDLE_REPO:-dotdna-io/assetatlas-reference-bundles}
+      CACHE_TYPE: redis
+      CACHE_DEFAULT_TIMEOUT: ${CACHE_DEFAULT_TIMEOUT:-300}
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+      ASSETATLAS_BRIDGE_API_KEY: ${ASSETATLAS_BRIDGE_API_KEY:-}
+      TEAMS_LINK_SECRET_KEY: ${TEAMS_LINK_SECRET_KEY:-}
+      ASSETATLAS_PUBLIC_BASE_URL: ${ASSETATLAS_PUBLIC_BASE_URL:-}
+      # Shared secret alertmanager presents in `Authorization: Bearer <secret>`
+      # when posting to /api/alerts/webhook/alertmanager. Without this var
+      # the api reads None, every webhook auth comparison fails, and
+      # alertmanager logs "401 Invalid webhook credentials" forever — alerts
+      # never make it from prometheus into the assetatlas alert table.
+      ALERTMANAGER_WEBHOOK_SECRET: ${ALERTMANAGER_WEBHOOK_SECRET:-}
+      # Custom integration logos uploaded via the wizard live on a
+      # persistent bind mount so they survive image rebuilds. The API
+      # serves them via /api/integrations/logos/file/<name>.
+      UPLOADED_LOGOS_DIR: /app/data/uploaded-logos
+      # #922 P2b: where the API renders the metrics-forwarder agent's remote_write config
+      # (shared with the agent via the metrics-forwarder bind mount below) and the agent's
+      # hot-reload endpoint. Both have safe in-code defaults; set here so the path tracks
+      # the volume mount.
+      METRICS_FORWARDER_CONFIG_DIR: /app/data/metrics-forwarder
+      METRICS_FORWARDER_RELOAD_URL: http://metrics-forwarder:9090/-/reload
+    volumes:
+      - ${DATA_DIR:-./data-volumes}/logs:/app/logs:z
+      # Persist ChromaDB across container restarts. Without this, embeddings
+      # land inside the container's own writable layer and disappear on
+      # `compose down`/restart, forcing a full re-embed on every boot — and
+      # the chromadb init race fires every restart, not just first install.
+      - ${DATA_DIR:-./data-volumes}/chromadb:/app/data/chromadb:z
+      - ${DATA_DIR:-./data-volumes}/uploaded-logos:/app/data/uploaded-logos:z
+      # #922 P2b: shared with the opt-in metrics-forwarder — the API writes the agent's
+      # rendered remote_write config here; the agent reads it (see its entrypoint). The
+      # installer's prepare_data_dirs makes this API-writable + agent-readable.
+      - ${DATA_DIR:-./data-volumes}/metrics-forwarder:/app/data/metrics-forwarder:z
+    expose:
+      - "5001"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 6G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    networks:
+      - assetatlas-network
+
+  # Background job scheduler (SINGLE INSTANCE ONLY — never scale above replicas: 1)
+  scheduler:
+    image: ${SCHEDULER_IMAGE:-ghcr.io/dotdna-io/assetatlas-scheduler:latest}
+    container_name: assetatlas-scheduler
+    restart: unless-stopped
+    logging: *default-logging
+    command: python src/scheduler_worker.py
+    environment:
+      DATABASE_URL: postgresql://assetatlas:${DB_PASSWORD}@timescaledb:5432/assetatlas
+      REDIS_URL: redis://redis:6379/0
+      FLASK_ENV: production
+      ASSETATLAS_ENCRYPTION_KEY: ${ASSETATLAS_ENCRYPTION_KEY}
+      SCHEDULER_MODE: worker
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
+      LOG_DIR: /app/logs
+      LOG_RETENTION_ENABLED: ${LOG_RETENTION_ENABLED:-true}
+      LOG_RETENTION_CRON: ${LOG_RETENTION_CRON:-0 3 * * *}
+    volumes:
+      - ${DATA_DIR:-./data-volumes}/logs:/app/logs:z
+      # Scheduler also imports ChromaDBStore (asset-generation embeds new
+      # field/value samples). Share the same persisted volume as the api.
+      - ${DATA_DIR:-./data-volumes}/chromadb:/app/data/chromadb:z
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      replicas: 1  # Swarm-only; container_name above enforces single-instance in plain Compose
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - assetatlas-network
+
+  # MCP Server (AI assistant integration via Streamable HTTP)
+  mcp:
+    image: ${MCP_IMAGE:-ghcr.io/dotdna-io/assetatlas-mcp:latest}
+    container_name: assetatlas-mcp
+    restart: unless-stopped
+    logging: *default-logging
+    command: python -m src.mcp.server --http --port 8100
+    environment:
+      DATABASE_URL: postgresql://assetatlas:${DB_PASSWORD}@timescaledb:5432/assetatlas
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ASSETATLAS_ENCRYPTION_KEY: ${ASSETATLAS_ENCRYPTION_KEY}
+      MCP_PORT: "8100"
+    expose:
+      - "8100"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # EVERY element here must be a single shell WORD: no spaces, no quotes, no
+      # metacharacters. podman-compose flattens an exec-form array into one
+      # `/bin/sh -c <string>` by joining the elements with spaces and quoting
+      # none of them, so the previous probe
+      #   ["CMD","python","-c","import socket; s=socket.create_connection(('localhost',8100),2); s.close()"]
+      # reached sh as bare text and died on `/bin/sh: 1: Syntax error: "("
+      # unexpected` — every poll, for the life of the container. CMD-SHELL does
+      # not rescue it (the embedded `'` closes podman-compose's own quoting) and
+      # neither does podman-compose 1.6.0; both were measured. The container was
+      # serving the whole time, so this was a permanently red probe on a healthy
+      # service — and once the health window stops mistaking "no result yet" for
+      # "no healthcheck" (#C, health.sh), a permanently red probe is a
+      # permanently failed install and, on an update, the destructive rollback.
+      #
+      # No `-f`: the MCP endpoint answers a plain GET with 406, which `-f` turns
+      # into exit 22. This is deliberately a CONNECTION-level probe — a 406 is
+      # proof the port is bound and the server is answering — so the body is
+      # discarded and only curl's transport status matters (7 = refused when the
+      # server is down). --max-time keeps a hung socket inside `timeout: 10s`.
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "--max-time", "5", "http://localhost:8100/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G        # was 512M — mcp registers ~28 tool modules and needs ~670 MiB to boot (#785)
+        reservations:
+          cpus: '0.25'
+          memory: 256M      # was 128M
+    networks:
+      - assetatlas-network
+
+  # Microsoft Teams bridge (always-on; idles when no credentials configured)
+  # Translates Bot Framework activities <-> AssetAtlas chat API.
+  # Built from its own Dockerfile.teams-bridge, NOT retagged from api (#1069):
+  # this is the only container reachable from the internet, so it carries just
+  # the four packages it imports rather than the ML/data stack. Keep it that
+  # way — it talks to the api over HTTP and needs nothing else from src/.
+  # Credentials are managed in the Settings UI (Settings → Chatbot → Teams)
+  # and fetched at runtime via the API.
+  teams-bridge:
+    image: ${TEAMS_BRIDGE_IMAGE:-ghcr.io/dotdna-io/assetatlas-teams-bridge:latest}
+    container_name: assetatlas-teams-bridge
+    restart: unless-stopped
+    logging: *default-logging
+    command: python -m src.teams_bridge
+    environment:
+      ASSETATLAS_API_URL: http://api:5001
+      ASSETATLAS_BRIDGE_API_KEY: ${ASSETATLAS_BRIDGE_API_KEY}
+      TEAMS_BOT_APP_ID: ${TEAMS_BOT_APP_ID:-}
+      TEAMS_BOT_APP_PASSWORD: ${TEAMS_BOT_APP_PASSWORD:-}
+      TEAMS_BOT_APP_TENANT_ID: ${TEAMS_BOT_APP_TENANT_ID:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    expose:
+      - "3978"
+    depends_on:
+      api:
+        condition: service_healthy
+    # NO healthcheck — and that is a gap, not a decision that this container does
+    # not need watching. It is UNMONITORED until the image can carry a probe.
+    #
+    # podman-compose flattens an exec-form array into `/bin/sh -c <joined>` with
+    # no quoting (see mcp above), so a probe survives only if every element is a
+    # bare shell word. This image has no tool that can be driven that way: it is
+    # python:3.13-slim with four pip packages and nothing else (#1069 above —
+    # deliberately minimal because this is the only internet-reachable
+    # container), so there is no curl, no wget, no nc, no ss. Python is the only
+    # thing here that can open a socket and a Python call cannot be written
+    # without `(`, which is exactly the character that broke the old probe.
+    # Everything else reachable from a shell word is a text match against kernel
+    # state (`grep <hex-port> /proc/net/tcp`), i.e. a probe that can report
+    # success without having tested anything — the failure mode of #1233, which
+    # is worse than no probe at all.
+    #
+    # Keeping the old probe was not an option: it fails 100% of the time on
+    # podman, so once the health window stops reading "no result yet" as "no
+    # healthcheck" (#C), it would fail every rootless install and fire the
+    # destructive auto-rollback on every rootless update. Removing it costs
+    # Docker installs a probe that did work there; that is the price of not
+    # shipping one that is permanently red on the primary production topology.
+    #
+    # The blast radius is bounded and was checked: nothing `depends_on`
+    # teams-bridge (nginx gates on api/ui/mcp only), and with no Teams
+    # credentials the service idles — it logs `teams_bridge_disabled=1
+    # reason=toggle_off` and serves nothing. The real fix is a probe script
+    # inside the image (`COPY healthcheck.py` — no new packages, so #1069's
+    # exposure argument is untouched) plus `test: ["CMD","python","healthcheck.py"]`,
+    # every element a bare word. That needs an image rebuild and publish, which
+    # is out of scope here.
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    networks:
+      - assetatlas-network
+
+  # Production UI (Node.js/Express/D3.js)
+  ui:
+    image: ${UI_IMAGE:-ghcr.io/dotdna-io/assetatlas-ui:latest}
+    container_name: assetatlas-ui
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - assetatlas-network
+
+  # Nginx Reverse Proxy (HTTPS termination, routing)
+  nginx:
+    image: ${NGINX_IMAGE:-docker.io/library/nginx:1.27-alpine}
+    container_name: assetatlas-nginx
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    environment:
+      # The HTTP->HTTPS redirect has to emit the port the operator is actually
+      # reaching us on, and nginx cannot know it: inside the container HTTPS is
+      # always 443, while outside it is whatever HTTPS_PORT publishes.
+      HTTPS_PORT: ${HTTPS_PORT:-8443}
+
+      # Opts in to /docker-entrypoint.d/15-local-resolvers.envsh, which reads
+      # the container's own /etc/resolv.conf and exports NGINX_LOCAL_RESOLVERS
+      # before the envsubst pass runs. The conf.d templates need it because they
+      # proxy through variables ($upstream_*) to force per-request re-resolution,
+      # which makes nginx's `resolver` directive load-bearing — and the right
+      # address depends on the runtime (Docker 127.0.0.11, Podman's aardvark-dns
+      # something else entirely).
+      #
+      # This is an explicit opt-in: that script returns early unless
+      # NGINX_ENTRYPOINT_LOCAL_RESOLVERS is set to a non-empty value, so without
+      # this line the variable is never exported, envsubst has nothing to
+      # substitute (its list is built from the environment), and the placeholder
+      # reaches nginx verbatim — the container then dies at startup with
+      # `[emerg] host not found in resolver "..."`. Verified against
+      # nginx:1.27-alpine: unset -> exit 1, set -> resolver 127.0.0.11 on Docker.
+      #
+      # This puts a FLOOR under NGINX_IMAGE: the entrypoint script first shipped
+      # in nginx 1.25 (checked — 1.25/1.26/1.27-alpine have it, 1.21/1.23 do
+      # not), so pinning an older image means no export and no nginx. It fails
+      # loudly at startup rather than silently, which is the one mercy here.
+      NGINX_ENTRYPOINT_LOCAL_RESOLVERS: "1"
+
+      # NGINX_ENVSUBST_FILTER restricts substitution to variable names matching
+      # it. The entrypoint hands envsubst an explicit list built from the
+      # environment, so nginx's own $host / $request_uri / $upstream_* are never
+      # candidates either way (they are not env vars) — this is not what keeps
+      # them intact. What it buys is that only the names spelled out below are
+      # ever substituted, so a future env var whose NAME collides with an nginx
+      # variable used in the config cannot silently blank it out.
+      #
+      # The flip side: a placeholder the templates use but this filter omits is
+      # left as a literal and nginx refuses to start. Every ${...} in
+      # docker/nginx/conf.d/*.conf must therefore be named here — the two lists
+      # are checked against each other by test_nginx_conf.bats.
+      #
+      # Matching is a regex against the name, so a plain substring suffices and
+      # '|' is alternation. Deliberately not anchored as ^...$: that needs a
+      # literal '$', compose would want it as '$$', and what actually reaches
+      # the container then hinges on interpolation rules — an avoidable way to
+      # get this wrong.
+      NGINX_ENVSUBST_FILTER: "HTTPS_PORT|NGINX_LOCAL_RESOLVERS"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro,z
+      # Mounted as a TEMPLATE, not straight into conf.d: the image's entrypoint
+      # runs envsubst over /etc/nginx/templates/*.template and writes the result
+      # to /etc/nginx/conf.d/. Doing the substitution at container start rather
+      # than at install time means update.sh — which re-extracts this whole conf
+      # tree from the bundle — cannot silently revert it.
+      - ./docker/nginx/conf.d/${NGINX_CONF:-online}.conf:/etc/nginx/templates/default.conf.template:ro,z
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro,z
+      - ${DATA_DIR:-./data-volumes}/nginx-logs:/var/log/nginx:z
+    depends_on:
+      api:
+        condition: service_healthy
+      ui:
+        condition: service_healthy
+      mcp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    networks:
+      - assetatlas-network
+
+  # pgAdmin (optional — database management UI)
+  # Enable with: docker compose ... --profile tools up -d
+  pgadmin:
+    image: ${PGADMIN_IMAGE:-docker.io/dpage/pgadmin4:8.14}
+    container_name: assetatlas-pgadmin
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@assetatlas.local}
+      # pgadmin runs only when the `pgadmin` compose profile is active, but
+      # docker compose interpolates this expression at parse time regardless
+      # of profile selection. Use ${VAR:-} (empty default, parse-safe) rather
+      # than ${VAR:?error} — operators who don't enable the profile shouldn't
+      # be forced to set this. pgadmin itself rejects empty passwords at boot
+      # if the profile IS enabled, so the fail-loud lands at the right layer.
+      PGADMIN_DEFAULT_PASSWORD: "${PGADMIN_PASSWORD:-}"
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - ${DATA_DIR:-./data-volumes}/pgadmin:/var/lib/pgadmin:z
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    networks:
+      - assetatlas-network
+    profiles:
+      - tools
+
+  # Metrics forwarder (optional — Prometheus agent mode, #922 Phase 2a)
+  # Scrapes the app's pull /metrics endpoints (api:5001, scheduler:9091) and
+  # remote_writes them to a customer-configured Prometheus-native endpoint.
+  # OFF by default — enable with: docker compose ... --profile forwarding up -d
+  # Runs standalone; does NOT require the monitoring overlay. The agent config is
+  # rendered from env at container start (mirrors the alertmanager
+  # entrypoint-from-env pattern in docker-compose.monitoring.yml).
+  # --web.enable-lifecycle leaves a POST /-/reload seam for the Phase 2b
+  # runtime-config layer.
+  metrics-forwarder:
+    image: ${PROMETHEUS_AGENT_IMAGE:-docker.io/prom/prometheus:v2.55.1}
+    container_name: assetatlas-metrics-forwarder
+    restart: unless-stopped
+    logging: *default-logging
+    # #922 P2b: the API writes the shared config 0640 (owner rw, group r) so the
+    # plaintext remote_write secret is NOT world-readable. The API runs as gid 1000
+    # (assetatlas); add that group here so this agent (a different uid) can read the
+    # config via group. Override with METRICS_FORWARDER_GID if the api image's gid differs.
+    group_add:
+      - "${METRICS_FORWARDER_GID:-1000}"
+    environment:
+      # Required when the profile is active — the container fails loud and exits
+      # if the URL is empty (see the guard below). Auth is optional: bearer takes
+      # precedence over basic (Prometheus permits only one auth per remote_write).
+      # METRICS_EXTERNAL_LABELS is optional, comma-separated key=value pairs.
+      METRICS_REMOTE_WRITE_URL: ${METRICS_REMOTE_WRITE_URL:-}
+      METRICS_REMOTE_WRITE_BEARER_TOKEN: ${METRICS_REMOTE_WRITE_BEARER_TOKEN:-}
+      METRICS_REMOTE_WRITE_USERNAME: ${METRICS_REMOTE_WRITE_USERNAME:-}
+      METRICS_REMOTE_WRITE_PASSWORD: ${METRICS_REMOTE_WRITE_PASSWORD:-}
+      METRICS_EXTERNAL_LABELS: ${METRICS_EXTERNAL_LABELS:-}
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -eu
+        SHARED=/etc/assetatlas-forwarder/agent.yml
+        CONFIG=/etc/prometheus/agent.yml
+        # #922 P2b: prefer the API-managed config on the shared volume if present AND
+        # readable — POST /-/reload re-reads it, so runtime config changes from
+        # Settings -> Monitoring apply live. Test readability (-r), not just existence, so
+        # a perms/group_add mismatch falls back to the env render below instead of
+        # crash-looping on a file the agent can't read. Otherwise fall back to the
+        # Phase-2a env render so ops-only (env-configured) deploys keep working unchanged.
+        if [ -r "$$SHARED" ]; then
+          echo "metrics-forwarder: using API-managed config at $$SHARED" >&2
+          exec /bin/prometheus \
+            --enable-feature=agent \
+            --config.file="$$SHARED" \
+            --storage.agent.path=/prometheus \
+            --web.enable-lifecycle
+        fi
+        if [ -z "$$METRICS_REMOTE_WRITE_URL" ]; then
+          echo "ERROR: no API-managed config at $$SHARED and METRICS_REMOTE_WRITE_URL is empty — configure forwarding in Settings -> Monitoring (or set the env vars) before enabling the 'forwarding' profile" >&2
+          exit 1
+        fi
+        umask 077
+        # Emit a value as a YAML single-quoted scalar (embedded quotes doubled)
+        # so URLs / tokens / passwords / labels with special characters can't
+        # break the rendered config.
+        yq() { printf "'%s'" "$$(printf '%s' "$$1" | sed "s/'/''/g")"; }
+        {
+          echo 'global:'
+          echo '  scrape_interval: 15s'
+          echo '  external_labels:'
+          echo '    installation: assetatlas'
+          if [ -n "$$METRICS_EXTERNAL_LABELS" ]; then
+            ( IFS=','
+              for pair in $$METRICS_EXTERNAL_LABELS; do
+                # Tolerate whitespace around comma-separated pairs ("k=v, k2=v2")
+                # so the label name isn't emitted mis-indented / with a stray space.
+                while [ "$$pair" != "$${pair# }" ]; do pair=$${pair# }; done
+                while [ "$$pair" != "$${pair% }" ]; do pair=$${pair% }; done
+                if [ -z "$$pair" ]; then continue; fi
+                printf '    %s: %s\n' "$$(yq "$${pair%%=*}")" "$$(yq "$${pair#*=}")"
+              done )
+          fi
+          echo 'scrape_configs:'
+          echo '  - job_name: assetatlas-api'
+          echo '    metrics_path: /metrics'
+          echo '    static_configs:'
+          echo "      - targets: ['api:5001']"
+          echo '  - job_name: assetatlas-scheduler'
+          echo '    metrics_path: /metrics'
+          echo '    static_configs:'
+          echo "      - targets: ['scheduler:9091']"
+          echo 'remote_write:'
+          printf '  - url: %s\n' "$$(yq "$$METRICS_REMOTE_WRITE_URL")"
+          if [ -n "$$METRICS_REMOTE_WRITE_BEARER_TOKEN" ]; then
+            printf '    bearer_token: %s\n' "$$(yq "$$METRICS_REMOTE_WRITE_BEARER_TOKEN")"
+          elif [ -n "$$METRICS_REMOTE_WRITE_USERNAME" ] || [ -n "$$METRICS_REMOTE_WRITE_PASSWORD" ]; then
+            echo '    basic_auth:'
+            printf '      username: %s\n' "$$(yq "$$METRICS_REMOTE_WRITE_USERNAME")"
+            printf '      password: %s\n' "$$(yq "$$METRICS_REMOTE_WRITE_PASSWORD")"
+          fi
+        } > "$$CONFIG"
+        # v2.55.1 enables agent mode via --enable-feature=agent (the bare --agent
+        # flag is Prometheus 3.x only). Agent mode uses --storage.agent.path (a
+        # remote_write send-ahead WAL), not --storage.tsdb.path.
+        exec /bin/prometheus \
+          --enable-feature=agent \
+          --config.file="$$CONFIG" \
+          --storage.agent.path=/prometheus \
+          --web.enable-lifecycle
+    volumes:
+      - metrics-forwarder-data:/prometheus
+      # #922 P2b: read the API-managed remote_write config (written by the api service to
+      # the shared metrics-forwarder bind mount). Its presence makes the entrypoint
+      # prefer it over the env render. Read-only — only the API writes it.
+      - ${DATA_DIR:-./data-volumes}/metrics-forwarder:/etc/assetatlas-forwarder:ro,z
+    networks:
+      - assetatlas-network
+    profiles:
+      - forwarding
+
+volumes:
+  # WAL send-ahead buffer for the opt-in metrics-forwarder (Prometheus agent).
+  # A named volume (not a DATA_DIR bind mount) — this is a transient remote_write
+  # buffer, not durable data that needs backing up. Mirrors the monitoring
+  # stack's prometheus-data volume.
+  metrics-forwarder-data:
+
+networks:
+  assetatlas-network:
+    driver: bridge

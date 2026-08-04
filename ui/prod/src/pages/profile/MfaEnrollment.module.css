@@ -1,0 +1,119 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.section {
+  max-width: 600px;
+  padding: 32px 0;
+}
+
+.heading {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.description {
+  color: var(--text-secondary);
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.statusEnabled {
+  color: var(--text-secondary);
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.steps {
+  color: var(--text-secondary);
+  padding-left: 20px;
+  margin: 0 0 24px;
+  line-height: 1.8;
+}
+
+.qrBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.secretRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.secretLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.secret {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  letter-spacing: 0.05em;
+  word-break: break-all;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--surface);
+  width: 100%;
+  max-width: 240px;
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.error {
+  color: var(--error, #d32f2f);
+  font-size: var(--font-size-sm);
+  margin-top: 12px;
+}
+
+
+/* One-time code: centred. A six-digit code pinned to the left edge of a
+   full-width field reads as stranded — unlike a password, the value never
+   grows to fill the box. Kept separate from .input because the disable
+   form's password field shares that class and must stay left-aligned. */
+.codeInput {
+  composes: input;
+  text-align: center;
+}

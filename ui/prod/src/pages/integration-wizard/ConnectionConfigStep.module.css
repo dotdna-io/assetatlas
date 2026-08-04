@@ -1,0 +1,20 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.form { display: flex; flex-direction: column; gap: var(--space-4); }
+.field { display: flex; flex-direction: column; gap: var(--space-1); }
+.fieldLabel { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-secondary); }
+.required { color: var(--error); }
+.fieldInput { height: 36px; width: 100%; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font-size: var(--font-size-sm); font-family: var(--font-family); outline: none; transition: border-color var(--transition-fast); }
+.fieldInput:focus { border-color: var(--accent); }
+.fieldHelp { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+.fieldTextarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font-size: var(--font-size-sm); font-family: var(--font-family); resize: vertical; min-height: 80px; outline: none; }
+.fieldTextarea:focus { border-color: var(--accent); }
+.passwordField { position: relative; }
+.passwordField .fieldInput { padding-right: 2.5rem; }
+.passwordToggle { position: absolute; right: var(--space-3); top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: var(--space-1); color: var(--text-tertiary); }
+.passwordToggle:hover { color: var(--text-primary); }
+.fileUpload { border: 2px dashed var(--border); border-radius: var(--radius-md); padding: var(--space-6); text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); color: var(--text-secondary); transition: border-color var(--transition-fast); }
+.fileUpload:hover, .fileUploadOver { border-color: var(--accent); color: var(--accent); }
+.fileInputHidden { display: none; }
+.fileUploadHint { font-size: 11px; color: var(--text-tertiary); }
+.fileName { font-weight: 500; color: var(--text-primary); }
+.noFields { font-size: var(--font-size-sm); color: var(--text-tertiary); font-style: italic; }

@@ -1,0 +1,95 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.container {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+}
+
+.svg {
+  display: block;
+}
+
+/* Legend */
+.legend {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-60%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 120px;
+  padding-left: 4px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Axis */
+.axisLine {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.tick {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.tickLabel {
+  font-size: 11px;
+  font-family: var(--font-family);
+  fill: var(--text-tertiary);
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  transform: translateY(-90%);
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #303034;
+  color: #e5e5e5;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:global(body:not(.dark-mode)) .tooltip {
+  background: #ffffff;
+  color: #1e293b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.tooltipDate {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  opacity: 0.9;
+  line-height: 1.5;
+}
+
+.tooltipDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

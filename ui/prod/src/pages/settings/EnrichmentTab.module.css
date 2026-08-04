@@ -1,0 +1,65 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/EnrichmentTab.module.css */
+
+/* ---------------------------------------------------------------------------
+   Header row (dataset count + upload button)
+--------------------------------------------------------------------------- */
+
+.header {
+  composes: glossyCard from '../../styles/shared.module.css';
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border-radius: var(--radius-sm);
+}
+
+.count {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.count strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Empty state
+--------------------------------------------------------------------------- */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.emptyIcon {
+  margin-bottom: 16px;
+  opacity: 0.3;
+  color: var(--text-primary);
+}
+
+.emptyTitle {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.emptyDesc {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Timing note: uploaded datasets are applied by the pipeline (stage 21), so
+   the columns do not appear on assets until the next run. */
+.pipelineNote {
+  margin: 0 0 16px;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}

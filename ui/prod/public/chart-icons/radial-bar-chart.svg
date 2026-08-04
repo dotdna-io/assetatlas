@@ -1,0 +1,35 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="radial-grad-1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#EF4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DC2626;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="radial-grad-2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="radial-grad-3" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="radial-grad-4" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circles (dotted guide rings) -->
+  <circle cx="60" cy="60" r="48" fill="none" stroke="#444" stroke-width="1" stroke-dasharray="2,4" opacity="0.3"/>
+  <circle cx="60" cy="60" r="38" fill="none" stroke="#444" stroke-width="1" stroke-dasharray="2,4" opacity="0.3"/>
+  <circle cx="60" cy="60" r="28" fill="none" stroke="#444" stroke-width="1" stroke-dasharray="2,4" opacity="0.3"/>
+  <circle cx="60" cy="60" r="18" fill="none" stroke="#444" stroke-width="1" stroke-dasharray="2,4" opacity="0.3"/>
+
+  <!-- Radial bars as segments (like in the screenshot) -->
+  <path d="M 60 60 L 60 12 A 48 48 0 0 1 85 25 Z" fill="url(#radial-grad-1)" opacity="0.9"/>
+  <path d="M 60 60 L 91 29 A 48 48 0 0 1 99.5 53 Z" fill="url(#radial-grad-2)" opacity="0.9"/>
+  <path d="M 60 60 L 99.5 67 A 48 48 0 0 1 78 97 Z" fill="url(#radial-grad-2)" opacity="0.9"/>
+  <path d="M 60 60 L 42 97 A 48 48 0 0 1 20.5 67 Z" fill="url(#radial-grad-3)" opacity="0.9"/>
+
+  <!-- Center circle -->
+  <circle cx="60" cy="60" r="12" fill="#1a1a1a"/>
+</svg>

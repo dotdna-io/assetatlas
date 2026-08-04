@@ -1,0 +1,46 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Mirrors WebhookChannelForm.module.css tokens. */
+.cardBody {
+  padding: 6px 18px 14px;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.recipientRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.recipientRow input {
+  flex: 1;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+}
+
+.recipientRow input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.addBtn {
+  margin-top: 4px;
+}
+
+.hint {
+  margin-top: 10px;
+  font-size: var(--font-size-xs);
+  color: var(--warning, var(--text-secondary));
+}

@@ -1,0 +1,10 @@
+{
+  "data": {
+    "authorizedSites": {
+      "sites": [
+        {"id": "site-001", "name": "HQ Office"},
+        {"id": "site-002", "name": "Branch Office"}
+      ]
+    }
+  }
+}

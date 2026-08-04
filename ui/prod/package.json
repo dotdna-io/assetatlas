@@ -1,0 +1,63 @@
+{
+  "name": "assetatlas-ui",
+  "version": "0.0.0-managed-by-repo-VERSION",
+  "private": true,
+  "description": "Advanced Data Visualization Platform for Cybersecurity Asset Management",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev:server": "nodemon server.js",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "help:screenshots": "playwright test --project=help"
+  },
+  "keywords": [
+    "visualization",
+    "charts",
+    "svg",
+    "data-viz",
+    "cybersecurity",
+    "asset-management",
+    "mfa",
+    "dashboard"
+  ],
+  "author": "AssetAtlas Team",
+  "license": "AGPL-3.0-or-later",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.91.0",
+    "compression": "^1.7.4",
+    "escape-html": "^1.0.3",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "http-proxy-middleware": "^3.0.5",
+    "morgan": "^1.10.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.1.0",
+    "react-qrcode-logo": "^4.1.0",
+    "react-router-dom": "^7.13.1",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "jsdom": "^29.0.0",
+    "nodemon": "^3.0.1",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1",
+    "vitest": "^4.1.0"
+  }
+}

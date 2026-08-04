@@ -1,0 +1,41 @@
+{
+  "data": [
+    {
+      "id": "agent-001",
+      "computerName": "DESKTOP-WIN001",
+      "serialNumber": "SN-001",
+      "osType": "windows",
+      "osName": "Windows 10 Pro",
+      "machineType": "desktop",
+      "modelName": "LENOVO - ThinkPad T14",
+      "isActive": true,
+      "isDecommissioned": false,
+      "activeThreats": 0,
+      "networkInterfaces": [
+        {
+          "name": "Ethernet",
+          "physical": "AA:BB:CC:DD:EE:01",
+          "inet": ["10.0.1.1"],
+          "inet6": []
+        }
+      ]
+    },
+    {
+      "id": "agent-002",
+      "computerName": "LAPTOP-MAC001",
+      "serialNumber": "SN-002",
+      "osType": "macos",
+      "osName": "macOS 13",
+      "machineType": "laptop",
+      "modelName": "Apple MacBook Pro 14",
+      "isActive": true,
+      "isDecommissioned": false,
+      "activeThreats": 0,
+      "networkInterfaces": []
+    }
+  ],
+  "pagination": {
+    "nextCursor": "cursor-page2",
+    "totalItems": 3
+  }
+}

@@ -1,0 +1,66 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+}
+
+.title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  /* Glyph size bumped from sm so + and × read as proper action icons,
+     not tiny text. */
+  font-size: 18px;
+  line-height: 1;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+/* Hover: no background fill — just a subtle scale-up + colour shift. */
+.iconBtn:hover {
+  color: var(--text-primary);
+  transform: scale(1.18);
+}
+
+.iconBtn:focus-visible {
+  outline: 2px solid var(--success);
+  outline-offset: 1px;
+}
+
+/* New-conversation button: bold SVG plus in true neutral gray (the
+   theme's secondary text is slate/white-tinted), same in both modes;
+   brightens to full text color on hover like the other header icons. */
+.newBtn {
+  color: #8a8a8a;
+}
+
+.newBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

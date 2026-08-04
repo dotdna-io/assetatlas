@@ -1,0 +1,156 @@
+# docker-compose.monitoring.yml — opt-in monitoring stack (epic #487, Sub-project A)
+# Usage: docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+
+services:
+  # When this overlay is applied (installed --with-monitoring) the API must be
+  # told the monitoring backend exists: MONITORING_ENABLED registers the
+  # /api/monitoring proxy + instantiates MonitoringService, and PROMETHEUS_URL
+  # points it at the prometheus service below. The base docker-compose.yml api
+  # service never sets these, so without this override the API boots with
+  # monitoring off — every /api/monitoring/* request 404s (hiding the dashboards)
+  # even though Prometheus is scraping. Compose merges this into the base api
+  # service's environment map.
+  api:
+    environment:
+      MONITORING_ENABLED: "true"
+      PROMETHEUS_URL: http://prometheus:9090
+
+  prometheus:
+    # docker.io/ prefixes throughout, for the reason spelled out above the
+    # timescaledb image in docker-compose.yml: podman refuses a short name on a
+    # host whose registries.conf defines no unqualified-search-registries.
+    image: docker.io/prom/prometheus:v2.55.1
+    container_name: assetatlas-prometheus
+    restart: unless-stopped
+    volumes:
+      # `:z` — see the SELinux note at the top of docker-compose.yml. The host
+      # mounts further down (/, /proc, /sys, /var/run, /dev/disk, /var/lib/docker)
+      # are deliberately left unlabelled: `:z` there would relabel the host.
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
+      - ./monitoring/alerts:/etc/prometheus/rules:ro,z
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    # node-exporter runs in network_mode: host and is unreachable by container
+    # name. host-gateway maps host.docker.internal to the host's bridge IP so
+    # prometheus.yml can target host.docker.internal:9100 portably.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - assetatlas-network
+
+  alertmanager:
+    image: docker.io/prom/alertmanager:v0.28.0
+    container_name: assetatlas-alertmanager
+    restart: unless-stopped
+    environment:
+      ALERTMANAGER_WEBHOOK_SECRET: ${ALERTMANAGER_WEBHOOK_SECRET}
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro,z
+      - alertmanager-data:/alertmanager
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -eu
+        if [ -z "$$ALERTMANAGER_WEBHOOK_SECRET" ]; then
+          echo "ERROR: ALERTMANAGER_WEBHOOK_SECRET env var is empty" >&2
+          exit 1
+        fi
+        umask 077
+        printf '%s' "$$ALERTMANAGER_WEBHOOK_SECRET" > /etc/alertmanager/webhook-secret
+        exec /bin/alertmanager \
+          --config.file=/etc/alertmanager/alertmanager.yml \
+          --storage.path=/alertmanager
+    networks:
+      - assetatlas-network
+
+  node-exporter:
+    image: docker.io/prom/node-exporter:v1.8.2
+    container_name: assetatlas-node-exporter
+    restart: unless-stopped
+    pid: host
+    network_mode: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|run|var/lib/docker)($$|/)'
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: assetatlas-postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://assetatlas:${DB_PASSWORD:-changeme}@timescaledb:5432/assetatlas?sslmode=disable"
+    networks:
+      - assetatlas-network
+
+  redis-exporter:
+    image: docker.io/oliver006/redis_exporter:v1.66.0
+    container_name: assetatlas-redis-exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+    networks:
+      - assetatlas-network
+
+  nginx-exporter:
+    image: docker.io/nginx/nginx-prometheus-exporter:1.4.0
+    container_name: assetatlas-nginx-exporter
+    restart: unless-stopped
+    command:
+      - '--nginx.scrape-uri=http://nginx/nginx_status'
+    networks:
+      - assetatlas-network
+
+  cadvisor:
+    # Use the OFFICIAL image ghcr.io/google/cadvisor, NOT the deprecated
+    # gcr.io/cadvisor/cadvisor — the latter ships a Docker API client capped at
+    # v1.41, which Docker Engine 25+ (min API v1.44) rejects, so cAdvisor's Docker
+    # factory fails to register and every container_* series loses its `name`
+    # label (all per-container panels go blank). See google/cadvisor#3793 / #3863.
+    image: ghcr.io/google/cadvisor:v0.60.5
+    container_name: assetatlas-cadvisor
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    # cadvisor is the one service in this overlay that only ever runs under
+    # Docker: it is pinned to the Docker API and bind-mounts /var/lib/docker,
+    # so under podman it produces no usefully-labelled container_* series.
+    # The profile keeps it out of the podman service set without a second
+    # overlay file to drift out of sync — compose_overlay_args adds
+    # `--profile privileged` only when the runtime is docker. That is also the
+    # compatibility answer: podman-compose gained --profile only in 1.1.0, and
+    # the distro builds reject it outright.
+    #
+    # The offline monitoring pack still bundles the image: build-monitoring-pack.sh
+    # greps `image:` lines and is indifferent to profiles, so a host that CAN run
+    # cadvisor still gets it from an air-gapped bundle.
+    profiles:
+      - privileged
+    networks:
+      - assetatlas-network
+
+volumes:
+  prometheus-data:
+  alertmanager-data:
+
+# `assetatlas-network` is declared in the base docker-compose.yml; this overlay
+# attaches its services to that same network via the per-service `networks:` lists.
+# We intentionally do NOT redeclare the network here.

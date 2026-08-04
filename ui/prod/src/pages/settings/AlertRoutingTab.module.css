@@ -1,0 +1,43 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/AlertRoutingTab.module.css */
+
+.rowControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.select {
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.alwaysOn {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* Bottom-of-card Save row — mirrors CategorySettings.module.css .actions. */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 10px 14px 12px;
+}

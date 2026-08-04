@@ -1,0 +1,164 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ReliabilityScores.module.css */
+
+/* Plain wrapper — no glossy surface here. The outer SettingsSection
+   in ConfidenceTab provides the card surface and the section title;
+   doubling them up was the card-inside-card. The surrounding
+   SettingsFullWidthBlock supplies the inner padding. */
+.card {
+  display: block;
+}
+
+.description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+/* ---------------------------------------------------------------------------
+   Tier group
+--------------------------------------------------------------------------- */
+
+.tierGroup {
+  margin-bottom: 14px;
+}
+
+.tierLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Score row
+--------------------------------------------------------------------------- */
+
+.scoreRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.scoreName {
+  /* Wider column so long labels like "Identity And Access Management"
+     stay on one line. The row's barTrack is flex:1, so this width comes
+     out of the bar — bars shrink ~15% in typical viewports. */
+  width: 260px;
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.barTrack {
+  flex: 1;
+  position: relative;
+  height: 20px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+}
+
+:global(body:not(.dark-mode)) .barTrack {
+  background: rgba(0,0,0,0.04);
+}
+
+.barFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.15s ease, background 0.15s ease;
+}
+
+.slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* Grey glossy drag handle — matches the thumb in ConfidenceThresholds
+   so both sliders read as the same kind of control. Webkit and Moz
+   pseudo-elements MUST live in separate rules; combining them in a
+   selector list invalidates the whole rule in each browser, which is
+   what was producing the native blue thumb. */
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 24px;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.18) 100%),
+    linear-gradient(180deg, #6b7280 0%, #4b5563 100%);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    0 2px 4px rgba(0, 0, 0, 0.40);
+}
+
+.slider::-moz-range-thumb {
+  width: 12px;
+  height: 24px;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.18) 100%),
+    linear-gradient(180deg, #6b7280 0%, #4b5563 100%);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    0 2px 4px rgba(0, 0, 0, 0.40);
+}
+
+:global(body:not(.dark-mode)) .slider::-webkit-slider-thumb {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.10) 100%),
+    linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+:global(body:not(.dark-mode)) .slider::-moz-range-thumb {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.10) 100%),
+    linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.scoreValue {
+  width: 40px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Actions
+--------------------------------------------------------------------------- */
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}

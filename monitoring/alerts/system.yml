@@ -1,0 +1,56 @@
+groups:
+  - name: assetatlas-system
+    interval: 30s
+    rules:
+      - alert: system-api-error-rate
+        expr: |
+          sum(rate(assetatlas_http_request_total{status=~"5.."}[5m]))
+            /
+          sum(rate(assetatlas_http_request_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API 5xx error rate above 1% (5m)
+          description: "AssetAtlas API is returning 5xx at {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: system-db-slow-queries
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(assetatlas_db_query_duration_seconds_bucket[5m])) by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Database query p95 above 500ms (5m)
+          description: "p95 query latency is {{ $value | humanizeDuration }} over 5m."
+
+      # The api and scheduler each export their own pool, so this evaluates once
+      # per job and can fire for either. The job has to appear in the text or the
+      # alert names no actionable target.
+      - alert: system-db-connection-pool
+        expr: |
+          (assetatlas_db_connection_pool_size - assetatlas_db_connection_pool_available)
+            /
+          assetatlas_db_connection_pool_size > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Database connection pool over 85% utilized on {{ $labels.job }}
+          description: "{{ $labels.job }} DB pool at {{ $value | humanizePercentage }} utilization for 5+ minutes."
+
+      # Scoped to the scheduler job on purpose. The gauge is DEFINED in
+      # src/api/utils/metrics.py, which the api imports, but only
+      # src/scheduler_worker.py ever calls .set() on it — so the api exports the
+      # series at its default 0. Unscoped, `time() - 0` is ~1.8e9 and this
+      # critical alert fired within seconds of every install and never cleared.
+      - alert: system-scheduler-stalled
+        expr: (time() - assetatlas_scheduler_last_heartbeat_seconds{job="assetatlas-scheduler"}) > 600
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Scheduler heartbeat stale > 10 minutes
+          description: "The scheduler worker has not heartbeated in {{ $value | humanizeDuration }}."

@@ -1,0 +1,401 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.section {
+  composes: glossyCard from '../../styles/shared.module.css';
+  margin-top: var(--space-6);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.sectionTitle {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  padding: var(--space-3) var(--space-4) 0;
+}
+
+/* ─── Header bar ─── */
+.headerBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.viewToggle {
+  display: inline-flex;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.toggleButton {
+  padding: 6px 16px;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.toggleButton:hover { color: var(--text-primary); }
+.toggleButtonActive {
+  background: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 100px;
+  /* 20% longer than the previous 220px cap. */
+  max-width: 264px;
+  padding: 5px 10px;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.searchInput::placeholder { color: var(--text-tertiary); }
+.searchInput:focus { border-color: var(--accent); }
+
+.statusFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.statusFilterLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+.statusSelect {
+  height: 30px;
+  padding: 0 28px 0 10px;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+.statusSelect:focus { border-color: var(--accent); }
+
+.statText {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+.statTextOk {
+  font-size: var(--font-size-sm);
+  color: var(--success);
+  font-weight: 500;
+}
+.statTextDanger {
+  font-size: var(--font-size-sm);
+  color: var(--error);
+  font-weight: 500;
+}
+
+/* ─── Shared list ─── */
+.list {
+  overflow-y: auto;
+}
+
+/* ─── Record card ─── */
+.recordCard {
+  border-bottom: 1px solid var(--border);
+}
+.recordDropped {
+  border-left: 3px solid var(--error);
+}
+
+.recordHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.recordHeader:hover { background: var(--bg-secondary); }
+
+.recordPreview {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.previewField { color: var(--text-tertiary); }
+.previewSep { color: var(--text-tertiary); }
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: transform 0.2s;
+}
+.chevronOpen { transform: rotate(180deg); }
+
+.recordExpanded { }
+
+/* ─── Transpose table (expanded record) ─── */
+.recordBody {
+  padding: 0 var(--space-4) var(--space-4) 40px;
+}
+
+.dropReason {
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--error-rgb), 0.08);
+  color: var(--error);
+  font-size: var(--font-size-sm);
+}
+
+.transposeTable {
+  width: 100%;
+  max-width: 800px;
+  font-size: var(--font-size-sm);
+  border-collapse: collapse;
+}
+
+.colSourceField {
+  width: 38%;
+  min-width: 240px;
+}
+.colMapsTo {
+  width: 22%;
+  min-width: 140px;
+}
+.transposeTh {
+  text-align: left;
+  padding: 6px 12px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.transposeTd {
+  padding: 5px 12px;
+  vertical-align: top;
+}
+.transposeTd code {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+.transposeTdValue {
+  padding: 5px 12px;
+  max-width: 350px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+}
+.rowMapped {
+  background: rgba(var(--success-rgb), 0.06);
+}
+:global(body:not(.dark-mode)) .rowMapped {
+  background: rgba(var(--success-rgb), 0.08);
+}
+.separator {
+  height: 1px;
+  background: var(--border);
+  padding: 0;
+}
+
+.transformSources {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.transformSources code {
+  font-size: var(--font-size-xs);
+  padding: 1px 4px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+}
+
+.mapsToFramework { color: var(--success); font-weight: 600; }
+.mapsToDss { color: var(--accent); font-weight: 600; }
+
+/* ─── Field card (fields view) ─── */
+.fieldCard {
+  border-bottom: 1px solid var(--border);
+}
+.fieldMappedFramework { border-left: 3px solid var(--success); }
+.fieldMappedDss { border-left: 3px solid var(--accent); }
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.fieldRow:hover { background: var(--bg-secondary); }
+
+.fieldInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  /* 1.7× the previous 220px floor so common names breathe; the
+     `flex: 1` lets the column grow further when row width allows. */
+  min-width: 374px;
+}
+
+.fieldMetaItem {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  width: 70px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.fieldMapping {
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  width: 130px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.fieldPath {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  /* If a name still exceeds the available space, ellipsize rather
+     than break the row layout — the full path is visible when the
+     card is expanded. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.fieldTypeBadge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+.fieldVirtualBadge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(var(--purple-rgb), 0.15);
+  color: var(--purple);
+}
+
+
+.fieldBody {
+  padding: var(--space-2) var(--space-4) var(--space-3) var(--space-4);
+  max-width: 500px;
+}
+
+.unmappedBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+.unmappedLabel {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+.unmappedField {
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(var(--error-rgb), 0.08);
+  color: var(--error);
+  border: 1px solid rgba(var(--error-rgb), 0.2);
+}
+
+/* ─── Value lists ─── */
+.valueSection {
+  margin-bottom: var(--space-2);
+}
+.valueSectionTitle {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: 2px;
+}
+.valueText {
+  font-size: var(--font-size-sm);
+  padding: 2px 8px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  word-break: break-all;
+  flex: 1;
+}
+.valueCount {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: right;
+}
+
+/* ─── Pagination ─── */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.pageSizeGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.pageSizeSelect {
+  font-size: var(--font-size-xs);
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-family);
+}
+.pageNavGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.pageInfo {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* ─── Common ─── */
+.emptyState {
+  text-align: center;
+  padding: var(--space-6);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+.textMuted {
+  color: var(--text-tertiary);
+}

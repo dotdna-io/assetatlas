@@ -1,0 +1,56 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    installation: assetatlas
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: alertmanager
+    static_configs:
+      - targets: ['alertmanager:9093']
+
+  - job_name: assetatlas-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['api:5001']
+
+  - job_name: assetatlas-scheduler
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['scheduler:9091']
+
+  # node-exporter runs with network_mode: host (it scrapes the host's /proc, /sys),
+  # so it isn't on the assetatlas-network bridge. Reach it via the host gateway:
+  # docker-compose.monitoring.yml gives prometheus an extra_hosts entry that
+  # maps host.docker.internal to host-gateway, so this target is portable.
+  - job_name: node-exporter
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+
+  - job_name: postgres-exporter
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  - job_name: redis-exporter
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  - job_name: nginx-exporter
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ['cadvisor:8080']

@@ -1,0 +1,20 @@
+[Unit]
+Description=AssetAtlas — IT Asset Management Platform
+Documentation=https://github.com/dotdna-io/assetatlas
+After=network-online.target docker.service
+Wants=network-online.target
+# If using podman, swap docker.service for podman.socket above.
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/assetatlas
+ExecStart=/usr/local/bin/assetatlas-cli start
+ExecStop=/usr/local/bin/assetatlas-cli stop
+TimeoutStartSec=300
+TimeoutStopSec=120
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

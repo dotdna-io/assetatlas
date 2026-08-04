@@ -1,0 +1,71 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  background: var(--bg-primary);
+}
+
+.container {
+  width: 100%;
+  max-width: 420px;
+}
+
+.card {
+  composes: glossyCardHero from '../styles/shared.module.css';
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+}
+
+/* Dark mode: top sheen instead of the corner kiss, matching the login card
+   — see LoginPage.module.css for why the geometry moves. */
+/* Dark mode: the pre-liquid-glass glossy card, restored — see
+   LoginPage.module.css for the reasoning. Light keeps the hero glass. */
+:global(body.dark-mode) .card {
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.03) 30%,
+      rgba(255, 255, 255, 0) 60%
+    ),
+    rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.02);
+}
+
+:global(body.dark-mode) .card::before,
+:global(body.dark-mode) .card::after {
+  background: none;
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--error);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: var(--font-size-base);
+}
+
+.link {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+}
+
+.link:hover {
+  text-decoration: underline;
+}

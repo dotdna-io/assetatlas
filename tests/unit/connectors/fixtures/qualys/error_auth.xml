@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SIMPLE_RETURN>
+  <RESPONSE>
+    <DATETIME>2026-03-19T10:00:00Z</DATETIME>
+    <CODE>1965</CODE>
+    <TEXT>Authentication failed. Please check your credentials.</TEXT>
+  </RESPONSE>
+</SIMPLE_RETURN>

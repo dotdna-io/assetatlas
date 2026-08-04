@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Link Microsoft Teams account — AssetAtlas</title>
+  <link rel="stylesheet" href="/static/css/auth.css">
+  <style>
+    .hidden { display: none; }
+    .signin-prompt { padding: 1rem 0; }
+  </style>
+</head>
+<body class="auth-body">
+  <main class="auth-card">
+    <h1>Link Microsoft Teams account</h1>
+    <p>You're about to link the Teams account
+       <strong>{{ display_name }}</strong> to your AssetAtlas account.
+       Future messages from this Teams identity will be routed to your
+       AssetAtlas user.</p>
+
+    <div id="signedOut" class="signin-prompt hidden">
+      <p>You're not signed in to AssetAtlas in this browser. Open
+         <a href="/" target="_blank" rel="noopener">AssetAtlas</a>,
+         sign in, then click <strong>Re-check</strong> below.</p>
+      <button type="button" id="recheckBtn" class="btn btn-secondary">Re-check</button>
+    </div>
+
+    <form id="confirmForm" class="hidden">
+      <button type="submit" class="btn btn-primary">Confirm link</button>
+      <a href="/" class="btn btn-secondary">Cancel</a>
+    </form>
+
+    <p id="confirmStatus" role="status"></p>
+  </main>
+  <script>
+    const TOKEN = {{ token | tojson }};
+    const signedOut = document.getElementById('signedOut');
+    const form = document.getElementById('confirmForm');
+    const status = document.getElementById('confirmStatus');
+
+    function aaToken() {
+      return localStorage.getItem('access_token');
+    }
+
+    function refreshSigninUi() {
+      if (aaToken()) {
+        signedOut.classList.add('hidden');
+        form.classList.remove('hidden');
+      } else {
+        signedOut.classList.remove('hidden');
+        form.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('recheckBtn').addEventListener('click', refreshSigninUi);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const t = aaToken();
+      if (!t) { refreshSigninUi(); return; }
+      status.textContent = 'Linking…';
+      const res = await fetch('/api/auth/teams-link/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + t,
+        },
+        body: JSON.stringify({ token: TOKEN }),
+      });
+      if (res.ok) {
+        window.location = '/teams/linked';
+      } else {
+        const body = await res.text();
+        status.textContent = 'Linking failed (' + res.status + '). ' + body;
+      }
+    });
+
+    // Initial check on page load.
+    refreshSigninUi();
+  </script>
+</body>
+</html>

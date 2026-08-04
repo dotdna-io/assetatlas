@@ -1,0 +1,323 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import type { HelpTopic } from './types';
+
+// Vite bundles every topic markdown as a raw string at build time —
+// no network, air-gap safe.
+const RAW = import.meta.glob('./content/*.md', {
+  query: '?raw', import: 'default', eager: true,
+}) as Record<string, string>;
+
+export const TOPICS: HelpTopic[] = [
+  {
+    id: 'getting-started',
+    title: 'Getting Started',
+    category: 'getting-started',
+    file: 'getting-started.md',
+    routes: ['/dashboard'],
+    order: 0,
+  },
+  {
+    id: 'explore',
+    title: 'Explore',
+    category: 'assets',
+    file: 'explore.md',
+    routes: ['/explorer'],
+    order: 0,
+  },
+  {
+    id: 'asset-details',
+    title: 'Asset Details',
+    category: 'assets',
+    file: 'asset-details.md',
+    routes: ['/asset-details'],
+    order: 1,
+  },
+  {
+    id: 'asset-history',
+    title: 'Asset History',
+    category: 'assets',
+    file: 'asset-history.md',
+    routes: ['/asset-history'],
+    order: 2,
+  },
+  {
+    id: 'integrations',
+    title: 'Connecting Data Sources',
+    category: 'data-sources',
+    file: 'integrations.md',
+    routes: ['/integrations', '/integration-wizard', '/integration-details', '/datasource-details'],
+    order: 0,
+  },
+  {
+    id: 'enrichment',
+    title: 'Enrichment Datasets',
+    category: 'data-sources',
+    file: 'enrichment.md',
+    routes: ['/settings/data/enrichment'],
+    order: 1,
+  },
+  {
+    id: 'reference-data',
+    title: 'Reference Data',
+    category: 'data-sources',
+    file: 'reference-data.md',
+    routes: ['/settings/data/reference-data'],
+    order: 2,
+  },
+  {
+    id: 'pipeline',
+    title: 'Asset-Generation Pipeline',
+    category: 'data-pipeline',
+    file: 'pipeline.md',
+    routes: ['/settings/data/pipeline', '/settings/data/confidence'],
+    order: 0,
+  },
+  {
+    id: 'field-registry',
+    title: 'Field Registry',
+    category: 'data-pipeline',
+    file: 'field-registry.md',
+    routes: ['/settings/data/semantic'],
+    order: 1,
+  },
+  {
+    id: 'unified-fields',
+    title: 'Unified Fields',
+    category: 'data-pipeline',
+    file: 'unified-fields.md',
+    routes: ['/settings/data/unified-fields'],
+    order: 2,
+  },
+  {
+    id: 'merge-denylist',
+    title: 'Merge Denylist',
+    category: 'data-pipeline',
+    file: 'merge-denylist.md',
+    routes: ['/settings/data/merge-denylist'],
+    order: 3,
+  },
+  {
+    id: 'rules-overview',
+    title: 'Rules Overview',
+    category: 'rules',
+    file: 'rules-overview.md',
+    routes: ['/rules'],
+    order: 0,
+  },
+  {
+    id: 'rule-wizard',
+    title: 'Creating a Rule',
+    category: 'rules',
+    file: 'rule-wizard.md',
+    routes: ['/rules'],
+    order: 1,
+  },
+  {
+    id: 'tag-rules',
+    title: 'Tag Rules',
+    category: 'rules',
+    file: 'tag-rules.md',
+    routes: ['/rules'],
+    order: 2,
+  },
+  {
+    id: 'posture-rules',
+    title: 'Posture Rules',
+    category: 'rules',
+    file: 'posture-rules.md',
+    routes: ['/rules'],
+    order: 3,
+  },
+  {
+    id: 'alerts',
+    title: 'Alerts',
+    category: 'alerts',
+    file: 'alerts.md',
+    routes: ['/alerts'],
+    order: 0,
+  },
+  {
+    id: 'alert-delivery',
+    title: 'Alert Delivery',
+    category: 'alerts',
+    file: 'alert-delivery.md',
+    routes: ['/settings/alert-delivery/channels', '/settings/alert-delivery/routing'],
+    order: 1,
+  },
+  {
+    id: 'reporting',
+    title: 'Reports & Charts',
+    category: 'reporting',
+    file: 'reporting.md',
+    routes: ['/reporting'],
+    order: 0,
+  },
+  {
+    id: 'chatbot-configuration',
+    title: 'Chatbot Configuration',
+    category: 'chatbot',
+    file: 'chatbot-configuration.md',
+    routes: ['/settings/chatbot/configuration'],
+    order: 0,
+  },
+  {
+    id: 'chatbot-behavior',
+    title: 'Chatbot Behavior',
+    category: 'chatbot',
+    file: 'chatbot-behavior.md',
+    routes: ['/settings/chatbot/behavior'],
+    order: 1,
+  },
+  {
+    id: 'chatbot-usage',
+    title: 'Chatbot Usage',
+    category: 'chatbot',
+    file: 'chatbot-usage.md',
+    routes: ['/settings/chatbot/usage'],
+    order: 2,
+  },
+  {
+    id: 'chatbot-teams',
+    title: 'Chatbot Teams',
+    category: 'chatbot',
+    file: 'chatbot-teams.md',
+    routes: ['/settings/chatbot/teams'],
+    order: 3,
+  },
+  {
+    id: 'monitoring-dashboards',
+    title: 'Monitoring Dashboards',
+    category: 'monitoring',
+    file: 'monitoring-dashboards.md',
+    routes: ['/settings/monitoring/dashboards'],
+    order: 0,
+  },
+  {
+    id: 'monitoring-forwarding',
+    title: 'Metrics Forwarding',
+    category: 'monitoring',
+    file: 'monitoring-forwarding.md',
+    routes: ['/settings/monitoring/forwarding'],
+    order: 1,
+  },
+  {
+    id: 'users-access',
+    title: 'Users & Access',
+    category: 'access-security',
+    file: 'users-access.md',
+    routes: ['/settings/access/users'],
+    order: 0,
+  },
+  {
+    id: 'api-keys',
+    title: 'API Keys',
+    category: 'access-security',
+    file: 'api-keys.md',
+    routes: ['/settings/access/api-keys'],
+    order: 1,
+  },
+  // The MCP server has no page of its own; it shares the API Keys route
+  // because a key is what a client authenticates with. Must stay AFTER
+  // `api-keys`: resolveTopicId breaks an equal-length prefix tie by TOPICS
+  // order, so the `?` button on that tab keeps resolving to `api-keys`.
+  {
+    id: 'mcp',
+    title: 'MCP Server',
+    category: 'access-security',
+    file: 'mcp.md',
+    routes: ['/settings/access/api-keys'],
+    order: 2,
+  },
+  {
+    id: 'ldap',
+    title: 'LDAP Authentication',
+    category: 'access-security',
+    file: 'ldap.md',
+    routes: ['/settings/access/ldap'],
+    order: 3,
+  },
+  {
+    id: 'oidc',
+    title: 'OIDC Single Sign-On',
+    category: 'access-security',
+    file: 'oidc.md',
+    routes: ['/settings/access/oidc'],
+    order: 4,
+  },
+  {
+    id: 'audit-log',
+    title: 'Audit Log',
+    category: 'access-security',
+    file: 'audit-log.md',
+    routes: ['/settings/access/audit'],
+    order: 5,
+  },
+  {
+    id: 'security-jwt',
+    title: 'Security & Password Policy',
+    category: 'access-security',
+    file: 'security-jwt.md',
+    routes: ['/settings/system/security'],
+    order: 6,
+  },
+  {
+    id: 'account',
+    title: 'Account',
+    category: 'access-security',
+    file: 'account.md',
+    routes: ['/account'],
+    order: 7,
+  },
+  {
+    id: 'retention',
+    title: 'Data Retention',
+    category: 'system',
+    file: 'retention.md',
+    routes: ['/settings/system/retention'],
+    order: 0,
+  },
+  {
+    id: 'logging',
+    title: 'Logging',
+    category: 'system',
+    file: 'logging.md',
+    routes: ['/settings/system/logging'],
+    order: 1,
+  },
+  {
+    id: 'email',
+    title: 'Email & SMTP',
+    category: 'system',
+    file: 'email.md',
+    routes: ['/settings/system/email'],
+    order: 2,
+  },
+  {
+    id: 'about',
+    title: 'About',
+    category: 'system',
+    file: 'about.md',
+    routes: ['/settings/system/about'],
+    order: 3,
+  },
+  // Shares About's route so the topic is reachable from the page that
+  // surfaces the update badge. Must stay AFTER `about`: resolveTopicId
+  // breaks an equal-length prefix tie by TOPICS order, so the `?` button
+  // on the About page keeps resolving to `about`.
+  {
+    id: 'updating',
+    title: 'Updating AssetAtlas',
+    category: 'system',
+    file: 'updating.md',
+    routes: ['/settings/system/about'],
+    order: 4,
+  },
+];
+
+export function getTopicById(id: string): HelpTopic | undefined {
+  return TOPICS.find((t) => t.id === id);
+}
+
+export function getTopicContent(topic: HelpTopic): string {
+  return RAW[`./content/${topic.file}`] ?? '';
+}

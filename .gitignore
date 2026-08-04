@@ -1,0 +1,215 @@
+# Vendor reference material
+/armis/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+.install-credentials
+
+# uv lock file
+uv.lock
+
+# Coverage artifacts
+.coverage
+coverage.json
+
+# Plans
+docs/plans/
+
+# Data directories and files
+data/
+!ui/prod/src/**/data/
+datasets/
+test_cache/
+data_scrapers/device_knowledge/cache/
+tests_output/
+*.csv
+*.xlsx
+data/**/*.json
+datasets/**/*.json
+tests_output/**/*.json
+ml_pipeline/**/*.json
+tmp/**/*.json
+src/modules/asset_generation/domain/os_normalization/*_cache*.json
+!src/modules/asset_generation/domain/os_normalization/exact_match_cache_compact.json
+src/modules/asset_generation/domain/os_normalization/*_index.json
+# CPE vendor↔product index ships with the image (Tier 3 OS validation in
+# hybrid_cpe_normalizer). Without it the api logs "CPE dictionary not found"
+# on every boot and CPE validation silently degrades. Whitelist mirrors the
+# exact_match_cache_compact.json pattern above.
+!src/modules/asset_generation/domain/os_normalization/cpe_vendor_product_index.json
+*.pkl
+*.cbm
+*.bak
+
+# ML training outputs
+ml_pipeline/ml_output/
+ml_pipeline/ml_logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Backup files
+*.bak
+*.orig
+*.swp
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+!deploy/build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+/lib/
+/lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+yarn.lock
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Model files and large binaries
+*.h5
+*.onnx
+*.pb
+*.pth
+*.bin
+ml_pipeline/models/
+ml_output/models/
+checkpoints/
+
+# Logs
+*.log
+logs/
+!src/modules/logs/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Synology NAS metadata
+@eaDir/
+.SynologyWorkingDirectory/
+#recycle/
+.syncing_*
+
+# Generated seed data for deployments
+database/seeds/
+
+# Local task plans
+tasks/
+docs/superpowers/plans/
+docs/superpowers/specs/
+.superpowers/
+
+# Claude Code settings (user-specific) — but SHARE the path-scoped rule files.
+# Must exclude the CONTENTS (.claude/*), not the directory: git cannot re-include
+# anything under a directory that is itself excluded, so a bare `.claude/` would
+# make the `!` below a no-op.
+.claude/*
+!.claude/rules/
+# Embedding models cache (downloaded on first run)
+models/cache/
+# LLM models for llama.cpp (downloaded separately)
+docker/llm-server/models/
+*.gguf
+
+# Deploy artifacts (large image tarballs and self-extracting installers)
+deploy/images/
+deploy/installers/
+*.tar.gz
+
+# Vendor reference material (PDFs, sample apps, docs for building integrations)
+docs/vendor-references/
+
+# Screenshots
+*.png
+!ui/prod/public/logos/*.png
+!src/api/utils/teams_manifest_assets/icons/*.png
+!ui/prod/public/help/img/**/*.png
+!.github/images/*.png
+
+# Vite build output
+ui/prod/dist/
+ui/prod/playwright-report/
+ui/prod/test-results/
+
+# Git worktrees
+.worktrees/
+
+# Archived/deprecated code
+_archive/
+ml_pipeline/_archive_dev/
+.venv-base-prep/
+
+# Teams app build output
+teams-app/dist/
+teams-app/assetatlas-teams.zip
+
+# Integration config backups (contain decrypted secrets — never commit)
+hs-integrations-backup-*.html
+

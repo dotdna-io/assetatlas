@@ -1,0 +1,25 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Big number -->
+  <text x="100" y="38"
+    font-family="Arial, sans-serif"
+    font-size="28"
+    font-weight="300"
+    fill="#374151"
+    text-anchor="end"
+    dominant-baseline="middle">8.4K</text>
+
+  <!-- Mini bars -->
+  <rect x="14" y="72" width="12" height="28" rx="2" fill="#3B82F6" opacity="0.8" />
+  <rect x="30" y="60" width="12" height="40" rx="2" fill="#3B82F6" opacity="0.8" />
+  <rect x="46" y="66" width="12" height="34" rx="2" fill="#3B82F6" opacity="0.8" />
+  <rect x="62" y="78" width="12" height="22" rx="2" fill="#3B82F6" opacity="0.8" />
+  <rect x="78" y="54" width="12" height="46" rx="2" fill="#3B82F6" opacity="0.8" />
+  <rect x="94" y="58" width="12" height="42" rx="2" fill="#3B82F6" opacity="1" />
+
+  <!-- Stats line -->
+  <line x1="14" y1="105" x2="106" y2="105" stroke="#E5E7EB" stroke-width="1" />
+  <text x="14" y="116" font-family="Arial, sans-serif" font-size="9" fill="#9CA3AF">Jul</text>
+  <text x="34" y="116" font-family="Arial, sans-serif" font-size="9" font-weight="600" fill="#374151">9.5K</text>
+  <text x="78" y="116" font-family="Arial, sans-serif" font-size="9" fill="#9CA3AF">Jan</text>
+  <text x="94" y="116" font-family="Arial, sans-serif" font-size="9" font-weight="600" fill="#3B82F6">8.4K</text>
+</svg>

@@ -1,0 +1,843 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* PostureRuleCard */
+.ruleCard {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+  padding: 13px 16px;
+  margin-bottom: 8px;
+  transition: border-color var(--transition-fast);
+}
+
+.ruleCard:hover { border-color: rgba(255, 255, 255, 0.14); }
+:global(body:not(.dark-mode)) .ruleCard:hover { border-color: rgba(0, 0, 0, 0.16); }
+
+.ruleCardView {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Left disclosure caret — rotates when the description detail is open. */
+.discloseCaret {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.discloseCaretOpen { transform: rotate(90deg); }
+
+/* Rule type shown as coloured text at the row's end (no badge). */
+.metaText {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.metaSep {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+  user-select: none;
+}
+
+.ruleCardBorder {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.postureGreen {
+  background-color: var(--success);
+}
+
+.complianceAmber {
+  background-color: #f59e0b;
+}
+
+.classificationGray {
+  background-color: #64748b;
+}
+
+.ruleTags {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+}
+
+.ruleMetrics {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 12px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.metricValue {
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+}
+
+.metricAccent {
+  color: var(--accent);
+}
+
+.metricPass {
+  color: var(--success);
+}
+
+.metricFail {
+  color: var(--error);
+}
+
+.ruleIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.ruleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ruleNameRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ruleName {
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+/* Expandable detail row — indented to sit under the rule name, with a bit
+   of breathing room between the name and the description. */
+.ruleDesc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 10px 0 8px 27px;
+}
+
+.ruleCategories {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.actionSep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.ruleActions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.editBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  padding: 0;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.editBtn:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary);
+}
+
+.editSection {
+  display: grid;
+  grid-template-columns: 40% 1fr;
+  gap: 24px;
+  padding: 16px 24px 0 0;
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.editLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+  letter-spacing: 0.4px;
+}
+
+.editRow {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.editRowLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.editSelect,
+.editInput {
+  height: 34px;
+  flex: 1;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg, var(--card-bg));
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+:global(body:not(.dark-mode)) .editSelect {
+  color-scheme: light;
+}
+
+.editSelect:focus,
+.editInput:focus {
+  border-color: var(--accent);
+}
+
+.editSelect option {
+  background: var(--input-bg);
+}
+
+.editActions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.editLeftMeta {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.editAppliesTo {
+  margin-top: 12px;
+}
+
+.editAppliesToLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.editCategoriesList {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.editAssetsMatched {
+  margin-top: 12px;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+/* Wizard — Fluid Columns */
+.wizard {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, var(--radius-sm));
+  margin-bottom: 24px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-color 0.3s ease;
+}
+
+:global(body:not(.dark-mode)) .wizard {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0.2) 40%,
+      rgba(0, 0, 0, 0.02) 100%
+    ),
+    rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.wizardOpen {
+  /* Generous ceiling — content (esp. the Criteria step with its
+     filter editor + output picker + preview) commonly exceeds 600px
+     and was clipping the Cancel/Save footer. The actual rendered
+     height is bounded by content, so a larger ceiling doesn't change
+     normal cases — it just stops short content from getting clipped. */
+  max-height: 2400px;
+  opacity: 1;
+}
+
+.wizardClosed {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  border-color: transparent;
+}
+
+.wizardTypeOnly {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.wizardColumns {
+  display: flex;
+  min-height: 288px;
+}
+
+.wizCol {
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.wizCol:last-child {
+  border-right: none;
+}
+
+.wizColDone {
+  flex: 0 0 130px;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+body.dark-mode .wizColDone {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.wizColActive {
+  flex: 2;
+}
+
+.wizColPending {
+  flex: 0 0 110px;
+}
+
+.wizColHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.wizColDot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.wizDotDone {
+  border: 2px solid var(--success);
+  color: white;
+  background: var(--success);
+}
+
+.wizDotActive {
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.wizDotPending {
+  border: 2px solid var(--border);
+  color: var(--text-tertiary);
+  background: transparent;
+}
+
+.wizColLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.wizLabelDone {
+  color: var(--text-tertiary);
+}
+
+.wizLabelActive {
+  color: var(--text-primary);
+}
+
+.wizLabelPending {
+  color: var(--text-tertiary);
+  opacity: 0.4;
+}
+
+.wizColSummary {
+  opacity: 0.6;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.wizColBody {
+  margin-top: 8px;
+  max-width: 80%;
+}
+
+.wizardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.wizardFooterLeft {
+  display: flex;
+  gap: 8px;
+}
+
+/* Step header */
+.stepHeader {
+  margin-bottom: 20px;
+}
+
+.stepTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.stepSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* Filters grid — two-column for compliance step 3 */
+.filtersGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.filtersGrid > * {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.filtersSingle {
+  display: block;
+}
+
+/* Type selector */
+.typeCards {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.typeCard {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0) 40%,
+      rgba(0, 0, 0, 0.06) 100%
+    ),
+    var(--card-bg);
+  border: 1px solid var(--card-border, var(--border));
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.typeCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-color: var(--accent);
+}
+
+.typeCardSelected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.typeIcon {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 8px;
+  color: var(--text-secondary);
+}
+
+.typeImg {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 8px;
+  display: block;
+  opacity: 0.85;
+  transition: opacity var(--transition-fast);
+}
+
+.typeCard:hover .typeImg {
+  opacity: 1;
+}
+
+.typeTitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+.typeDesc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Preview counter */
+.previewCounter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.previewNumber {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.previewLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* Pass / fail tally sits inline next to "assets match" — separated
+   by a vertical divider — at the same font size as the total so the
+   three numbers read as a single comparable group. */
+.previewCounts {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.previewPass {
+  color: var(--success);
+}
+
+.previewFail {
+  color: var(--error);
+}
+
+/* Logic toggle */
+.logicToggle {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  margin-bottom: 16px;
+}
+
+.logicBtn {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+}
+
+.logicBtnActive {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.logicBtnLeft {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.logicBtnRight {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* Detection alerts */
+.detectionSection {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.detectionHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.detectionFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.detectionLabel {
+  cursor: pointer;
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+}
+
+.detectionChevron {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.detectionChevronOpen {
+  transform: rotate(180deg);
+  transition: transform 0.2s;
+}
+
+.detectionFieldLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.detectionSelect {
+  width: 100%;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  outline: none;
+}
+
+.detectionSelect:focus {
+  border-color: var(--accent);
+}
+
+.detectionInput {
+  width: 100%;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  box-sizing: border-box;
+  outline: none;
+}
+
+.detectionInput:focus {
+  border-color: var(--accent);
+}
+
+/* Form elements */
+.formGroup {
+  margin-bottom: 16px;
+}
+
+.formLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.formLabelOptional {
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+/* Small explanatory line under a field label. */
+.formHint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  line-height: 1.45;
+  margin: 0 0 8px;
+}
+
+.formInput {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.formInput:focus {
+  border-color: var(--accent);
+}
+
+/* Hide the native number spinners (up/down chevrons) — the threshold value
+   is typed directly. Scoped to number inputs so selects/text are untouched. */
+.formInput[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.formInput[type='number']::-webkit-inner-spin-button,
+.formInput[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.formTextarea {
+  width: 100%;
+  height: 80px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  box-sizing: border-box;
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--transition-fast);
+}
+
+.formTextarea:focus {
+  border-color: var(--accent);
+}
+
+.tagPreview {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tagPreviewLabel {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.createBtn {
+  margin-top: 24px;
+}
+
+/* Inline edit mode */
+.ruleCardExpanded {
+  padding-bottom: 20px;
+}
+
+.editForm {
+  padding: 16px 0;
+}
+
+.filterSection {
+  margin-bottom: 20px;
+}
+
+.filterSectionHeader {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.addFilterBtn {
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.addFilterBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.addFilterBtnSpaced {
+  margin-top: 8px;
+}
+
+.filterLoadingText {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: 12px;
+}

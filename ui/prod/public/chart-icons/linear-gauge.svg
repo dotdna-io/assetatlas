@@ -1,0 +1,22 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Track bar -->
+  <rect x="14" y="68" width="92" height="8" rx="4" fill="#E5E7EB" />
+
+  <!-- Red segment (0-33%) -->
+  <rect x="14" y="68" width="30" height="8" rx="4" fill="#EF4444" />
+
+  <!-- Amber segment (33-66%) -->
+  <rect x="44" y="68" width="30" height="8" fill="#F59E0B" />
+
+  <!-- Green segment (66-75%) -->
+  <rect x="74" y="68" width="9" height="8" fill="#10B981" />
+
+  <!-- Center text -->
+  <text x="60" y="52"
+    font-family="Arial, sans-serif"
+    font-size="28"
+    font-weight="300"
+    fill="#374151"
+    text-anchor="middle"
+    dominant-baseline="middle">75%</text>
+</svg>

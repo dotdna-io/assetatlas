@@ -1,0 +1,267 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/AuditLogTab.module.css */
+
+/* ---------------------------------------------------------------------------
+   Filter bar
+--------------------------------------------------------------------------- */
+
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+  align-items: flex-end;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Push a single filter field to the right edge of the bar — used for the
+   time picker so it docks alongside the table the way alerts/dashboard
+   do. */
+.filterFieldRight {
+  margin-left: auto;
+}
+
+/* Search button matches the 36px input height so the row reads as one
+   continuous control strip. */
+.searchButton {
+  height: 36px;
+}
+
+.filterLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+}
+
+.filterInput,
+.filterSelect {
+  height: 36px;
+  padding: 0 10px;
+  background: var(--input-bg, rgba(255,255,255,0.05));
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  outline: none;
+  min-width: 120px;
+}
+
+:global(body:not(.dark-mode)) .filterInput,
+:global(body:not(.dark-mode)) .filterSelect {
+  background: #fff;
+  border-color: rgba(0,0,0,0.15);
+  color: var(--text-primary);
+}
+
+.filterInput:focus,
+.filterSelect:focus {
+  border-color: var(--accent, #3B82F6);
+}
+
+/* ---------------------------------------------------------------------------
+   Table card (glossy card pattern)
+--------------------------------------------------------------------------- */
+
+.tableCard {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   Table
+--------------------------------------------------------------------------- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHeader th {
+  padding: 10px 14px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  white-space: nowrap;
+}
+
+:global(body:not(.dark-mode)) .tableHeader th {
+  border-bottom-color: rgba(0,0,0,0.08);
+}
+
+/* ---------------------------------------------------------------------------
+   Data rows
+--------------------------------------------------------------------------- */
+
+.row {
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.12s ease;
+}
+
+.row:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+:global(body:not(.dark-mode)) .row {
+  border-bottom-color: rgba(0,0,0,0.06);
+}
+
+:global(body:not(.dark-mode)) .row:hover {
+  background: rgba(0,0,0,0.03);
+}
+
+.row td {
+  padding: 10px 14px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+/* Path cell — truncate with tooltip */
+.pathCell {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   Detail (expanded) row
+--------------------------------------------------------------------------- */
+
+.detailRow {
+  display: none;
+  background: rgba(0,0,0,0.15);
+}
+
+:global(body:not(.dark-mode)) .detailRow {
+  background: rgba(0,0,0,0.04);
+}
+
+.detailRow.expanded {
+  display: table-row;
+}
+
+.detailRow td {
+  padding: 0;
+}
+
+.detailContent {
+  display: flex;
+  gap: 24px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+}
+
+.detailSection {
+  flex: 1;
+  min-width: 240px;
+}
+
+.detailSection h4 {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+  margin: 0 0 8px;
+}
+
+.detailSection pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ---------------------------------------------------------------------------
+   Method / status — coloured text only (no badges)
+--------------------------------------------------------------------------- */
+
+.methodText {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.methodGet { color: #10B981; }
+.methodPost { color: #3B82F6; }
+.methodPut { color: #8B5CF6; }
+.methodPatch { color: #F59E0B; }
+.methodDelete { color: #EF4444; }
+
+.statusText {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.statusOk { color: #10B981; }
+.statusWarn { color: #F59E0B; }
+.statusErr { color: #EF4444; }
+
+/* ---------------------------------------------------------------------------
+   Duration
+--------------------------------------------------------------------------- */
+
+.durationFast {
+  color: #10B981;
+  font-size: var(--font-size-sm);
+}
+
+.durationMedium {
+  color: #F59E0B;
+  font-size: var(--font-size-sm);
+}
+
+.durationSlow {
+  color: #EF4444;
+  font-size: var(--font-size-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   Empty state
+--------------------------------------------------------------------------- */
+
+.empty {
+  padding: 48px 20px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------------
+   Pagination
+--------------------------------------------------------------------------- */
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+:global(body:not(.dark-mode)) .pagination {
+  border-top-color: rgba(0,0,0,0.08);
+}
+
+.pageInfo {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}

@@ -1,0 +1,126 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/AboutTab.module.css */
+
+/* Two-column layout for the four About cards. SettingsSection has its
+   own margin-bottom; we reset it on direct children so the grid `gap`
+   provides the only vertical/horizontal rhythm. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.grid > * {
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tabular values in About read better in a mono face — but use the
+   shared --font-mono token (and the project's --font-size-sm) so they
+   align with code chips elsewhere in the app. */
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+/* Unit suffix sits next to the number in tertiary color so the eye
+   reads "1,234,567 rows" as "value + label" rather than as one blob.
+   Used for Storage rows where the value alone is ambiguous (rows,
+   files, clients, etc.). */
+.unit {
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+/* Sub-section label inside a SettingsSection. Used to group rows whose
+   names are data-driven (table names) so the heading carries the
+   context instead of every row repeating the same prefix. Padding
+   matches the row's left edge (8px grid + 14px row = 22px). */
+.groupLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-tertiary);
+  padding: 12px 22px 4px;
+}
+
+/* Health rows render the status word as colored text — no chip, no
+   dot, just the word in the status color. The text-transform keeps
+   the casing consistent regardless of what the API returns. */
+.statusText {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.schedulerCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jobCount {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+/* Version cell holds the version plus, when relevant, the update badge and
+   the admin "Check now" action on one wrapping line. */
+.versionCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* "update available → X" — amber, matching the "degraded" status accent, so it
+   reads as an advisory rather than an error. */
+.updateBadge {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--warning);
+  white-space: nowrap;
+}
+
+/* "Check for updates" row: the enable toggle plus, once on, the admin
+   "Check now" action and post-check status, on one wrapping line. */
+.updateControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Text-only "Check now" action (admin). Underlined link affordance in
+   secondary color; dims + drops the underline while a check is in flight. */
+.checkNow {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.checkNow:disabled {
+  cursor: default;
+  opacity: 0.6;
+  text-decoration: none;
+}
+
+/* Post-check feedback ("Up to date" / "Couldn’t reach release server"). */
+.checkStatus {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}

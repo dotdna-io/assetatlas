@@ -1,0 +1,44 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mc-line" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="mc-area" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:0.02" />
+    </linearGradient>
+  </defs>
+
+  <!-- Big number (above sparkline) -->
+  <text x="60" y="28"
+    font-family="Arial, sans-serif"
+    font-size="26"
+    font-weight="300"
+    fill="#3B82F6"
+    text-anchor="middle"
+    dominant-baseline="middle">8.7K</text>
+
+  <!-- Sparkline area -->
+  <path d="M 12,90 L 12,62 L 30,57 L 50,66 L 72,46 L 108,50 L 108,90 Z" fill="url(#mc-area)" />
+
+  <!-- Sparkline -->
+  <polyline points="12,62 30,57 50,66 72,46 108,50"
+    fill="none" stroke="url(#mc-line)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- End dot -->
+  <circle cx="108" cy="50" r="3.5" fill="white" stroke="#3B82F6" stroke-width="2" />
+
+  <!-- Bottom stats line -->
+  <line x1="12" y1="96" x2="108" y2="96" stroke="#E5E7EB" stroke-width="1" />
+
+  <!-- Stat labels -->
+  <text x="18" y="106" font-family="Arial, sans-serif" font-size="7" fill="#9CA3AF">Jul</text>
+  <text x="18" y="115" font-family="Arial, sans-serif" font-size="8" font-weight="600" fill="#64748b">6.2K</text>
+
+  <text x="60" y="106" font-family="Arial, sans-serif" font-size="7" fill="#9CA3AF" text-anchor="middle">Peak</text>
+  <text x="60" y="115" font-family="Arial, sans-serif" font-size="8" font-weight="600" fill="#64748b" text-anchor="middle">9.1K</text>
+
+  <text x="102" y="106" font-family="Arial, sans-serif" font-size="7" fill="#9CA3AF" text-anchor="end">Jan</text>
+  <text x="102" y="115" font-family="Arial, sans-serif" font-size="8" font-weight="600" fill="#3B82F6" text-anchor="end">8.7K</text>
+</svg>

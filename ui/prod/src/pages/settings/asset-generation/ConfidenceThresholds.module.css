@@ -1,0 +1,187 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ConfidenceThresholds.module.css */
+
+/* Plain wrapper — no glossy surface here. The outer SettingsSection
+   in ConfidenceTab provides the card surface and the section title;
+   doubling them up was the card-inside-card. The surrounding
+   SettingsFullWidthBlock supplies the inner padding. */
+.card {
+  display: block;
+}
+
+.description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+/* ---------------------------------------------------------------------------
+   Slider wrapper
+--------------------------------------------------------------------------- */
+
+.sliderWrap {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+/* Colored zone track */
+
+.track {
+  display: flex;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.zoneLow {
+  background: rgba(var(--error-rgb), 0.55);
+  transition: flex 0.1s ease;
+}
+
+.zoneMed {
+  /* --warning has no companion --warning-rgb token; the literal RGB
+     matches the token (#f59e0b → 245,158,11) so the alpha tint reads
+     identical to the rest of the app's warning surface treatment. */
+  background: rgba(245, 158, 11, 0.55);
+  transition: flex 0.1s ease;
+}
+
+.zoneHigh {
+  background: rgba(var(--success-rgb), 0.55);
+  transition: flex 0.1s ease;
+}
+
+/* Range inputs — stacked on top of track */
+
+.range {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Grey glossy drag handles. Two-layer background = specular highlight
+   on top + grey base; inset white edge + drop shadow gives the chip a
+   metallic, raised feel that matches the app's button-secondary look.
+   Webkit and Moz pseudo-elements MUST live in separate rules — if you
+   combine them in one selector list, each browser invalidates the
+   whole rule because it doesn't recognise the other vendor's pseudo,
+   and you fall back to the native blue thumb. */
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 28px;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.18) 100%),
+    linear-gradient(180deg, #6b7280 0%, #4b5563 100%);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  cursor: pointer;
+  pointer-events: all;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    0 2px 4px rgba(0, 0, 0, 0.40);
+}
+
+.range::-moz-range-thumb {
+  width: 14px;
+  height: 28px;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.18) 100%),
+    linear-gradient(180deg, #6b7280 0%, #4b5563 100%);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  cursor: pointer;
+  pointer-events: all;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    0 2px 4px rgba(0, 0, 0, 0.40);
+}
+
+:global(body:not(.dark-mode)) .range::-webkit-slider-thumb {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.10) 100%),
+    linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+:global(body:not(.dark-mode)) .range::-moz-range-thumb {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.10) 100%),
+    linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+/* ---------------------------------------------------------------------------
+   Labels below slider
+--------------------------------------------------------------------------- */
+
+.labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  padding: 4px 2px 0;
+}
+
+/* Zone labels centered in each zone */
+
+.zoneLabels {
+  display: flex;
+  margin-top: 4px;
+}
+
+.zoneLabel {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  transition: flex 0.1s ease;
+}
+
+.zoneLabelLow {
+  composes: zoneLabel;
+  color: var(--error);
+}
+
+.zoneLabelMed {
+  composes: zoneLabel;
+  color: var(--warning);
+}
+
+.zoneLabelHigh {
+  composes: zoneLabel;
+  color: var(--success);
+}
+
+/* ---------------------------------------------------------------------------
+   Actions
+--------------------------------------------------------------------------- */
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  align-items: center;
+}
+
+.errorMsg {
+  color: var(--error);
+  font-size: var(--font-size-xs);
+  margin-top: 8px;
+}

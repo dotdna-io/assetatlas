@@ -1,0 +1,131 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  /* Keep in sync with .panelWithSidebar in ChatPanel.module.css, which
+     grows the panel by exactly this width. */
+  width: 192px;
+  border-right: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.groupHeader {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  border-left: 3px solid transparent;
+}
+
+/* Portal-rendered tooltip — body-level so it can escape the sidebar's
+   overflow-clipped scroll container into the chat area. Single line,
+   fully opaque, positioned via inline style at the row's bounding box. */
+.tooltip {
+  position: fixed;
+  background: #16181d;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10000;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.30);
+  /* y coord is the row's top; lift the tooltip above by its own height. */
+  transform: translateY(-100%);
+}
+
+.row:hover {
+  background-color: var(--bg-primary);
+}
+
+.rowActive {
+  background-color: var(--bg-primary);
+  border-left-color: var(--success);
+  font-weight: 600;
+}
+
+.title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: none;
+  gap: 2px;
+}
+
+.row:hover .actions,
+.row:focus-within .actions {
+  display: flex;
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 3px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconBtn:hover {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.empty {
+  padding: var(--space-4);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+/* Full-width variant used as the chat panel's main view when no
+   conversation is active. No fixed width / right border — it fills the
+   panel's recessed body well. */
+.mainList {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}

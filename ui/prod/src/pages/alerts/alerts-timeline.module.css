@@ -1,0 +1,194 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Two chart blocks live directly on the page (no card chrome). */
+/* Single combined chart (AssetAtlas + custom) — fills the right pane
+   of the alerts top section; the wrapper owns the height. */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  height: 100%;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: fadeUp 0.4s ease forwards;
+  opacity: 0;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Chart area — flex row of bars aligned to the bottom. With many buckets
+   (24h, 30d) bars shrink to fit and the gap stays tight; with few buckets
+   (7d) the cap kicks in and `space-evenly` spreads them across the full
+   chart width with breathing room rather than clustering them in the centre. */
+.chart {
+  position: relative;
+  height: 120px;
+  /* Stretch to the severity cards' height when the top-section grid is
+     taller than the base 120px. */
+  flex: 1;
+  min-height: 120px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-evenly;
+  gap: 4px;
+  z-index: 1;
+}
+
+.bar {
+  flex: 1 1 0;
+  max-width: 48px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  cursor: default;
+  min-width: 0;
+}
+
+.barFill {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 3px;
+  overflow: hidden;
+  transform-origin: bottom;
+  animation: growBar 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  /* Subtle inner shadow so the empty top of low bars still reads as a
+     filled column when adjacent bars are taller. */
+}
+
+.bar:hover .barFill {
+  filter: brightness(1.08);
+}
+
+@keyframes growBar {
+  from { transform: scaleY(0); opacity: 0; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+.segment {
+  width: 100%;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+
+.segment:hover {
+  opacity: 1;
+}
+
+.segmentActive {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+}
+
+/* X-axis tick row — mirrors the chart's flex layout so each tick lines
+   up under its bar. Per-bucket flex sizing must match the bar so labels
+   stay aligned even as the chart resizes. */
+.axis {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.axisTick {
+  flex: 1 1 0;
+  max-width: 48px;
+  min-width: 0;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+  /* Visible labels are wider than their slot when the bar slot is narrow
+     (e.g. 30d view). Empty neighbour slots give them room to overflow
+     without colliding, so we keep the slot reservation for alignment but
+     let the text spill out instead of truncating to "4/...". */
+  overflow: visible;
+}
+
+/* Empty state — when a chart has no data at all */
+.empty {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* Tooltip (fixed-position, multi-row) */
+.tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  transform: translate(-50%, -100%) translateY(-10px);
+  background: var(--tooltip-bg);
+  color: var(--tooltip-color);
+  border: 1px solid var(--tooltip-border);
+  box-shadow: var(--tooltip-shadow);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+/* Near the top of the viewport there's no room above the cursor —
+   render below it instead (AlertsTimeline sets this by cursor Y). */
+.tooltipBelow {
+  transform: translate(-50%, 14px);
+}
+
+.tooltipDate {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.tooltipRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.tooltipDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.tooltipCount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tooltipTotal {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.tooltipTotalCount {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}

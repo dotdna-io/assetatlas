@@ -1,0 +1,13 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.progress { display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-6); max-width: 60%; }
+.step { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; }
+.stepCircle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--font-size-sm); font-weight: 600; border: 2px solid var(--border); background: var(--bg-secondary); color: var(--text-tertiary); transition: all var(--transition-fast); }
+.stepCircleActive { border-color: var(--accent); background: var(--accent); color: white; width: 36px; height: 36px; }
+.stepCircleCompleted { border-color: var(--success); background: var(--success); color: white; cursor: pointer; }
+.stepCircleCompleted:hover { opacity: 0.8; }
+.stepCircleClickable { cursor: pointer; }
+.stepCircleClickable:hover { border-color: var(--accent); }
+.stepLabel { font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--space-1); white-space: nowrap; }
+.stepLabelActive { color: var(--text-primary); font-weight: 600; }
+.line { flex: 1; height: 2px; background: var(--border); margin: 0 var(--space-1); min-width: 40px; align-self: center; margin-bottom: 20px; }
+.lineCompleted { background: var(--success); }

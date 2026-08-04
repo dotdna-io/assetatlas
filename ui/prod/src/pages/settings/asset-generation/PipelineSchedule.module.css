@@ -1,0 +1,141 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* PipelineSchedule.module.css */
+
+/* Plain wrapper — no glossy surface here. The outer SettingsSection
+   in AssetGenerationTab provides the card surface and the "Pipeline
+   Schedule" title; doubling them up was the card-inside-card. The
+   surrounding SettingsFullWidthBlock supplies the inner padding. */
+.card {
+  display: block;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* ---------------------------------------------------------------------------
+   Toggle
+--------------------------------------------------------------------------- */
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggleLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Controls area
+--------------------------------------------------------------------------- */
+
+.controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1;
+}
+
+.controlsDisabled {
+  composes: controls;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Mode tabs */
+
+.modeTabs {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+:global(body:not(.dark-mode)) .modeTabs {
+  background: rgba(0,0,0,0.06);
+}
+
+.modeTab {
+  padding: 4px 12px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modeTab:hover {
+  color: var(--text-primary);
+}
+
+.modeTabActive {
+  composes: modeTab;
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Inline group */
+
+.inlineGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* Shared select / input styles */
+
+.input {
+  height: 32px;
+  padding: 0 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.inputMono {
+  composes: input;
+  font-family: monospace;
+  min-width: 130px;
+}
+
+/* ---------------------------------------------------------------------------
+   Next Run
+--------------------------------------------------------------------------- */
+
+.nextRun {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.nextRunDisabled {
+  composes: nextRun;
+  opacity: 0.4;
+}
+
+.nextRunLabel {
+  font-weight: 500;
+}

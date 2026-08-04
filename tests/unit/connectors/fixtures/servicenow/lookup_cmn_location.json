@@ -1,0 +1,22 @@
+{
+  "result": [
+    {
+      "sys_id": "loc-001",
+      "name": "New York HQ",
+      "full_name": "United States/New York/New York HQ",
+      "street": "123 Broadway",
+      "city": "New York",
+      "state": "NY",
+      "country": "US"
+    },
+    {
+      "sys_id": "loc-002",
+      "name": "Chicago DC",
+      "full_name": "United States/Illinois/Chicago DC",
+      "street": "456 Michigan Ave",
+      "city": "Chicago",
+      "state": "IL",
+      "country": "US"
+    }
+  ]
+}

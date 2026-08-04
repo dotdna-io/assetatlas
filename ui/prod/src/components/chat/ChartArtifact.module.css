@@ -1,0 +1,57 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.artifact {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Bound the vanilla donut (420px native) so it fits inside the 85% bubble
+ * on narrow viewports; the chart class uses <viewBox> so it scales cleanly.
+ */
+.chart {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1 / 1;
+  align-self: center;
+}
+
+.tableWrap {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.tableWrap summary {
+  cursor: pointer;
+  user-select: none;
+  padding: var(--space-1) 0;
+}
+
+.tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-1);
+}
+
+.tableWrap th,
+.tableWrap td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.tableWrap th {
+  font-weight: 600;
+}
+
+.tableWrap td.numeric,
+.tableWrap th.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

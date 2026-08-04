@@ -1,0 +1,12 @@
+{
+  "status": "success",
+  "matches": [
+    {
+      "endpoint.name": "DESKTOP-WIN001",
+      "endpoint.ip": "10.0.1.100",
+      "endpoint.os": "Windows 10 Pro",
+      "event.type": "endpoint.status",
+      "timestamp": "2026-03-19T10:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,174 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.btn {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: 4px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Sizes */
+.sm {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+.md {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.lg {
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--font-size-base);
+}
+
+/* Subtle Glass — shared overlay for filled variants */
+.primary,
+.danger,
+.success {
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0) 40%,
+      rgba(0, 0, 0, 0.1) 100%
+    );
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Variants */
+.primary {
+  background-color: var(--accent);
+  color: white;
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+
+.secondary {
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0) 50%
+    );
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.danger {
+  background-color: var(--error);
+  color: white;
+}
+
+.danger:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.success {
+  background-color: var(--success);
+  color: white;
+}
+
+.success:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+}
+
+.ghost:hover:not(:disabled) {
+  background: rgba(100, 116, 139, 0.1);
+}
+
+/* Success flash — driven by Button's `success` prop: the clicked button
+   turns green and reads "Success" for a moment, then reverts. Must sit
+   after the variants so it overrides their background/color. */
+.flashSuccess,
+.flashSuccess:hover:not(:disabled) {
+  background-color: var(--success);
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0) 40%,
+      rgba(0, 0, 0, 0.1) 100%
+    );
+  color: white;
+  border-color: transparent;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: successPop 300ms ease-out;
+}
+
+/* A button may disable itself right after succeeding (e.g. Run Now while
+   the pipeline is starting) — keep the confirmation readable regardless. */
+.flashSuccess:disabled,
+.flashSuccess[aria-disabled='true'] {
+  opacity: 1;
+}
+
+@keyframes successPop {
+  40% { transform: scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flashSuccess {
+    animation: none;
+  }
+}
+
+/* Spinner */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: _spin 0.8s linear infinite;
+}
+
+@keyframes _spin {
+  to { transform: rotate(360deg); }
+}
+
+.secondary .spinner {
+  border-color: var(--border);
+  border-top-color: var(--text-primary);
+}
+
+.ghost .spinner {
+  border-color: var(--border);
+  border-top-color: var(--text-primary);
+}

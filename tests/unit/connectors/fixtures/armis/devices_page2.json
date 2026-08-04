@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "data": {
+    "count": 1,
+    "total": 3,
+    "next": null,
+    "results": [
+      {
+        "id": 1003,
+        "name": "SERVER-LIN003",
+        "type": "Servers",
+        "category": "Computers",
+        "ipAddress": "10.0.2.50",
+        "macAddress": "AA:BB:CC:DD:EE:03",
+        "manufacturer": "HPE",
+        "model": "ProLiant DL380 Gen10",
+        "serialNumber": "SN-ARMIS-003",
+        "operatingSystem": "Red Hat Enterprise Linux",
+        "operatingSystemVersion": "9.2",
+        "firstSeen": "2024-03-10T06:00:00Z",
+        "lastSeen": "2026-03-18T11:00:00Z",
+        "riskLevel": 15,
+        "purdueLevel": 3,
+        "site": {"name": "Data Center", "location": "Virginia"},
+        "sensor": {"name": "sensor-dc-01", "type": "Virtual"},
+        "tags": [],
+        "dataSources": [{"name": "CrowdStrike"}, {"name": "Qualys"}],
+        "businessImpact": "High",
+        "visibility": "Full"
+      }
+    ]
+  }
+}

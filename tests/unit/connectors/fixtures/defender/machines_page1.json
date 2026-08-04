@@ -1,0 +1,57 @@
+{
+  "@odata.nextLink": "https://api.securitycenter.microsoft.com/api/machines?$top=10000&$skiptoken=page2token",
+  "value": [
+    {
+      "id": "machine-id-001",
+      "computerDnsName": "DESKTOP-CORP001.contoso.com",
+      "firstSeen": "2024-01-15T08:00:00Z",
+      "lastSeen": "2026-03-18T22:45:00Z",
+      "osPlatform": "Windows10",
+      "version": "22H2",
+      "osBuild": 19045,
+      "osArchitecture": "64-bit",
+      "lastIpAddress": "10.0.1.50",
+      "lastExternalIpAddress": "203.0.113.10",
+      "healthStatus": "Active",
+      "onboardingStatus": "Onboarded",
+      "riskScore": "Low",
+      "exposureLevel": "Low",
+      "deviceValue": "Normal",
+      "aadDeviceId": "aad-device-001",
+      "isAadJoined": true,
+      "rbacGroupId": 1,
+      "rbacGroupName": "Corp Workstations",
+      "machineTags": [],
+      "ipAddresses": [
+        {"ipAddress": "10.0.1.50", "macAddress": "001A2B3C4D5E", "operationalStatus": "Up", "type": "Ethernet"},
+        {"ipAddress": "169.254.100.1", "macAddress": "AABB11223344", "operationalStatus": "Down", "type": "Ethernet"}
+      ]
+    },
+    {
+      "id": "machine-id-002",
+      "computerDnsName": "LAPTOP-DEV002.contoso.com",
+      "firstSeen": "2024-03-01T10:00:00Z",
+      "lastSeen": "2026-03-18T20:00:00Z",
+      "osPlatform": "Windows11",
+      "version": "23H2",
+      "osBuild": 22631,
+      "osArchitecture": "64-bit",
+      "lastIpAddress": "10.0.2.25",
+      "lastExternalIpAddress": "203.0.113.10",
+      "healthStatus": "Active",
+      "onboardingStatus": "Onboarded",
+      "riskScore": "None",
+      "exposureLevel": "None",
+      "deviceValue": "Normal",
+      "aadDeviceId": "aad-device-002",
+      "isAadJoined": true,
+      "rbacGroupId": 2,
+      "rbacGroupName": "Dev Laptops",
+      "machineTags": ["dev"],
+      "ipAddresses": [
+        {"ipAddress": "10.0.2.25", "macAddress": "AABBCCDDEEFF", "operationalStatus": "Up", "type": "Ethernet"},
+        {"ipAddress": "192.168.56.1", "macAddress": "112233445566", "operationalStatus": "Up", "type": "Ethernet"}
+      ]
+    }
+  ]
+}

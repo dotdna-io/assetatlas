@@ -1,0 +1,28 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Page-local overrides for the post-login MFA enrollment screen.
+   The shared MfaEnrollment.module.css is also used by the profile-page
+   section (left-aligned), so we only tweak alignment here in the
+   centered card context. */
+
+.qrBlock {
+  align-items: center;
+}
+
+.secretRow {
+  justify-content: center;
+}
+
+.formGroup {
+  align-items: center;
+}
+
+.actions {
+  justify-content: center;
+}
+
+/* Center the standalone "Back to sign-in" link in the error state too. */
+.linkRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}

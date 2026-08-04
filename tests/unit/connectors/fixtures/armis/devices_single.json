@@ -1,0 +1,37 @@
+{
+  "success": true,
+  "data": {
+    "count": 1,
+    "total": 1,
+    "next": null,
+    "results": [
+      {
+        "id": 1001,
+        "name": "DESKTOP-WIN001",
+        "type": "Laptops",
+        "category": "Computers",
+        "ipAddress": "10.0.1.10",
+        "ipv6": ["fe80::1"],
+        "macAddress": "AA:BB:CC:DD:EE:01",
+        "manufacturer": "Dell Inc.",
+        "model": "Latitude 5520",
+        "serialNumber": "SN-ARMIS-001",
+        "operatingSystem": "Windows 11 Enterprise",
+        "operatingSystemVersion": "22H2",
+        "firstSeen": "2024-01-15T08:00:00Z",
+        "lastSeen": "2026-03-18T10:00:00Z",
+        "riskLevel": 35,
+        "purdueLevel": 2,
+        "site": {"name": "HQ Office", "location": "New York"},
+        "sensor": {"name": "sensor-hq-01", "type": "Physical"},
+        "tags": ["Production", "US-East"],
+        "boundaries": "Corporate",
+        "accessSwitch": "switch-floor3-01",
+        "dataSources": [{"name": "CrowdStrike"}, {"name": "Active Directory"}],
+        "businessImpact": "Medium",
+        "customProperties": {"department": "Engineering", "costCenter": "CC-100"},
+        "visibility": "Full"
+      }
+    ]
+  }
+}

@@ -1,0 +1,270 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.topRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.card {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+:global(body:not(.dark-mode)) .cardHeader {
+  border-bottom-color: rgba(0,0,0,0.06);
+}
+
+.cardTitle {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+}
+
+.editButton {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  padding: 0;
+}
+
+.editButton:hover {
+  text-decoration: underline;
+}
+
+.cardBody {
+  padding: var(--space-3) var(--space-4);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-1) 0;
+}
+
+.row + .row {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.value {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  text-align: right;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emptyRow {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  padding: var(--space-2) 0;
+}
+
+/* ─── Field Mapping section ─── */
+.mappingBody {
+  padding: var(--space-3) var(--space-4);
+}
+
+.mappingGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mappingHeaderRow {
+  display: grid;
+  grid-template-columns: 9fr 2fr 9fr;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.mappingColHeader {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+}
+
+.mappingRow {
+  display: grid;
+  grid-template-columns: 9fr 2fr 9fr;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  margin-bottom: 2px;
+}
+
+.mappingSource {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mappingArrow {
+  display: flex;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.mappingTarget {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.identifierBadge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  letter-spacing: 0.3px;
+}
+
+.mappingSection {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.mappingSectionTitle {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  font-size: 11px;
+
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.transformRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  margin-bottom: 2px;
+}
+
+.transformName {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+
+  color: var(--text-primary);
+}
+
+.transformOps {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  flex: 1;
+}
+
+/* ─── Run-pipeline opt-in ─── */
+.pipelineOptIn {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.pipelineRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.pipelineRow input {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.pipelineLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.pipelineHint {
+  margin: var(--space-2) 0 0;
+  padding-left: calc(var(--space-2) + 13px);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+.pipelineLink {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.pipelineLink:hover {
+  text-decoration: underline;
+}
+
+/* Plain colored status text (replaces success/default Badge chips) */
+.statusOk {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: #10b981;
+}
+
+.statusMuted {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}

@@ -1,0 +1,343 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.sidebar {
+  width: var(--sidebar-width);
+  /* Quiet liquid-glass frame — same material as .glossyCard (translucent so
+     the app backdrop shows through blurred + saturated), kept a touch denser
+     and calmer than a card so it frames the content rather than competing. */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.50) 100%);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-right: 1px solid rgba(255, 255, 255, 0.7);
+  border-top-right-radius: 24px;
+  border-bottom-right-radius: 24px;
+  box-shadow:
+    8px 0 30px -14px rgba(60, 65, 80, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset -1px 0 0 rgba(255, 255, 255, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-5) 0;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+:global(body.dark-mode) .sidebar {
+  background: linear-gradient(180deg, rgba(32, 33, 38, 0.55) 0%, rgba(24, 25, 30, 0.50) 100%);
+  border-right-color: rgba(255, 255, 255, 0.10);
+  box-shadow:
+    8px 0 30px -12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset -1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+.top {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 52px;
+}
+
+/* --- Nav Item --- */
+.navItem {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-decoration: none;
+  color: var(--text-secondary);
+  background: transparent;
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.navItem svg {
+  width: 21px;
+  height: 21px;
+  stroke: var(--text-secondary);
+  transition: all var(--transition-base);
+  z-index: 2;
+  position: relative;
+}
+
+.navItem:hover svg {
+  stroke: var(--text-primary);
+}
+
+:global(body.dark-mode) .navItem svg {
+  stroke: var(--text-secondary);
+}
+
+:global(body.dark-mode) .navItem:hover svg {
+  stroke: var(--text-primary);
+}
+
+/* Admin-only destination seen by a standard user: present but inert, so the
+   capability stays discoverable and the tooltip can say why it won't open.
+   The dark-mode hover rules above are more specific than a bare
+   `.navItemMuted:hover svg`, so the override is repeated under the same
+   selector weight rather than relying on source order alone. */
+.navItemMuted,
+.navItemMuted:hover {
+  cursor: default;
+  opacity: 0.4;
+  background: transparent;
+}
+
+.navItemMuted:hover svg,
+:global(body.dark-mode) .navItemMuted:hover svg {
+  stroke: var(--text-secondary);
+}
+
+/* Scale per icon type — applied via inline style transform on the svg */
+
+/* Active state: subtle overlay, not solid blue */
+.navItem.active {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.navItem.active svg {
+  stroke: white;
+}
+
+:global(body.dark-mode) .navItem.active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:global(body.dark-mode) .navItem.active svg {
+  stroke: var(--text-primary);
+}
+
+/* --- Expanding label with glassmorphism --- */
+.label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  /* Start hidden behind icon */
+  width: 37px;
+  padding-left: 37px;
+  padding-right: 0;
+
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+
+  /* Base: transparent. No backdrop-filter at rest — a blur(0px) here nests
+     inside the sidebar's own backdrop-filter and paints a faint square behind
+     every icon. The frost is applied only on hover (below), where the pill
+     actually needs it. */
+  background: rgba(255, 255, 255, 0);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: transparent;
+  white-space: nowrap;
+
+  z-index: -1;
+
+  transition:
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.3s ease,
+    backdrop-filter 0.3s ease,
+    -webkit-backdrop-filter 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    color 0.15s ease;
+}
+
+:global(body.dark-mode) .label {
+  color: transparent;
+  background: rgba(0, 0, 0, 0);
+}
+
+/* Hover: expand and glassmorphism */
+.navItem:hover .label {
+  width: 105px;
+  padding-right: 10px;
+  justify-content: center;
+  color: var(--text-primary);
+
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+
+  transition:
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.3s ease,
+    backdrop-filter 0.3s ease,
+    -webkit-backdrop-filter 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    color 0.2s ease 0.1s;
+}
+
+:global(body.dark-mode) .navItem:hover .label {
+  color: var(--text-primary);
+  background: rgba(30, 41, 59, 0.12);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Active label */
+.navItem.active .label {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+:global(body.dark-mode) .navItem.active .label {
+  color: var(--text-primary);
+}
+
+/* --- Profile icon + hover menu --- */
+.profileIcon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+  color: var(--text-secondary);
+}
+
+.profileIcon > svg {
+  width: 30px;
+  height: 30px;
+  stroke: var(--text-secondary);
+  z-index: 2;
+  position: relative;
+}
+
+.profileMenu {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  min-width: 220px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-10px) translateY(10px);
+  z-index: 10;
+  transition:
+    all 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+.profileIcon:hover .profileMenu {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(32px) saturate(1.6);
+  -webkit-backdrop-filter: blur(32px) saturate(1.6);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+:global(body.dark-mode) .profileIcon:hover .profileMenu {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.profileHeader {
+  padding: 16px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profileName {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.profileEmail {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.profileDivider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0 12px;
+}
+
+:global(body.dark-mode) .profileDivider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Extra vertical margin above the divider that sits before Sign Out so
+   Dark/Light Mode reads as part of the Profile group and Sign Out is
+   noticeably further down — harder to mis-click. */
+.profileDividerSpaced {
+  margin-top: 8px;
+}
+
+.profileMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+/* Hover highlights the label only — keeps icons neutral and avoids a
+   full-row blue band that draws the eye toward Sign Out. */
+.profileMenuItem:hover span {
+  color: var(--accent);
+}
+
+.profileMenuItem svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--text-secondary);
+  flex-shrink: 0;
+}

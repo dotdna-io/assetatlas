@@ -1,0 +1,137 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/MergeDenylistTab.module.css */
+
+/* ── Add row (mirrors AlertRoutingTab.module.css .select + apiKeys.module.css
+   .formInput tokens) ── */
+
+.addRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px 14px;
+}
+
+.select {
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.input {
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  flex: 1;
+  min-width: 160px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Separator between the two range bounds — reads as 'start to end'. */
+.rangeSep {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+/* ── Match-count preview (mirrors UnifiedFieldModal.module.css .previewLoading,
+   which is the other settings screen with a live preview) ── */
+
+.previewRow {
+  padding: 0 14px 12px;
+}
+
+.previewMuted {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* A wide entry is the mistake this preview exists to catch, so its count is
+   coloured rather than left to be skimmed past. */
+.previewLoud {
+  font-size: var(--font-size-sm);
+  color: var(--warning);
+}
+
+/* ── Table (mirrors apiKeys.module.css / UnifiedFieldsTab.module.css) ── */
+
+.tableWrap {
+  overflow-x: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:global(body:not(.dark-mode)) .tableWrap {
+  border-top-color: rgba(0, 0, 0, 0.06);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:global(body:not(.dark-mode)) .th {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.thRight {
+  text-align: right;
+}
+
+.td {
+  padding: 11px 14px;
+  vertical-align: middle;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:global(body:not(.dark-mode)) .td {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.table tbody tr:last-child .td {
+  border-bottom: none;
+}
+
+.secondary {
+  color: var(--text-secondary);
+}
+
+.actionsCell {
+  text-align: right;
+}
+
+.emptyCell {
+  text-align: center;
+  padding: 32px 14px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}

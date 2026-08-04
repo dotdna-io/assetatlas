@@ -1,0 +1,69 @@
+# AssetAtlas Base Image (Internet-Connected Build)
+# Contains: Python runtime, all pip packages, ML model (downloaded), reference data
+# Rebuild only when dependencies, model, or reference data change
+# App code is NOT included — see Dockerfile for the thin app image
+#
+# Usage:
+#   docker build -f Dockerfile.base.online \
+#     -t localhost/assetatlas-base:latest \
+#     -t assetatlas-base:latest .
+#
+# Differences from Dockerfile.base (air-gapped):
+#   - Downloads the BGE embedding model during build instead of COPY from local cache
+#   - Requires internet access during build
+
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies.
+# constraints-prod.txt pins the transitive closure the manifest's uncapped `>=`
+# floors would otherwise resolve to latest-at-build-time (#1262) — same pairing
+# as Dockerfile.base, and it must stay in step with it: this file exists to
+# produce the SAME runtime without the local model cache.
+COPY requirements-prod.txt ./requirements.txt
+COPY constraints-prod.txt ./constraints.txt
+RUN pip install --no-cache-dir -r requirements.txt -c constraints.txt
+
+# Copy reference data files needed at runtime. Only the files produced by
+# scripts/prepare-base-data.sh (mac_ranges.csv, dbip-city-lite.mmdb) or tracked
+# in git (categories.json, device_knowledge_base/) are bundled. Optional
+# deployment-specific enrichment inputs (ipam.csv, asset_os*.csv, os_global.csv,
+# rules.csv, category_overrides.csv, category_subcategory_mapping.json) are NOT
+# shipped — the loaders degrade gracefully when they are absent (a fresh install
+# runs with reduced enrichment until an operator supplies them).
+COPY data/mac_ranges.csv ./data/mac_ranges.csv
+COPY data/categories.json ./data/categories.json
+COPY data/device_knowledge_base/ ./data/device_knowledge_base/
+COPY data/dbip-city-lite.mmdb ./data/dbip-city-lite.mmdb
+
+# Set HuggingFace cache paths BEFORE downloading the model
+# so all hub metadata and tokenizer configs land in /app/models/cache
+ENV HF_HOME=/app/models/cache
+ENV SENTENCE_TRANSFORMERS_HOME=/app/models/cache
+
+# Download embedding model (BGE-base-en-v1.5, ~420MB)
+# This replaces the COPY from local cache used in the air-gapped Dockerfile.base
+RUN mkdir -p /app/models/cache && \
+    python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-base-en-v1.5', cache_folder='/app/models/cache')"
+
+# Create non-root user and log directory
+# chown only mutable dirs — model cache is read-only at runtime, no need to rechown 420MB
+RUN mkdir -p /app/logs && \
+    useradd -m -u 1000 assetatlas && \
+    chown -R assetatlas:assetatlas /app/logs /app/data
+
+USER assetatlas
+
+# Set offline mode for runtime (model already cached above — prevent runtime downloads)
+ENV HF_HUB_OFFLINE=1
+ENV TRANSFORMERS_OFFLINE=1
+
+EXPOSE 5001

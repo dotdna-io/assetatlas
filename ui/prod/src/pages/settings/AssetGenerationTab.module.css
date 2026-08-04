@@ -1,0 +1,35 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/AssetGenerationTab.module.css */
+.inlineControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.numberInput {
+  width: 96px;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.numberInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Hide native number-input spin buttons — the user types the value. */
+.numberInput[type='number']::-webkit-inner-spin-button,
+.numberInput[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.numberInput[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

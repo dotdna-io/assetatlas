@@ -1,0 +1,16 @@
+{
+  "_comment": "Shared fixture pinning the merge-denylist admin UI to the Python encoder (#991). Read by tests/unit/merge_denylist/test_encoding.py and ui/prod/src/api/__tests__/merge-denylist.test.ts, so a change on either side alone fails a test rather than silently diverging.",
+  "match_types_by_type": {
+    "hostname": ["exact", "prefix", "suffix"],
+    "fqdn": ["exact", "prefix", "suffix"],
+    "mac": ["exact", "prefix", "range"],
+    "serial": ["exact"]
+  },
+  "_preview_fields_comment": "The catalog display name the UI's match-count preview asks /assets/values for, per identifier type, and the assets column each must resolve to.",
+  "preview_fields": {
+    "hostname": { "display_name": "Hostname", "column": "hostname" },
+    "fqdn": { "display_name": "FQDN", "column": "fqdn" },
+    "mac": { "display_name": "MAC Address", "column": "mac" },
+    "serial": { "display_name": "Serial Number", "column": "sn" }
+  }
+}

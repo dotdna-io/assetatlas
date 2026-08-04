@@ -1,0 +1,71 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* SettingsSection's body has tight default padding meant for grid rows.
+   Form fields need more breathing room, so wrap children in this block
+   and override — mirrors EmailSettingsTab.module.css's .cardBody. */
+.cardBody {
+  padding: 6px 18px 14px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.row:last-child {
+  margin-bottom: 0;
+}
+
+.row label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.row input {
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+}
+
+.row input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Hide native number-input spin buttons — the user types the value. */
+.row input[type='number']::-webkit-inner-spin-button,
+.row input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.row input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.textarea {
+  min-height: 72px;
+  padding: 8px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono, monospace);
+  resize: vertical;
+}
+
+.error {
+  margin-top: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--error);
+}

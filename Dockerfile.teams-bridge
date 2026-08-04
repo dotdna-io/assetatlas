@@ -1,0 +1,42 @@
+# AssetAtlas Teams bridge — standalone slim image (#1069).
+#
+# This was `FROM assetatlas-backend:latest`, which put the entire ML/data stack
+# inside the one internet-reachable container: it terminates Teams webhooks, and
+# it was carrying a 255.7 MB ONNX embedding model, a 64.6 MB geolocation
+# database, chromadb, onnxruntime, numpy, pandas, psycopg2 and postgresql-client
+# — none of which it can even import. src/teams_bridge/ imports nothing from the
+# rest of src/; it is a pure HTTP client of the API.
+#
+# This is NOT a size win and must not be justified as one. Sharing with the app
+# image drops from 100% (identical manifest digest) to just the python:3.13-slim
+# layers below, so the combined stack grows by this image's own pip layer. The
+# justification is exposure: a CVE in any of those packages currently lands in
+# the most reachable container in the deployment, for no benefit.
+#
+# Pinned to the same python:3.13-slim tag as Dockerfile.base so the ~42 MB of
+# debian + python layers stay shared rather than duplicated.
+FROM python:3.13-slim
+
+LABEL org.opencontainers.image.source="https://github.com/dotdna-io/assetatlas" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later"
+
+WORKDIR /app
+
+# Same uid 1000 / name as Dockerfile.base:74, so anything written to a shared
+# volume by one image stays readable by the other.
+RUN useradd -m -u 1000 assetatlas
+
+COPY requirements-teams-bridge.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# src/ has no __init__.py — it is a PEP 420 namespace package, so copying only
+# the bridge subtree still resolves `python -m src.teams_bridge`.
+COPY --chown=assetatlas:assetatlas src/teams_bridge/ ./src/teams_bridge/
+
+USER assetatlas
+
+EXPOSE 3978
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "-m", "src.teams_bridge"]

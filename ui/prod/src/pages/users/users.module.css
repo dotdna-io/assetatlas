@@ -1,0 +1,498 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ── Stats summary strip ── */
+.statsLine {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: var(--font-size-sm);
+}
+
+/* Header row pairing stats with Create User button on the same line. */
+.statsHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.statItem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.statKey {
+  color: var(--text-tertiary);
+}
+
+.statValue {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.statSep {
+  color: var(--text-tertiary);
+  opacity: 0.45;
+  margin-right: 4px;
+}
+
+.statSuccess { color: var(--success); }
+.statWarning { color: var(--warning); }
+.statDanger  { color: var(--error); }
+
+/* ── Filters ── */
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+/* Width tuned to roughly match the stats line above ("Total Users: N |
+   Active: N | Admins: N | Inactive: N") so the search input's right edge
+   sits near the end of the stats text. */
+.searchWrapper {
+  flex: 0 0 460px;
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.filterSelect {
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+}
+
+/* ── Actions ── */
+.actionsCell {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.iconBtn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.dropdownMenu {
+  position: fixed;
+  z-index: 100;
+  min-width: 160px;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background var(--transition-fast);
+}
+
+.menuItem:hover {
+  background: var(--bg-secondary);
+}
+
+.menuItemDanger {
+  color: var(--error);
+}
+
+/* ── Table ── */
+.tableCard {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border);
+}
+
+.thRight {
+  text-align: right;
+}
+
+.td {
+  padding: 12px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+:global(body:not(.dark-mode)) .td {
+  border-bottom-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Fade the data cells of an inactive user, but keep the actions cell at
+   full opacity so the kebab/edit buttons don't look disabled. */
+.rowInactive > td:not(:last-child) {
+  opacity: 0.55;
+}
+
+.userCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.username {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fullName {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.email {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.lastActive {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.emptyCell {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Pagination ── */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.pageInfo {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.pageButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.pageBtn {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageBtnActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.pageBtnActive:hover {
+  background: var(--accent);
+}
+
+/* ── Modal Form ── */
+.modalUserHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modalUsername {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.formGroup {
+  margin-bottom: 16px;
+}
+
+.formLabel {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.required {
+  color: var(--error);
+}
+
+.formInput {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast);
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.formInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.formInputError {
+  border-color: var(--error);
+}
+
+.fieldError {
+  display: block;
+  color: var(--error);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.hint {
+  display: block;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.passwordWrapper {
+  position: relative;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.passwordToggle:hover {
+  color: var(--text-primary);
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Page Layout ── */
+.page {
+  /* No padding — AppShell handles margins */
+}
+
+/* ── Invite Created Dialog ── */
+.inviteCreatedBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inviteCreatedBody p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.inviteUrlLabel {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.inviteUrlRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.inviteUrlInput {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast);
+}
+
+.inviteUrlInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.inviteCreatedActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* Role as plain colored text (replaces the role badge). Theme-aware so the
+   colours stay legible on both light and dark backgrounds. */
+.roleText {
+  font-weight: 600;
+}
+
+.roleSuperAdmin { color: #7c3aed; }
+.roleAdmin { color: #d97706; }
+.roleUser { color: #2563eb; }
+
+:global(body.dark-mode) .roleSuperAdmin { color: #a78bfa; }
+:global(body.dark-mode) .roleAdmin { color: #fbbf24; }
+:global(body.dark-mode) .roleUser { color: #60a5fa; }
+
+/* Auth type: directory-backed (LDAP / SSO) reads blue; local stays neutral. */
+.authType {
+  font-weight: 600;
+}
+
+.authDirectory { color: #2563eb; }
+.authLocal { color: var(--text-secondary); font-weight: 500; }
+
+:global(body.dark-mode) .authDirectory { color: #60a5fa; }

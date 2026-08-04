@@ -1,0 +1,18 @@
+{
+  "value": [
+    {
+      "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "deviceName": "DESKTOP-WIN001",
+      "userPrincipalName": "john.doe@contoso.com",
+      "managedDeviceOwnerType": "company",
+      "serialNumber": "SN-001",
+      "manufacturer": "Dell",
+      "model": "OptiPlex 7090",
+      "operatingSystem": "Windows",
+      "osVersion": "10.0.19041.1",
+      "complianceState": "compliant",
+      "lastSyncDateTime": "2026-03-18T10:00:00Z",
+      "enrolledDateTime": "2024-01-15T08:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,220 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.panel {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+
+/* Integration header */
+.selectedTech {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-5);
+}
+.logo { width: 32px; height: 32px; object-fit: contain; }
+.techName { font-weight: 600; font-size: var(--font-size-sm); }
+.techCategory { font-size: var(--font-size-xs); color: var(--text-tertiary); }
+.changeButton {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  cursor: pointer;
+  font-family: var(--font-family);
+}
+.changeButton:hover { color: var(--text-primary); border-color: var(--text-tertiary); }
+
+/* Heading */
+.heading {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+/* Two-card method grid */
+.methodGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: 40px;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.methodCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-6) var(--space-4) var(--space-5);
+  min-height: 180px;
+  justify-content: center;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 40%),
+    rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  text-align: center;
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+.methodCard:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.methodCardActive,
+.methodCardActive:hover {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+
+:global(body:not(.dark-mode)) .methodCard {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.2) 40%, transparent 100%),
+    rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+:global(body:not(.dark-mode)) .methodCard:hover {
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+:global(body:not(.dark-mode)) .methodCardActive,
+:global(body:not(.dark-mode)) .methodCardActive:hover {
+  border-color: var(--accent);
+}
+
+.methodLogo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: brightness(1.4);
+}
+
+:global(body:not(.dark-mode)) .methodLogo {
+  filter: none;
+}
+
+.methodCornerLogo {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  opacity: 0.7;
+  filter: brightness(1.4);
+}
+
+:global(body:not(.dark-mode)) .methodCornerLogo {
+  filter: none;
+}
+
+.methodTitle {
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+.methodDesc {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
+/* Small transport logos inside the SIEM card */
+.transportLogos {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.transportLogoSmall {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  opacity: 0.7;
+}
+
+/* Transport picker (expanded after selecting SIEM) */
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-3);
+  margin-top: var(--space-5);
+  text-align: center;
+}
+
+.transportGrid {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+}
+
+.transportCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 40%),
+    rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.transportCard:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.transportCardActive,
+.transportCardActive:hover {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+
+:global(body:not(.dark-mode)) .transportCard {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.2) 40%, transparent 100%),
+    rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+:global(body:not(.dark-mode)) .transportCard:hover {
+  border-color: rgba(0, 0, 0, 0.14);
+}
+:global(body:not(.dark-mode)) .transportCardActive,
+:global(body:not(.dark-mode)) .transportCardActive:hover {
+  border-color: var(--accent);
+}
+.transportLogo { width: 20px; height: 20px; object-fit: contain; }
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

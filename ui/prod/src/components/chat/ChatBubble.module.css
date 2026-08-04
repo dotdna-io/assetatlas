@@ -1,0 +1,135 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.bubble {
+  position: fixed;
+  bottom: calc(var(--space-6) + 40px);
+  right: calc(var(--space-6) + 16px);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 1000;
+
+  /* Light mode default — pearl: light grey with a soft top sheen so the
+     dark green icon pops, matching the cleaner card surfaces around it. */
+  background:
+    linear-gradient(160deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0) 55%
+    ),
+    linear-gradient(180deg, rgba(198, 200, 210, 0.78) 0%, rgba(168, 170, 182, 0.78) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 10px 28px -8px rgba(60, 60, 70, 0.28),
+    0 4px 12px -4px rgba(60, 60, 70, 0.16),
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
+}
+
+/* One-shot attention pulse on first mount — subtle green ring that
+   expands outward twice then settles. Uses a pseudo-element so it
+   never conflicts with the bubble's static shadows or pressed state. */
+.bubble::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: bubblePulse 1.8s ease-out 0.5s 2 both;
+}
+
+@keyframes bubblePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.50);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(16, 185, 129, 0);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble::before { animation: none; }
+}
+
+.bubble:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 14px 36px -8px rgba(60, 60, 70, 0.36),
+    0 6px 16px -4px rgba(60, 60, 70, 0.20),
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.bubble:focus-visible {
+  outline: 2px solid var(--success);
+  outline-offset: 3px;
+}
+
+.bubble[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--success),
+    0 10px 28px -8px rgba(60, 60, 70, 0.28),
+    0 4px 12px -4px rgba(60, 60, 70, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Pressed state's own ring takes the place of the outer dark ring */
+
+/* ---- Dark mode: surface is close to the card tone but slightly
+   translucent (88% alpha) and lifted with a heavier ambient shadow +
+   outer 1px ring. Means it stays distinct from the canvas on
+   card-less pages without darkening into invisibility. ---- */
+:global(body.dark-mode) .bubble {
+  background:
+    linear-gradient(160deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0) 50%
+    ),
+    linear-gradient(180deg, rgba(46, 46, 54, 0.88) 0%, rgba(26, 26, 30, 0.88) 100%);
+  border-color: rgba(255, 255, 255, 0.20);
+  box-shadow:
+    0 18px 40px -8px rgba(0, 0, 0, 0.80),
+    0 8px 20px -4px rgba(0, 0, 0, 0.50),
+    0 0 0 2px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+:global(body.dark-mode) .bubble:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 22px 48px -8px rgba(0, 0, 0, 0.85),
+    0 10px 24px -4px rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(0, 0, 0, 0.50),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+:global(body.dark-mode) .bubble[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--success),
+    0 18px 40px -8px rgba(0, 0, 0, 0.80),
+    0 8px 20px -4px rgba(0, 0, 0, 0.50),
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.icon {
+  width: 28px;
+  height: 28px;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}

@@ -1,0 +1,7 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/dotdna-io/assetatlas/security/policy
+    about: >-
+      Please do not open a public issue for security problems. Follow the
+      private disclosure process in SECURITY.md and email security@dotdna.io.

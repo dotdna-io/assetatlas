@@ -1,0 +1,87 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px var(--space-2);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+  /* Gloss is wrapped in CSS vars so a parent context (e.g. the chat
+     panel) can flatten badges by setting --badge-gloss-image / -shadow
+     to none, without a per-callsite prop. */
+  background-image: var(--badge-gloss-image, linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0) 50%
+  ));
+  box-shadow: var(--badge-gloss-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.1));
+}
+
+:global(body:not(.dark-mode)) .badge {
+  background-image: var(--badge-gloss-image, linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.05) 100%
+  ));
+  box-shadow: var(--badge-gloss-shadow,
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05)
+  );
+}
+
+/* Variants set background-color (not background shorthand) so the glossy
+   linear-gradient declared on .badge via background-image survives. */
+
+.success {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.danger {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.warning {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.info {
+  background-color: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.default {
+  background-color: rgba(100, 116, 139, 0.12);
+  color: var(--text-secondary);
+}
+
+.custom {
+  /* background-color and color set via inline style */
+}
+
+:global(body.dark-mode) .success {
+  background-color: rgba(16, 185, 129, 0.15);
+}
+
+:global(body.dark-mode) .danger {
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
+:global(body.dark-mode) .warning {
+  background-color: rgba(245, 158, 11, 0.15);
+}
+
+:global(body.dark-mode) .info {
+  background-color: rgba(59, 130, 246, 0.15);
+}
+
+:global(body.dark-mode) .default {
+  background-color: rgba(100, 116, 139, 0.15);
+}

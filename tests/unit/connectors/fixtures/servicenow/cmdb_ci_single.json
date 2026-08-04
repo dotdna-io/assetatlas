@@ -1,0 +1,33 @@
+{
+  "result": [
+    {
+      "sys_id": "ci-001",
+      "name": "DESKTOP-WIN001",
+      "asset_tag": "AT-001",
+      "serial_number": "SN-001",
+      "model_id": {"link": "https://dev12345.service-now.com/api/now/table/cmdb_model/model-001", "value": "model-001"},
+      "manufacturer": {"link": "https://dev12345.service-now.com/api/now/table/core_company/mfg-001", "value": "mfg-001"},
+      "location": {"link": "https://dev12345.service-now.com/api/now/table/cmn_location/loc-001", "value": "loc-001"},
+      "assigned_to": "user-001",
+      "ip_address": "10.0.1.10",
+      "mac_address": "AA:BB:CC:DD:EE:01",
+      "sys_class_name": "cmdb_ci_computer",
+      "sys_created_on": "2024-01-15 08:00:00",
+      "sys_updated_on": "2026-03-18 10:00:00",
+      "company": "",
+      "department": "",
+      "cost_center": "",
+      "purchase_date": "2023-06-01",
+      "warranty_expiration": "2026-06-01",
+      "install_status": "1",
+      "operational_status": "1",
+      "managed_by": "",
+      "owned_by": "",
+      "supported_by": "",
+      "u_business_unit": "",
+      "u_environment": "Production",
+      "comments": "",
+      "short_description": "Standard desktop"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "value": [
+    {
+      "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "deviceName": "IPHONE-MOB003",
+      "userPrincipalName": "alice.jones@contoso.com",
+      "managedDeviceOwnerType": "personal",
+      "serialNumber": "SN-003",
+      "manufacturer": "Apple",
+      "model": "iPhone 15",
+      "operatingSystem": "iOS",
+      "osVersion": "17.3.1",
+      "complianceState": "noncompliant",
+      "lastSyncDateTime": "2026-03-19T08:00:00Z",
+      "enrolledDateTime": "2025-06-10T11:00:00Z"
+    }
+  ]
+}

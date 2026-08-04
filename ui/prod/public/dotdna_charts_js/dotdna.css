@@ -1,0 +1,440 @@
+/* DotDNA Charts Library - Vanilla JavaScript Edition */
+/* Main stylesheet with animations and base styles */
+
+/* Base Chart Container */
+.dotdna-chart {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+.dotdna-chart-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Number Card Styles */
+.dotdna-number-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: transparent;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.dotdna-number-card-icon {
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dotdna-number-card-value {
+    font-size: 56px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+    line-height: 1;
+}
+
+.dotdna-number-card-value.animating {
+    opacity: 0.7;
+    transform: scale(0.95);
+}
+
+.dotdna-number-card-suffix {
+    font-size: 24px;
+    margin-left: 4px;
+    opacity: 0.7;
+}
+
+.dotdna-number-card-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6B7280;
+    margin-bottom: 12px;
+    text-align: center;
+    transition: opacity 0.5s ease;
+}
+
+.dotdna-number-card-label.hidden {
+    opacity: 0;
+}
+
+.dotdna-number-card-trend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.5s ease;
+}
+
+.dotdna-number-card-trend.hidden {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.dotdna-number-card-trend-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.dotdna-number-card-bg-blur {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+    transition: opacity 1s ease;
+}
+
+.dotdna-number-card-bg-blur.hidden {
+    opacity: 0 !important;
+}
+
+.dotdna-number-card-bg-blur.top-right {
+    top: 0;
+    right: 0;
+    width: 128px;
+    height: 128px;
+}
+
+.dotdna-number-card-bg-blur.bottom-left {
+    bottom: 0;
+    left: 0;
+    width: 96px;
+    height: 96px;
+    transition-delay: 200ms;
+}
+
+/* SVG Chart Styles */
+.dotdna-chart svg {
+    width: 100%;
+    height: 100%;
+}
+
+.dotdna-chart .petal,
+.dotdna-chart .bar-segment,
+.dotdna-chart .pyramid-segment {
+    cursor: pointer;
+    transition: opacity 0.3s ease, transform 0.2s ease;
+}
+
+.dotdna-chart .petal:hover,
+.dotdna-chart .bar-segment:hover,
+.dotdna-chart .pyramid-segment:hover {
+    opacity: 0.8;
+}
+
+.dotdna-chart .petal.active {
+    filter: brightness(1.1);
+    stroke: white;
+    stroke-width: 2;
+}
+
+/* Animations */
+@keyframes dotdna-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes dotdna-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes dotdna-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes dotdna-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dotdna-chart .rotating {
+    animation: dotdna-rotate 1s ease-out;
+    transform-origin: center;
+}
+
+.dotdna-chart .fade-in {
+    animation: dotdna-fade-in 0.5s ease-in;
+}
+
+.dotdna-chart .scale-in {
+    animation: dotdna-scale-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Label and Line Styles */
+.dotdna-chart .label-line {
+    stroke: rgba(156, 163, 175, 0.4);
+    stroke-width: 1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.dotdna-chart .label-line.visible {
+    opacity: 1;
+}
+
+.dotdna-chart .petal-label,
+.dotdna-chart .segment-label {
+    fill: #374151;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.dotdna-chart .petal-label.visible,
+.dotdna-chart .segment-label.visible {
+    opacity: 1;
+}
+
+.dotdna-chart .center-count {
+    fill: #1F2937;
+    font-size: 36px;
+    font-weight: 700;
+}
+
+.dotdna-chart .center-label {
+    fill: #6B7280;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Donut center text - adapts to light/dark mode */
+.donut-center-text {
+    fill: #1F2937;  /* Black for light mode */
+}
+
+body.dark-mode .donut-center-text {
+    fill: white;  /* White for dark mode */
+}
+
+.donut-center-label {
+    fill: #6B7280;  /* Muted gray for light mode */
+}
+
+body.dark-mode .donut-center-label {
+    fill: #9CA3AF;  /* Lighter muted gray for dark mode */
+}
+
+/* Gauge percentage text - adapts to light/dark mode via CSS so the theme
+   switch picks up immediately without re-rendering the SVG (the chart's
+   render() previously read document.body.classList at element-creation
+   time, which is a timing race against the body-class apply effect). */
+.gauge-pct {
+    fill: #111827;
+}
+
+body.dark-mode .gauge-pct {
+    fill: #FFFFFF;
+}
+
+/* Gauge track - stroke variant (CircleGauge arc, LinearGauge dashed line) */
+.gauge-track-stroke {
+    stroke: rgba(0, 0, 0, 0.06);
+}
+
+body.dark-mode .gauge-track-stroke {
+    stroke: rgba(255, 255, 255, 0.1);
+}
+
+/* Gauge track - fill variant (LinearGauge continuous rect) */
+.gauge-track-fill {
+    fill: rgba(0, 0, 0, 0.06);
+}
+
+body.dark-mode .gauge-track-fill {
+    fill: rgba(255, 255, 255, 0.1);
+}
+
+/* Line chart tooltip — themed via CSS so theme toggles restyle the
+   existing tooltip without having to rebuild the chart. */
+.line-chart-tooltip {
+    background-color: #ffffff;
+    color: #1e293b;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.dark-mode .line-chart-tooltip {
+    background-color: #303034;
+    color: #f0f0f0;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Line chart grid + axis labels — CSS so theme switches restyle the
+   existing chart via cascade, no re-render needed. */
+.line-chart-grid {
+    stroke: #E5E7EB;
+    opacity: 0.5;
+}
+
+body.dark-mode .line-chart-grid {
+    stroke: #374151;
+    opacity: 0.3;
+}
+
+.line-chart-axis-label {
+    color: #6B7280;
+}
+
+body.dark-mode .line-chart-axis-label {
+    color: #9CA3AF;
+}
+
+/* Circle chart text - adapts to light/dark mode */
+.chart-text-primary {
+    color: #1F2937;  /* Black for light mode */
+}
+
+body.dark-mode .chart-text-primary {
+    color: white;  /* White for dark mode */
+}
+
+.chart-text-secondary {
+    color: #6B7280;  /* Gray for light mode */
+}
+
+body.dark-mode .chart-text-secondary {
+    color: #9CA3AF;  /* Light gray for dark mode */
+}
+
+/* Circle background - subtle in light, transparent in dark */
+.circle-bg {
+    stroke: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .circle-bg {
+    stroke: rgba(255, 255, 255, 0.1);
+}
+
+/* Radial bar background - subtle in light, transparent in dark */
+.radial-bg {
+    stroke: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .radial-bg {
+    stroke: rgba(255, 255, 255, 0.1);
+}
+
+/* Radial center circle - white in light, dark in dark mode */
+.radial-center {
+    fill: white;
+    stroke: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .radial-center {
+    fill: #1e293b;
+    stroke: rgba(255, 255, 255, 0.1);
+}
+
+/* Radial percentage labels */
+.radial-label {
+    fill: rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .radial-label {
+    fill: rgba(255, 255, 255, 0.4);
+}
+
+/* Legend text color adaptation */
+.dotdna-chart div[style*="font-size: 13px"] {
+    color: #374151;
+}
+
+body.dark-mode .dotdna-chart div[style*="font-size: 13px"] {
+    color: #D1D5DB;
+}
+
+/* Tooltip */
+.dotdna-tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    pointer-events: none;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    white-space: nowrap;
+}
+
+.dotdna-tooltip.visible {
+    opacity: 1;
+}
+
+/* Legend */
+.dotdna-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+    justify-content: center;
+}
+
+.dotdna-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.dotdna-legend-item:hover {
+    opacity: 0.7;
+}
+
+.dotdna-legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .dotdna-number-card-value {
+        font-size: 36px;
+    }
+
+    .dotdna-chart .center-count {
+        font-size: 28px;
+    }
+
+    .dotdna-chart .petal-label,
+    .dotdna-chart .segment-label {
+        font-size: 10px;
+    }
+}

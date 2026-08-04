@@ -1,0 +1,101 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/**
+ * AssetAtlas Design Tokens
+ * Single source of truth for all CSS variables used across the application.
+ * Matches the legacy shared-styles.css variables exactly.
+ */
+
+:root {
+  /* Colors — Light mode (warm gray, not pure white) */
+  --bg-primary: #ebedf0;
+  --bg-secondary: #e4e6ea;
+  --card-bg: rgba(255, 255, 255, 0.72);
+  --input-bg: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.08);
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --accent: #3b82f6;
+  --accent-rgb: 59, 130, 246;
+  --accent-hover: #2563eb;
+  --border: rgba(0, 0, 0, 0.1);
+  --border-color: rgba(0, 0, 0, 0.1);
+  /* Background for "empty" brick in PostureScoreBars — needs to read on
+     both the (white-ish) dashboard cards and the (light-grey) page bg
+     of the data source details page. Dark-mode override flips it to a
+     light-on-dark value in dark-mode.css. */
+  --posture-empty-brick: rgba(0, 0, 0, 0.18);
+  --shadow: rgba(0, 0, 0, 0.1);
+  --shadow-color: rgba(0, 0, 0, 0.1);
+
+  /* Semantic colors */
+  --success: #10b981;
+  --success-rgb: 16, 185, 129;
+  --error: #ef4444;
+  --error-rgb: 239, 68, 68;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  /* Auxiliary marker for "computed/transformed/virtual" data — distinct
+     from --accent (action) and --info (informational), so transformed
+     fields don't visually collide with DSS-mapped ones. */
+  --purple: #a855f7;
+  --purple-rgb: 168, 85, 247;
+
+  /* Brand — the lime at the top of the logo mark's gradient (the mark runs
+     #66cc0d down to #395720; the tip is the value that survives at icon
+     size). Identity, not state: use it where something should read as
+     AssetAtlas, never to mean "this succeeded" — that's --success, and the
+     two are not interchangeable even though both are green. Mode-independent
+     on purpose, so the brand does not shift between light and dark. */
+  --brand-lime: #66cc0d;
+  --brand-lime-rgb: 102, 204, 13;
+
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 32px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Border radius */
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.3);
+
+  /* Layout */
+  --sidebar-width: 70px;
+  --sidebar-expanded-width: 90px;
+  --content-max-width: 1920px;
+
+  /* Dropdown / Tooltip surfaces */
+  --dropdown-bg: #ebedf0;
+  --tooltip-bg: #ebedf0;
+  --tooltip-color: #1e293b;
+  --tooltip-border: rgba(0, 0, 0, 0.08);
+  --tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-base: 0.3s ease;
+}

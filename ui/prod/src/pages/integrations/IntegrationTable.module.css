@@ -1,0 +1,138 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid rgba(255, 255, 255, 0.03);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.th:last-child {
+  border-right: none;
+}
+
+:global(body:not(.dark-mode)) .th {
+  border-right-color: rgba(0, 0, 0, 0.04);
+}
+
+.thSortable {
+  cursor: pointer;
+}
+
+.thSortable:hover {
+  color: var(--text-primary);
+}
+
+.thActive {
+  color: var(--text-primary);
+}
+
+.thToggle {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  width: 50px;
+}
+
+.sortIcon {
+  margin-left: 4px;
+  font-size: 10px;
+}
+
+.td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid rgba(255, 255, 255, 0.03);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.td:last-child {
+  border-right: none;
+}
+
+:global(body:not(.dark-mode)) .td {
+  border-right-color: rgba(0, 0, 0, 0.04);
+}
+
+.tdToggle {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  text-align: center;
+  width: 50px;
+}
+
+.tr:hover {
+  background: var(--bg-secondary);
+}
+
+.nameCell {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.nameLink {
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.nameLink:hover {
+  color: var(--accent);
+}
+
+.actionsCell {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+/* Status as plain colored text instead of a Badge chip — keeps the
+   table row scannable. Uppercase + letter-spacing mirrors the same
+   "replace the chip" treatment used in RunDetailPanel. */
+.statusText {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.statusSuccess { color: var(--success); }
+.statusError   { color: var(--error); }
+.statusInfo    { color: var(--info); }
+.statusMuted   { color: var(--text-secondary); }

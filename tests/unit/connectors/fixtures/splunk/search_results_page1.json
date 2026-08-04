@@ -1,0 +1,18 @@
+{
+  "results": [
+    {
+      "host": "DESKTOP-WIN001",
+      "ip": "10.0.1.10",
+      "mac": "AA:BB:CC:DD:EE:01",
+      "serial": "SN-001",
+      "os": "Windows 11"
+    },
+    {
+      "host": "SERVER-LIN001",
+      "ip": "10.0.2.20",
+      "mac": "AA:BB:CC:DD:EE:02",
+      "serial": "SN-002",
+      "os": "Ubuntu 22.04"
+    }
+  ]
+}

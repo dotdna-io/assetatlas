@@ -1,0 +1,133 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.root {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 32px;
+  min-width: 180px;
+  padding: 0 10px 0 10px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  outline: none;
+}
+
+.trigger:focus,
+.triggerOpen {
+  border-color: var(--accent);
+}
+
+.triggerLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.triggerPlaceholder {
+  color: var(--text-tertiary);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.panel {
+  /* position + top/left/min-width come from an inline style that the
+     component computes from the trigger's bounding rect. The panel is
+     portaled to document.body to escape ancestor overflow clipping
+     (the wizard and its columns both set overflow: hidden). */
+  max-width: 360px;
+  z-index: 1000;
+  /* bg-primary, not bg-secondary: the latter is semi-transparent
+     (rgba 5% white) in dark mode, which would let content show through. */
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  overflow: hidden;
+}
+
+.search {
+  height: 32px;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  outline: none;
+  flex: 0 0 auto;
+}
+
+.search::placeholder {
+  color: var(--text-tertiary);
+}
+
+.list {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 4px 0;
+}
+
+.groupLabel {
+  padding: 8px 10px 4px;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.group + .group .groupLabel {
+  border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  margin-top: 4px;
+  padding-top: 10px;
+}
+
+.option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.option:hover,
+.optionActive {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.optionSelected {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.empty {
+  padding: 16px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}

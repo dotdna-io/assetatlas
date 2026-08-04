@@ -1,0 +1,24 @@
+{
+  "data": [
+    {
+      "id": "device-001",
+      "localIp": "10.0.1.50",
+      "macAddress": "AA:BB:CC:DD:EE:01",
+      "deviceType": "Printer",
+      "manufacturer": "HP",
+      "managedState": "not_managed"
+    },
+    {
+      "id": "device-002",
+      "localIp": "10.0.1.60",
+      "macAddress": "AA:BB:CC:DD:EE:02",
+      "deviceType": "Switch",
+      "manufacturer": "Cisco",
+      "managedState": "not_managed"
+    }
+  ],
+  "pagination": {
+    "nextCursor": "cursor-page2",
+    "totalItems": 3
+  }
+}

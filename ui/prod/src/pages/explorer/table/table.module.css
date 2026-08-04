@@ -1,0 +1,677 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.tableWrap {
+  position: relative;
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* Hosts the scroll-nudge overlays; the wrap itself scrolls inside it. */
+.tableOuter {
+  position: relative;
+}
+
+/* ── Horizontal-scroll nudges ──
+   Translucent chevrons overlaid at the table's edges, shown only when
+   columns are hidden in that direction. top is JS-driven (viewport
+   middle clamped to the table's bounds) because position: sticky is
+   defeated by .main's overflow-x: hidden. */
+.scrollNudge {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 40;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(20, 21, 26, 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--text-secondary);
+  transform: translateY(-50%);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.scrollNudge:hover {
+  color: var(--text-primary);
+  background: rgba(20, 21, 26, 0.8);
+}
+
+:global(body:not(.dark-mode)) .scrollNudge {
+  border-color: rgba(0, 0, 0, 0.10);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+:global(body:not(.dark-mode)) .scrollNudge:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.scrollNudgeLeft { left: 8px; }
+.scrollNudgeRight { right: 8px; }
+
+.table {
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.th {
+  box-sizing: border-box;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  user-select: none;
+  position: relative;
+  overflow: visible;
+}
+
+.thContent {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thLabel {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  gap: 4px;
+  min-width: 0;
+  max-width: calc(100% - 26px);
+}
+
+.thSortable {
+  cursor: pointer;
+}
+
+.thSortable:hover {
+  color: var(--text-primary);
+}
+
+.sortIcon {
+  width: 12px;
+  height: 12px;
+  margin-left: 4px;
+  vertical-align: middle;
+  opacity: 0.3;
+  flex-shrink: 0;
+}
+
+.sortIconActive {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.tr:hover {
+  background: var(--bg-secondary);
+}
+
+.td {
+  box-sizing: border-box;
+  padding: 8px 12px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+/* Last-seen text colors */
+.lastSeenRecent { color: #059669; }
+.lastSeenAging { color: #d97706; }
+.lastSeenStale { color: #dc2626; }
+
+/* Confidence text colors (no badge — plain colored status text) */
+.confHigh { color: #059669; font-weight: 600; }
+.confMedium { color: #d97706; font-weight: 600; }
+.confLow { color: #dc2626; font-weight: 600; }
+.confHigh, .confMedium, .confLow { text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Array cell */
+.arrayValues {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+}
+
+.arrayValue {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.arrayOverflow {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.arrayOverflowBadge {
+  display: inline;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  margin-left: 6px;
+}
+
+.arrayOverflowBadge:hover {
+  color: var(--text-primary);
+  background: rgba(100, 116, 139, 0.25);
+}
+
+/* Action column */
+.actionCell {
+  width: 40px;
+  text-align: center;
+  position: relative;
+  vertical-align: middle;
+}
+
+.actionBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionBtn:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.actionBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Header cell above the row-actions column — hosts the bulk-actions
+   trigger (it acts on all matching rows, hence the header slot). */
+.actionHeadCell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.actionMenu {
+  composes: glossyCard from '../../../styles/shared.module.css';
+  position: fixed;
+  border-radius: var(--radius-sm);
+  /* High enough to clear the chart-card hover z-index (150) which would
+     otherwise sit on top of this portaled menu while the user is hovering
+     the card they just clicked. */
+  z-index: 10000;
+  min-width: 192px;
+  overflow: hidden;
+}
+
+:global(body:not(.dark-mode)) .actionMenu.actionMenu {
+  background:
+    radial-gradient(ellipse 85% 55% at 8% -4%, rgba(255, 255, 255, 0.40) 0%, transparent 55%),
+    linear-gradient(180deg, #f4f6f9 0%, #e6e9ed 100%),
+    #ebedf0;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.actionMenuItem {
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.actionMenuItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:global(body:not(.dark-mode)) .actionMenuItem:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* States */
+.emptyState {
+  text-align: center;
+  padding: 60px;
+  color: var(--text-tertiary);
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+:global(body.dark-mode) .loadingOverlay {
+  background: rgba(42, 42, 42, 0.5);
+}
+
+/* Dark mode overrides */
+:global(body.dark-mode) .lastSeenRecent { color: #34d399; }
+:global(body.dark-mode) .lastSeenAging { color: #fbbf24; }
+:global(body.dark-mode) .lastSeenStale { color: #f87171; }
+:global(body.dark-mode) .confHigh { color: #34d399; }
+:global(body.dark-mode) .confMedium { color: #fbbf24; }
+:global(body.dark-mode) .confLow { color: #f87171; }
+
+/* Column selector panel — flex column layout so the footer stays pinned
+   to the bottom while only the field list scrolls. */
+.columnSelectorPanel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  width: 320px;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  z-index: 20;
+  padding: 12px 12px 0;
+  overflow: hidden;
+}
+
+:global(body.dark-mode) .columnSelectorPanel {
+  background: var(--card-bg);
+}
+
+.columnSelectorList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-right: -6px;
+  padding-right: 6px;
+}
+
+.columnSelectorSearch {
+  width: 100%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color var(--transition-fast);
+}
+
+.columnSelectorSearch:focus {
+  border-color: var(--accent);
+}
+
+.columnSelectorSearch::placeholder {
+  color: var(--text-tertiary);
+}
+
+.columnGroup {
+  margin-bottom: 8px;
+}
+
+.columnGroupHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 0;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  user-select: none;
+}
+
+.columnGroupHeader:hover {
+  color: var(--text-primary);
+}
+
+.columnGroupChevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.columnGroupCollapsed .columnGroupChevron {
+  transform: rotate(-90deg);
+}
+
+.columnGroupItems {
+  padding-left: 8px;
+}
+
+.columnItem {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.columnItem:hover {
+  color: var(--accent);
+}
+
+.columnItemCheckbox {
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.columnItemCheckbox:disabled {
+  cursor: not-allowed;
+}
+
+.columnItemHint {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.columnSelectorFooter {
+  flex-shrink: 0;
+  margin: 0 -12px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  background: inherit;
+}
+
+.columnSelectorApplyBtn {
+  padding: 4px 14px;
+  font-size: 12px;
+  font-family: var(--font-family);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.columnSelectorApplyBtn:hover {
+  opacity: 0.85;
+}
+
+.columnSelectorClearBtn {
+  padding: 4px 14px;
+  font-size: 12px;
+  font-family: var(--font-family);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.columnSelectorClearBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+/* Drag-drop */
+.thDragging {
+  opacity: 0.5;
+}
+
+.thDragOver {
+  border-left: 2px solid var(--accent);
+}
+
+/* Resize handle */
+.resizeHandle {
+  position: absolute;
+  right: -7px;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  cursor: col-resize;
+  z-index: 10;
+  /* Defensive: prevent any chance of native drag starting on the handle. */
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: none;
+}
+
+.resizeHandle::after {
+  content: '';
+  position: absolute;
+  right: 7px;
+  top: 30%;
+  bottom: 30%;
+  width: 1px;
+  background: var(--border);
+  opacity: 0.5;
+  transition: opacity 0.15s, background 0.15s, width 0.15s;
+}
+
+.resizeHandle:hover::after {
+  opacity: 1;
+  background: var(--accent);
+  width: 2px;
+}
+
+:global(body.is-resizing) .resizeHandle::after {
+  opacity: 1;
+  background: var(--accent);
+  width: 2px;
+}
+
+.resizing {
+  user-select: none;
+}
+
+/* Spacer column / cell — absorbs extra table width when the sum of declared
+   col widths is less than the table's min-width: 100%. Without this, Chrome/
+   Edge redistribute the slack across all data columns and visually undo any
+   shrink-resize the user makes. The spacer has no declared width, so the
+   browser's distribution algorithm dumps the extra here instead. */
+.spacerCol {
+  /* No width declared — that's the point. */
+}
+
+.spacerCell {
+  padding: 0;
+  border-bottom: none;
+  background: transparent;
+}
+
+/* Column filter trigger icon */
+.filterTrigger {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 2px;
+  margin-left: 4px;
+  color: var(--text-tertiary);
+  opacity: 0.5;
+  transition: opacity var(--transition-fast);
+  position: relative;
+}
+
+.filterTrigger:hover {
+  opacity: 1;
+}
+
+.filterTriggerActive {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* Column filter dropdown — portaled to <body>, anchored to the column's th */
+.filterDropdown {
+  position: fixed;
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 340px;
+  display: flex;
+  flex-direction: column;
+  background: #ebedf0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  /* Above the Modal overlay (10000) — the chart editor's table preview
+     renders this dropdown while inside the modal. */
+  z-index: 10001;
+  padding: 12px 12px 0;
+  overflow: hidden;
+}
+
+:global(body.dark-mode) .filterDropdown {
+  background: var(--card-bg);
+}
+
+.filterSearch {
+  width: 100%;
+  min-height: 34px;
+  margin-bottom: 8px;
+  padding: 0 10px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.filterSearch:focus {
+  border-color: var(--accent);
+}
+
+.filterSearch::placeholder {
+  color: var(--text-tertiary);
+}
+
+.selectAllRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.selectAllRow:hover {
+  background: var(--bg-secondary);
+}
+
+.filterValueList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.filterValue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  transition: background var(--transition-fast);
+}
+
+.filterValue:hover {
+  background: var(--bg-secondary);
+}
+
+.filterValueCount {
+  color: var(--text-tertiary);
+  margin-left: auto;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.filterActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: inherit;
+}
+
+/* Date/timestamp filter */
+.dateFilterWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.datePresets {
+  display: flex;
+  gap: 4px;
+}
+
+.datePresetBtn {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+}
+
+.datePresetBtnActive {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}

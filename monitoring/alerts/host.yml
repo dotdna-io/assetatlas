@@ -1,0 +1,34 @@
+groups:
+  - name: assetatlas-host
+    interval: 30s
+    rules:
+      - alert: host-disk-full-90
+        expr: |
+          (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|devtmpfs"}
+                 / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|devtmpfs"}) > 0.90
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host disk above 90% on {{ $labels.mountpoint }}
+          description: "Filesystem {{ $labels.mountpoint }} at {{ $value | humanizePercentage }}."
+
+      - alert: host-memory-pressure
+        expr: |
+          node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host memory available below 10%
+          description: "Only {{ $value | humanizePercentage }} memory available."
+
+      - alert: host-load-high
+        expr: |
+          node_load15 > (count without (cpu, mode) (node_cpu_seconds_total{mode="idle"}) * 2)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host 15-minute load > 2× CPU count
+          description: "15m load average {{ $value }} sustained for 15 minutes."

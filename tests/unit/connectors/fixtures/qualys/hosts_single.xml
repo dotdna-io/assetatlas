@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE HOST_LIST_OUTPUT SYSTEM "https://qualysapi.qualys.com/api/2.0/fo/asset/host/host_list_output.dtd">
+<HOST_LIST_OUTPUT>
+  <RESPONSE>
+    <DATETIME>2026-03-19T10:00:00Z</DATETIME>
+    <HOST_LIST>
+      <HOST>
+        <ID>12345</ID>
+        <ASSET_ID>67890</ASSET_ID>
+        <IP>10.0.0.1</IP>
+        <TRACKING_METHOD>IP</TRACKING_METHOD>
+        <OS>Windows Server 2022</OS>
+        <DNS>server01.example.com</DNS>
+        <NETBIOS>SERVER01</NETBIOS>
+        <QG_HOSTID>abc-123-def</QG_HOSTID>
+        <LAST_SCAN_DATETIME>2026-03-18T08:00:00Z</LAST_SCAN_DATETIME>
+        <LAST_VM_SCANNED_DATE>2026-03-18T08:00:00Z</LAST_VM_SCANNED_DATE>
+        <LAST_BOOT>2026-03-10T06:00:00Z</LAST_BOOT>
+        <FIRST_FOUND_DATE>2025-01-01T00:00:00Z</FIRST_FOUND_DATE>
+        <LAST_ACTIVITY>2026-03-19T09:00:00Z</LAST_ACTIVITY>
+        <SERIAL_NUMBER>SN-WIN-001</SERIAL_NUMBER>
+        <HARDWARE_UUID>uuid-1111-2222-3333</HARDWARE_UUID>
+        <AGENT_STATUS>Running</AGENT_STATUS>
+        <CLOUD_AGENT_RUNNING_ON>AWS</CLOUD_AGENT_RUNNING_ON>
+        <DNS_DATA>
+          <HOSTNAME>server01</HOSTNAME>
+          <DOMAIN>example.com</DOMAIN>
+          <FQDN>server01.example.com</FQDN>
+        </DNS_DATA>
+        <ASSET_GROUP_IDS>101,102</ASSET_GROUP_IDS>
+        <TAGS>
+          <TAG><NAME>Production</NAME></TAG>
+          <TAG><NAME>Windows</NAME></TAG>
+        </TAGS>
+        <TRURISK_SCORE>750</TRURISK_SCORE>
+        <ASSET_CRITICALITY_SCORE>4</ASSET_CRITICALITY_SCORE>
+        <METADATA>
+          <EC2>
+            <ATTRIBUTE><NAME>instanceId</NAME><VALUE>i-0123456789abcdef0</VALUE></ATTRIBUTE>
+            <ATTRIBUTE><NAME>region</NAME><VALUE>us-east-1</VALUE></ATTRIBUTE>
+          </EC2>
+        </METADATA>
+      </HOST>
+    </HOST_LIST>
+  </RESPONSE>
+</HOST_LIST_OUTPUT>

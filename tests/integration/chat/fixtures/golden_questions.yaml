@@ -1,0 +1,59 @@
+# Golden-question set for the chat pipeline.
+#
+# Each entry defines one Q&A trace the orchestrator must produce against the
+# data seeded by tests/integration/chat/seeders/golden_seed.sql.
+#
+# Fields
+#   id                    — stable identifier (→ becomes the recording file name).
+#   question              — the user's literal input to /api/chat/stream.
+#   role                  — RBAC role of the acting user ("user" | "admin").
+#   expected_tools        — ordered list of tools the model should have called.
+#                            * name                — required tool name.
+#                            * args_contract       — optional shallow match:
+#                                <field>: <literal> | {regex: "..."} |
+#                                                     {contains: "..."}
+#                              Unmatched args are ignored so the contract stays
+#                              robust to cosmetic arg drift.
+#   expected_answer_contains — substrings that MUST appear in the final
+#                              assistant text (case-sensitive).
+#
+# The current list is a starter set of five; the plan targets 25 total but the
+# harness (test_golden_questions.py) is question-count-agnostic, so more can
+# be appended as the LLM gets fresh prompts or new tools land.
+
+- id: windows_server_count
+  question: "How many Windows servers are in the inventory?"
+  role: user
+  expected_tools:
+    - name: aggregate_assets
+  expected_answer_contains: ["5"]
+
+- id: total_seeded_assets
+  question: "List all assets owned by 'golden-seed@test'."
+  role: user
+  expected_tools:
+    - name: list_assets
+  expected_answer_contains: ["13"]
+
+- id: assets_in_lodz
+  question: "How many assets are located in Lodz?"
+  role: user
+  expected_tools:
+    - name: aggregate_assets
+  expected_answer_contains: ["6"]
+
+- id: macos_workstations
+  question: "How many macOS workstations do we have?"
+  role: user
+  expected_tools:
+    - name: aggregate_assets
+  expected_answer_contains: ["2"]
+
+- id: distinct_operating_systems
+  question: >-
+    What distinct operating systems are represented among
+    golden-seed@test's assets?
+  role: user
+  expected_tools:
+    - name: get_field_values
+  expected_answer_contains: ["Windows Server 2022", "macOS", "Ubuntu"]

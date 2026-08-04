@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Three stacked score rows (Visibility / Quality / Completeness or
+   similar). Each row has a label + level chip header above a row of
+   12 segments that animate in with a left-to-right cascade. */
+.scoreRows {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.scoreRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scoreHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.scoreLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-tertiary);
+}
+
+.scoreChip {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  /* color set inline to match level */
+}
+
+.scoreBarWrap {
+  width: 100%;
+  height: 12px;
+  display: flex;
+  gap: 3px;
+}
+
+.scoreSegment {
+  flex: 1;
+  height: 100%;
+  border-radius: 2px;
+  transition: opacity 0.25s ease, background 0.3s ease;
+}

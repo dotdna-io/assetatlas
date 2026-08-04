@@ -1,0 +1,5 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.page {
+  max-width: var(--content-max-width);
+  margin-top: -16px;
+}

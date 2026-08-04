@@ -1,0 +1,40 @@
+{
+  "categories": [
+    {
+      "name": "server",
+      "subcategories": ["server", "hypervisor", "container host", "network storage", "unknown"]
+    },
+    {
+      "name": "workstation",
+      "subcategories": ["laptop", "workstation", "virtual desktop", "thin client", "vdi", "unknown"]
+    },
+    {
+      "name": "network",
+      "subcategories": ["switch", "wireless access point", "firewall", "router", "network appliance", "industrial switch", "industrial router", "network equipment", "session border controller", "unknown"]
+    },
+    {
+      "name": "mobile",
+      "subcategories": ["phone", "rugged phone", "tablet"]
+    },
+    {
+      "name": "printer",
+      "subcategories": ["printer", "industrial printer", "ticket printer"]
+    },
+    {
+      "name": "storage",
+      "subcategories": ["nas", "san", "backup appliance", "unknown"]
+    },
+    {
+      "name": "iot",
+      "subcategories": ["access control", "embedded pc", "smart home", "power meter", "laboratory equipment", "unknown"]
+    },
+    {
+      "name": "ot",
+      "subcategories": ["ot device", "controller", "embedded pc", "io module", "hmi", "plc", "rtu", "ac drives", "dcs", "ethernet ic", "switch", "safety equipement", "unknown"]
+    },
+    {
+      "name": "miscellaneous",
+      "subcategories": ["ip phone", "ip camera", "ups", "multimedia", "barcode reader", "lcd display", "rfid reader", "whiteboards", "pc accessories", "network card", "surveillance", "video projector", "graphics card", "docking station", "smart tv", "ilo", "video conference", "unknown"]
+    }
+  ]
+}

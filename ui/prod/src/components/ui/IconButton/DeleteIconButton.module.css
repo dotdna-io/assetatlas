@@ -1,0 +1,7 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Doubled class beats IconButton's own :hover (same-specificity, and CSS
+   module order across files isn't guaranteed) and any single-class site
+   hover — the red must win everywhere (same trick as Modal's .modal.modal). */
+.delete.delete:hover:not(:disabled) {
+  color: var(--error);
+}

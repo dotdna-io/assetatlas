@@ -1,0 +1,4 @@
+[
+  {"hostname": "DESKTOP-WIN001", "ip_address": "10.0.1.10", "serial_number": "SN-001", "os": "Windows 11", "status": "active"},
+  {"hostname": "SERVER-LIN001", "ip_address": "10.0.2.20", "serial_number": "SN-002", "os": "Ubuntu 22.04", "status": "active"}
+]

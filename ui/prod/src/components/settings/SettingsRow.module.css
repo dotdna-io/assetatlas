@@ -1,0 +1,127 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:global(body:not(.dark-mode)) .row {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+/* Span both columns of a 2-column SettingsRowGrid (no-op in stack layout). */
+.rowFull {
+  grid-column: 1 / -1;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* The dotted underline cues the operator that there is hover-only info,
+   matching the convention browsers render around <abbr>. */
+.tooltipWrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.nameWithTooltip {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: help;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--text-tertiary);
+  text-underline-offset: 3px;
+  display: inline-block;
+  outline: none;
+}
+
+/* Custom tooltip — appears immediately on hover/focus. Native title=
+   has a ~700ms delay and ugly styling, so we render our own. Positioned
+   below the name so it doesn't get clipped at the top of the card. */
+.tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.1s ease-in, visibility 0s linear 0.1s;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
+  width: max-content;
+  max-width: 480px;
+  white-space: normal;
+  pointer-events: none;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+:global(body:not(.dark-mode)) .tooltip {
+  background: #ffffff;
+  color: var(--text-primary);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
+}
+
+.tooltipWrapper:hover .tooltip,
+.nameWithTooltip:focus-visible + .tooltip,
+.nameWithTooltip:focus + .tooltip {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.1s ease-in;
+}
+
+.description {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.reset {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.row:hover .reset,
+.row:focus-within .reset {
+  opacity: 1;
+}
+
+.reset:hover {
+  color: var(--accent);
+}

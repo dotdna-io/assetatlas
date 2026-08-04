@@ -1,0 +1,225 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/CategorySettings.module.css */
+
+/* Inline control widgets (used inside SettingsRow) */
+.inputGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.numberInput,
+.textInput {
+  width: 120px;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+/* Wider text input for free-form strings (URLs, paths). Stretched to
+   630px (~150% of the previous 420px) so long values like LDAP DNs and
+   OIDC issuer URLs render readable in stack layout; max-width keeps it
+   inside the row on narrow viewports. */
+.textInputWide {
+  width: 630px;
+  max-width: 100%;
+}
+
+/* Hide native number-input spin buttons — the user types the value. */
+.numberInput[type='number']::-webkit-inner-spin-button,
+.numberInput[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.numberInput[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.numberInput:focus,
+.textInput:focus,
+.selectInput:focus,
+.jsonInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.selectInput {
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.jsonInput {
+  width: 100%;
+  min-height: 96px;
+  padding: 8px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  resize: vertical;
+}
+
+/* Master switch — a category's `enabled` flag lifted out of the grid and
+   rendered standalone above the card, so the control that decides whether
+   the whole feature is live doesn't read as one row among fifteen. Same
+   placement as the Email tab's "Enable outbound email"; heavier label,
+   because this one is the only row that can make the rest inert. */
+.masterToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 4px 4px 0;
+}
+
+.masterToggleText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.masterToggleLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Effective state: the flag alone doesn't decide whether the feature runs,
+   so this line says what it actually does. Amber for the mismatch the user
+   cannot otherwise see — switched on but missing required config. */
+.masterToggleNote {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.masterToggleWarn {
+  color: var(--warning);
+}
+
+/* Card intro slot — short help text rendered above the rows so a tab can
+   merge its preamble into the same glossy section instead of stacking a
+   separate card on top. */
+.intro {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 14px 16px 0;
+}
+
+/* Example block for JSON fields — pulled out of the description so the
+   inline text reads cleanly and the JSON itself is monospace + boxed. */
+.jsonExample {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jsonExampleLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.jsonExampleCode {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* JSON full-width row (textarea + meta + reset stacked) */
+.jsonRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jsonInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.jsonName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.jsonDescription {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.jsonMeta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+}
+
+.jsonInputGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.jsonReset {
+  align-self: flex-end;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.jsonReset:hover {
+  color: var(--accent);
+}
+
+/* Bottom-of-tab Save row. Right-aligned to match the rest of the app;
+   inline error sits to the left of the button so the user reads the
+   message before reaching for the action. The right/bottom padding
+   keeps the button off the card edge — same breathing room the rows
+   above use (8px grid + 14px row = 22px from the card border). */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px 12px;
+}
+.actionsLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.actionsRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}

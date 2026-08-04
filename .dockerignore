@@ -1,0 +1,121 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.json
+htmlcov/
+*.cover
+.hypothesis/
+
+# Documentation
+docs/_build/
+
+# Scraper working data. These are gitignored, so a CI checkout never has them —
+# but a LOCAL image build (including build-offline.sh, which builds the app
+# images on the operator's machine) would otherwise bake them in. Measured: a
+# clean data_scrapers/ is 260 KB, while a working tree that has run the device
+# knowledge scraper is ~1.4 GB, most of it a cloned upstream repo under cache/.
+# Dockerfile only needs the scraper *code*.
+data_scrapers/device_knowledge/cache/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker (don't copy Docker files into image)
+Dockerfile
+Dockerfile.base
+docker-compose*.yml
+.dockerignore
+docker/
+
+# Logs
+*.log
+logs/
+tmp/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+# Re-include ChromaDB sqlite (needed for semantic search)
+!data/chromadb/chroma.sqlite3
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.example
+.install-credentials
+
+# Tasks and notes
+tasks/
+notes/
+
+# Worktrees and archives
+.worktrees/
+_archive/
+
+# Loose data files
+*.csv
+
+# Tests
+tests/
+# ...except the embedding golden vectors: Dockerfile.base's parity gate (#1070)
+# needs them in the build context. Narrow re-includes, not the whole tree.
+!tests/fixtures/embedding/
+!tests/fixtures/embedding/**
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# Misc
+LICENSE
+CLAUDE.md
+README.md
+CHANGELOG.md
+
+# Large data not needed at runtime
+data/archive/
+data/input_files/
+data/providers/
+data/providers_raw/
+data/category_prediction/
+ml_pipeline/
+
+# UI code (has its own Dockerfile)
+ui/
+!ui/prod/public/logos/
+
+# Deploy scripts
+deploy/
+scripts/
+# ...except the parity verifier the base image runs at build time (#1070).
+!scripts/verify_embedding_parity.py

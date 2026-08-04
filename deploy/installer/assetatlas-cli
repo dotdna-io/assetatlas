@@ -1,0 +1,353 @@
+#!/usr/bin/env bash
+# deploy/installer/assetatlas-cli — operator-facing umbrella command.
+# Installed as a symlink at /usr/local/bin/assetatlas (and /usr/local/bin/assetatlas-cli for compatibility) by install.sh.
+#
+# Usage: assetatlas <command> [args]
+#
+# Commands:
+#   start                 Start all services (compose up -d with opted-in overlays).
+#                         Used by the systemd unit ExecStart.
+#   stop                  Stop all services gracefully (compose down).
+#                         Used by the systemd unit ExecStop.
+#   restart               Stop then start.
+#   status                Show overall status (compose ps).
+#   logs [service]        Follow logs for all services or a specific service.
+#   enable monitoring     Start the monitoring stack overlay (prometheus, alertmanager, exporters).
+#   disable monitoring    Stop the monitoring stack overlay.
+#   apply-retention       Apply the desired metrics retention (Settings UI) by
+#                         updating .env and recreating the Prometheus container.
+#   update [flags]        Run update.sh, passing all flags through.
+#   rollback [tag]        Roll back to a previous snapshot via update.sh --rollback.
+#   backup                Dump the database to $INSTALL_DIR/backups/.
+#   restore <file>        Restore the database from a backup file.
+#   version               Print the installed version.
+#   support-bundle [path] Collect a diagnostics bundle (logs, state, redacted env).
+
+set -euo pipefail
+
+# Resolve INSTALL_DIR from the symlink target (we live in $INSTALL_DIR/installer/assetatlas-cli)
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || python3 -c "import os, sys; print(os.path.realpath(sys.argv[1]))" "${BASH_SOURCE[0]}")")" && pwd)"
+INSTALL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+export INSTALL_DIR
+
+LIB_DIR="$INSTALL_DIR/lib"
+# shellcheck source=../lib/common.sh
+source "$LIB_DIR/common.sh"
+# shellcheck source=../lib/runtime.sh
+source "$LIB_DIR/runtime.sh"
+# shellcheck source=../lib/env.sh
+source "$LIB_DIR/env.sh"
+# shellcheck source=../lib/backup.sh
+source "$LIB_DIR/backup.sh"
+
+INSTALL_STATE_PATH="$INSTALL_DIR/.install-state"
+COMPOSE_BASE="$INSTALL_DIR/docker-compose.yml"
+COMPOSE_MONITORING="$INSTALL_DIR/docker-compose.monitoring.yml"
+# compose_cmd (runtime.sh) requires this: every compose invocation below goes
+# through it, which is also where the podman-compose presence guard lives —
+# this CLI runs no pre-flight, so that guard is what turns a missing
+# podman-compose into the same remedy install/update print, instead of a bare
+# "command not found" from the shell.
+COMPOSE_FILE="$COMPOSE_BASE"
+
+# DB connection setup (mirrors update.sh, used for backup/restore/version)
+# Returns 1 — rather than expanding an unset variable — when detect_runtime has
+# not run yet. Under `set -u` an unbound expansion terminates the shell outright,
+# and a `|| true` at the call site does NOT catch that: it is why `support-bundle`
+# exited 1 with no output at all (#1094). Callers must handle a non-zero return.
+_setup_db_cmds() {
+    [ -n "${RUNTIME:-}" ] || return 1
+    # `|| true`: a missing .env must not be fatal either — same failure class,
+    # and the AND-list would otherwise trip `set -e`.
+    { [ -f "$INSTALL_DIR/.env" ] && . "$INSTALL_DIR/.env"; } || true
+    DB_USER="${POSTGRES_USER:-assetatlas}"
+    DB_NAME="${POSTGRES_DB:-assetatlas}"
+    PSQL_CMD="${RUNTIME} exec -i assetatlas-db psql -U ${DB_USER} -d ${DB_NAME}"
+    PG_DUMP_CMD="${RUNTIME} exec -i assetatlas-db pg_dump -U ${DB_USER} -d ${DB_NAME}"
+    BACKUP_DIR="${BACKUP_DIR:-$INSTALL_DIR/backups}"
+    export PSQL_CMD PG_DUMP_CMD BACKUP_DIR
+}
+
+# _compose_with_overlays <compose subcommand> [args...]
+# THE compose invocation for this file. Delegates overlay/profile selection to
+# compose_overlay_args (shared with install.sh and update.sh) so cli/update stay
+# in lockstep on which services are in the project.
+#
+# Every command here goes through it, not just `start`. A hand-rolled
+# `-f base -f monitoring` next to it looks equivalent and is not: it omits
+# `--profile privileged`, so cadvisor is not part of the project for that one
+# invocation. That cost `enable monitoring` the Containers dashboard on
+# privileged hosts — the documented activation command for the offline
+# monitoring pack — and left `stop` (the systemd unit's ExecStop) unable to
+# reach assetatlas-cadvisor, so `systemctl stop assetatlas` stranded it running.
+#
+# Overlay args go BEFORE the subcommand: `--profile` is a top-level flag, and
+# compose rejects it after the verb.
+#
+# Uses a `while read` loop instead of `mapfile` for bash 3.2 compatibility
+# (bats tests on macOS run under /bin/bash 3.2; production has bash 4+).
+#
+# compose_cmd, not a bare `$COMPOSE_CMD`: the missing-podman-compose guard and
+# its remedy live there, and every command below reaches compose through this
+# helper (cmd_logs calls compose_cmd directly for the same reason).
+_compose_with_overlays() {
+    local overlay_args=()
+    local _line
+    while IFS= read -r _line; do
+        overlay_args+=("$_line")
+    done < <(compose_overlay_args)
+    if [ ${#overlay_args[@]} -gt 0 ]; then
+        compose_cmd "${overlay_args[@]}" "$@"
+    else
+        compose_cmd "$@"
+    fi
+}
+
+usage() {
+    sed -n '2,25p' "$0"
+}
+
+cmd_start() {
+    detect_runtime
+    log_info "Starting AssetAtlas..."
+    _compose_with_overlays up -d
+    log_ok "AssetAtlas started."
+}
+
+cmd_stop() {
+    detect_runtime
+    log_info "Stopping AssetAtlas..."
+    # Same argv as cmd_start, profile included. This is the systemd unit's
+    # ExecStop, so a `down` that omitted the profile would leave
+    # assetatlas-cadvisor running after `systemctl stop assetatlas`.
+    _compose_with_overlays down
+    log_ok "AssetAtlas stopped."
+}
+
+cmd_restart() {
+    cmd_stop
+    cmd_start
+}
+
+cmd_enable() {
+    local component=${1:-}
+    case "$component" in
+        monitoring)
+            [ -f "$COMPOSE_MONITORING" ] || die "Monitoring overlay not found at $COMPOSE_MONITORING. Did you install the monitoring add-on pack?"
+            log_info "Enabling monitoring stack..."
+            detect_runtime
+            # The opt-in is recorded BEFORE the up, not after, because
+            # compose_overlay_args reads it from .install-state — that read is
+            # what puts the monitoring overlay and cadvisor's
+            # `--profile privileged` on this invocation. Rolled back if the up
+            # fails, so a failed enable leaves the recorded state exactly as it
+            # found it: otherwise every later `start` would carry an overlay
+            # that has already been shown not to come up.
+            local prev; prev=$(state_get with_monitoring 0)
+            state_set with_monitoring 1
+            if ! _compose_with_overlays up -d; then
+                state_set with_monitoring "$prev"
+                die "Could not start the monitoring stack (with_monitoring left at $prev)."
+            fi
+            log_ok "Monitoring stack enabled."
+            log_info "Prometheus: http://localhost:9090"
+            ;;
+        *)
+            die "Unknown enable target: $component (try 'monitoring')"
+            ;;
+    esac
+}
+
+cmd_disable() {
+    local component=${1:-}
+    case "$component" in
+        monitoring)
+            log_info "Disabling monitoring stack..."
+            detect_runtime
+            if [ -f "$COMPOSE_MONITORING" ]; then
+                # Runs while with_monitoring is still 1, so the overlay and the
+                # privileged profile are both on the argv — cadvisor is only
+                # reachable by name when its profile is active.
+                #
+                # Which also means disabling something .install-state already
+                # calls disabled is a no-op: the same is true of `start` and
+                # `stop`, and one opt-in driving the whole file beats a second
+                # rule for one command. To clean up containers left behind by a
+                # half-finished enable, re-enable and disable again.
+                _compose_with_overlays stop \
+                    prometheus alertmanager node-exporter postgres-exporter redis-exporter nginx-exporter cadvisor 2>/dev/null || true
+                _compose_with_overlays rm -f \
+                    prometheus alertmanager node-exporter postgres-exporter redis-exporter nginx-exporter cadvisor 2>/dev/null || true
+            fi
+            state_set with_monitoring 0
+            log_ok "Monitoring stack disabled."
+            ;;
+        *)
+            die "Unknown disable target: $component (try 'monitoring')"
+            ;;
+    esac
+}
+
+cmd_apply_retention() {
+    detect_runtime
+    [ "$(state_get with_monitoring 0)" = "1" ] \
+        || die "Monitoring stack is not enabled. Run: assetatlas enable monitoring"
+    _setup_db_cmds  # assembles $PSQL_CMD; the actual DB reachability is checked on the query below
+    local desired
+    if ! desired=$($PSQL_CMD -At -c \
+        "SELECT value FROM system_settings WHERE category='monitoring' AND key='retention'" \
+        2>/dev/null | tr -d '[:space:]'); then
+        die "Cannot query the database for the desired retention (is it running?)."
+    fi
+    if [ -z "$desired" ]; then
+        log_info "No desired retention set in the UI (Settings -> Monitoring -> Dashboards); nothing to apply."
+        return 0
+    fi
+    # Herestring, not a pipe: grep -q exits on its match, a piped writer takes
+    # EPIPE, and pipefail turns a MATCH into a failed pipeline — which here would
+    # reject a valid retention value (#1199). $desired is a handful of bytes and
+    # a single write, so the writer effectively cannot lose this race; swept
+    # anyway, because "provably safe today" is not a property of the construct.
+    if ! grep -Eq '^[0-9]+(ms|s|m|h|d|w|y)$' <<<"$desired"; then
+        die "Refusing to apply an invalid retention value from the database: '$desired'"
+    fi
+    log_info "Applying Prometheus retention = $desired (recreating the prometheus container)..."
+    _set_env_var PROMETHEUS_RETENTION "$desired"
+    _compose_with_overlays up -d prometheus
+    log_ok "Retention applied: $desired"
+}
+
+cmd_status() {
+    detect_runtime
+    # Through the same helper as start/stop: without the profile, `ps` would
+    # not list cadvisor even where it is running.
+    _compose_with_overlays ps
+}
+
+cmd_logs() {
+    local service=${1:-}
+    detect_runtime
+    # compose_cmd here too, not a bare $COMPOSE_CMD: the missing-podman-compose
+    # guard and remedy live there.
+    if [ -n "$service" ]; then
+        compose_cmd logs -f "$service"
+    else
+        compose_cmd logs -f
+    fi
+}
+
+cmd_update() {
+    exec "$INSTALL_DIR/installer/update.sh" "$@"
+}
+
+cmd_rollback() {
+    exec "$INSTALL_DIR/installer/update.sh" --rollback "$@"
+}
+
+cmd_backup() {
+    local scheduled=0
+    while [ $# -gt 0 ]; do
+        case "$1" in --scheduled) scheduled=1 ;; *) die "Unknown backup flag: $1" ;; esac
+        shift
+    done
+    detect_runtime
+    _setup_db_cmds || die "Cannot reach DB"
+    local tag
+    tag="$(date -u +%Y%m%dT%H%M%SZ)"
+    [ "$scheduled" = "1" ] && tag="scheduled-$tag"
+    local out
+    # 'backup' namespace, NOT 'pre-update': these are high-churn (one per night)
+    # and must never share a retention queue with update.sh's rollback snapshots,
+    # which are restored by exact filename (#1096).
+    out=$(backup_db "$tag" backup)
+    # Default retention: 7 daily backups (configurable via .install-state)
+    local keep
+    keep=$(state_get backup_retention 7)
+    prune_backups "$keep"
+    [ "$scheduled" = "1" ] || log_ok "Manual backup created: $out"
+}
+
+cmd_restore() {
+    local backup_file=${1:-}
+    [ -n "$backup_file" ] || die "Usage: assetatlas restore <backup-file>"
+    [ -f "$backup_file" ] || die "Backup file not found: $backup_file"
+    detect_runtime
+    _setup_db_cmds
+    # shellcheck source=../lib/backup.sh
+    if [ "${UNATTENDED:-0}" != "1" ]; then
+        log_warn "This will DESTROY the current database and restore from: $backup_file"
+        printf 'Type YES to continue: '
+        read -r _confirm
+        [ "$_confirm" = "YES" ] || die "Restore cancelled."
+    fi
+    # Checked explicitly rather than left to `set -e`. Since #1212 restore_db
+    # REPORTS failure with a non-zero return instead of dying, and nothing
+    # follows this call today — so the bare form aborts with the same status. It
+    # stops being true the day a line is added below it, and a failed restore
+    # would then report success (#1240). Says which of the two states the
+    # database is in, exactly as update.sh's rollback does.
+    restore_db "$backup_file" || die "Restore from $backup_file FAILED (see the error above). restore_db drops the public schema before it loads the dump, so unless the drop ITSELF failed — in which case the database is untouched — what is in there now is only what loaded before the error. This command does NOT stop the stack, so if it is running it is serving — and writing — against that schema right now: stop it with 'assetatlas stop' before doing anything else, then restore from a known-good backup and start it again."
+}
+
+cmd_version() {
+    local version_file="$INSTALL_DIR/VERSION"
+    local version
+    if [ -f "$version_file" ]; then
+        version=$(cat "$version_file")
+    else
+        version="unknown"
+    fi
+    printf 'AssetAtlas %s\n' "$version"
+    # Best-effort: print system_info row if the DB is reachable.
+    # _setup_db_cmds runs FIRST — it is what sets PSQL_CMD. Guarding on PSQL_CMD
+    # before calling it made this block permanently dead (#1097), which mattered
+    # because the DB row is the half that would reveal a VERSION file disagreeing
+    # with what the database believes.
+    # try_detect_runtime, not detect_runtime: detect_runtime `die`s on a too-old
+    # runtime, and an `exit` is caught neither by `2>/dev/null` nor by sitting in
+    # an `if` condition — `version` exited 1 with the reason swallowed.
+    if try_detect_runtime 2>/dev/null && _setup_db_cmds; then
+        $PSQL_CMD -At -c "SELECT installed_version, runtime, install_mode, last_updated_at FROM system_info WHERE id = 1;" 2>/dev/null || true
+    fi
+}
+
+cmd_support_bundle() {
+    source "$INSTALL_DIR/lib/support.sh"
+    # Runtime detection must run BEFORE _setup_db_cmds, which expands $RUNTIME.
+    # Neither is fatal: a bundle carrying host/config diagnostics is still worth
+    # producing without a runtime or a database. But their stderr is no longer
+    # discarded — hiding it is what made the failure impossible to report (#1094).
+    # try_detect_runtime, not `detect_runtime || true`: detect_runtime `die`s on a
+    # too-old runtime, and `|| true` does not catch an `exit`.
+    try_detect_runtime || true
+    _setup_db_cmds || log_warn "Database not reachable; bundle will omit DB diagnostics."
+    collect_support_bundle "$@"
+}
+
+main() {
+    local cmd=${1:-}
+    shift || true
+    case "$cmd" in
+        start)          cmd_start "$@" ;;
+        stop)           cmd_stop "$@" ;;
+        restart)        cmd_restart "$@" ;;
+        enable)         cmd_enable "$@" ;;
+        disable)        cmd_disable "$@" ;;
+        apply-retention) cmd_apply_retention "$@" ;;
+        status)         cmd_status "$@" ;;
+        logs)           cmd_logs "$@" ;;
+        update)         cmd_update "$@" ;;
+        rollback)       cmd_rollback "$@" ;;
+        backup)         cmd_backup "$@" ;;
+        restore)        cmd_restore "$@" ;;
+        version)        cmd_version "$@" ;;
+        support-bundle) cmd_support_bundle "$@" ;;
+        ""|-h|--help)   usage; exit 0 ;;
+        *) die "Unknown command: $cmd (try 'assetatlas --help')" ;;
+    esac
+}
+
+# Only run main when executed directly (not when sourced by tests).
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+    main "$@"
+fi

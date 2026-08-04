@@ -1,0 +1,26 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="seg-radial-1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="seg-radial-2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="seg-radial-3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D97706;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer ring segments -->
+  <path d="M 60 15 A 45 45 0 0 1 97.5 35" fill="none" stroke="url(#seg-radial-1)" stroke-width="10" opacity="0.9"/>
+  <path d="M 97.5 35 A 45 45 0 0 1 97.5 85" fill="none" stroke="url(#seg-radial-2)" stroke-width="10" opacity="0.9"/>
+  <path d="M 97.5 85 A 45 45 0 0 1 22.5 85" fill="none" stroke="url(#seg-radial-3)" stroke-width="10" opacity="0.9"/>
+
+  <!-- Inner ring segments -->
+  <path d="M 60 30 A 30 30 0 0 1 85 45" fill="none" stroke="url(#seg-radial-1)" stroke-width="8" opacity="0.7"/>
+  <path d="M 85 45 A 30 30 0 0 1 85 75" fill="none" stroke="url(#seg-radial-2)" stroke-width="8" opacity="0.7"/>
+  <path d="M 85 75 A 30 30 0 0 1 35 75" fill="none" stroke="url(#seg-radial-3)" stroke-width="8" opacity="0.7"/>
+</svg>

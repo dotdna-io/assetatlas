@@ -1,0 +1,655 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ========================================================================= */
+/* Header                                                                    */
+/* ========================================================================= */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.categoryIconWrap {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  /* color is applied inline by the consumer; the SVG's currentColor uses it */
+}
+
+.categoryIcon {
+  width: 32px;
+  height: 32px;
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.assetTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Category name as colored text — the large category icon to the left is
+   the "icon" half, so the badge chrome is dropped here. */
+.categoryLabel {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.assetSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.iconBtn {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+}
+
+.iconBtn:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.iconBtnAlerted {
+  color: var(--error);
+}
+
+.iconBtnAlerted:hover {
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.iconBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--error);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  border: 2px solid var(--card-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Last seen badge — flat, colored bg + text */
+/* Data Sources count: plain colored number, no chip (was Badge info). */
+.sourcesCount {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+/* Header status values: colored text only, no chip background. */
+.statusText {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.lastSeenBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lastSeenRecent { color: #059669; }
+.lastSeenAging { color: #d97706; }
+.lastSeenStale { color: #dc2626; }
+
+:global(body.dark-mode) .lastSeenRecent { color: #34d399; }
+:global(body.dark-mode) .lastSeenAging { color: #fbbf24; }
+:global(body.dark-mode) .lastSeenStale { color: #f87171; }
+
+/* ========================================================================= */
+/* Shared glossy panel — near-transparent card surface                      */
+/* ========================================================================= */
+
+.glossyPanel {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+}
+
+/* ========================================================================= */
+/* Info Cards                                                                */
+/* ========================================================================= */
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1200px) {
+  .cardsGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .cardsGrid { grid-template-columns: 1fr; }
+}
+
+.card {
+  composes: glossyPanel;
+  padding: 16px;
+}
+
+.cardTitle {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin: 0 0 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+:global(body:not(.dark-mode)) .cardTitle {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.fieldLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* Geo label with tooltip */
+.geoLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.geoInfoWrap {
+  position: relative;
+  display: inline-flex;
+  cursor: help;
+}
+
+.geoTooltip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 400;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #303034;
+  color: #e5e5e5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 10;
+}
+
+:global(body:not(.dark-mode)) .geoTooltip {
+  background: #ffffff;
+  color: #1e293b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.geoInfoWrap:hover .geoTooltip {
+  display: block;
+}
+
+.fieldValue {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  text-align: right;
+  word-break: break-all;
+}
+
+.fieldValueList {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+/* Posture */
+.postureRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.posturePass { color: #10b981; display: flex; }
+.postureFail { color: #ef4444; display: flex; }
+:global(body.dark-mode) .posturePass { color: #34d399; }
+:global(body.dark-mode) .postureFail { color: #f87171; }
+
+.postureLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.postureProviders {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.postureBadge span {
+  max-width: none;
+}
+
+/* ========================================================================= */
+/* Confidence Section                                                        */
+/* ========================================================================= */
+
+.confidenceSection {
+  margin-bottom: 24px;
+}
+
+.confidenceBar {
+  composes: glossyPanel;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+
+.confidenceBar:hover {
+  border-color: var(--accent);
+}
+
+.confidenceLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.confidencePercent {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.confidenceExplanation {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevronBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 4px;
+  display: flex;
+}
+
+/* Factors grid */
+.factorsGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+@media (max-width: 1200px) {
+  .factorsGrid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .factorsGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.factorCard {
+  composes: glossyPanel;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.factorLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+}
+
+.factorValue {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.factorBar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.factorBarFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.factorDetail {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* ========================================================================= */
+/* Data Sources Section                                                      */
+/* ========================================================================= */
+
+.sourcesSection {
+  margin-bottom: 24px;
+}
+
+.sourcesTopRow {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.sourcesSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.sourcesSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  transition: border-color var(--transition-fast);
+}
+
+.sourcesSearch:focus-within {
+  border-color: var(--accent);
+}
+
+.sourcesSearchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  color: var(--text-primary);
+}
+
+.sourcesSearchInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.sourcesLayout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  min-height: 300px;
+}
+
+@media (max-width: 768px) {
+  .sourcesLayout { grid-template-columns: 1fr; }
+}
+
+/* Source list */
+.sourceList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  max-height: 500px;
+}
+
+.sourceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.sourceItem:hover {
+  background: var(--bg-secondary);
+}
+
+.sourceItemActive {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+:global(body.dark-mode) .sourceItemActive {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.sourceItemInactive {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sourceBadgeFullName span {
+  max-width: none;
+}
+
+.sourceItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sourceItemCount {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.sourceDivider {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  padding: 12px 10px 4px;
+}
+
+/* Source detail panel */
+.sourceDetail {
+  composes: glossyPanel;
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+.sourceDetailHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sourceFieldsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 28px;
+  row-gap: 16px;
+  margin-bottom: 16px;
+}
+
+.fieldRowsTwoCol {
+  column-count: 2;
+  column-gap: 28px;
+}
+
+.fieldRowsTwoCol .sourceFieldRow {
+  break-inside: avoid;
+}
+
+.sourceFieldCount {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.sourceSync {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+.fieldSection {
+  margin-bottom: 16px;
+}
+
+.fieldSectionTitle {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin: 0 0 8px;
+}
+
+.sourceFieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4px 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.sourceFieldRow:last-child {
+  border-bottom: none;
+}
+
+.sourceFieldLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.sourceFieldValue {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* ========================================================================= */
+/* Loading / Error states                                                    */
+/* ========================================================================= */
+
+.loadingWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+}
+
+.errorWrap {
+  text-align: center;
+  padding: 80px 0;
+  color: var(--text-tertiary);
+}
+
+.errorTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}

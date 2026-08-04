@@ -1,0 +1,45 @@
+{
+  "totalRecords": 3,
+  "count": 2,
+  "$skipToken": "page2token",
+  "data": [
+    {
+      "id": "/subscriptions/sub-001/resourceGroups/rg-prod/providers/Microsoft.Compute/virtualMachines/vm-web-01",
+      "name": "vm-web-01",
+      "type": "microsoft.compute/virtualmachines",
+      "location": "eastus",
+      "resourceGroup": "rg-prod",
+      "subscriptionId": "sub-001",
+      "computerName": "vm-web-01",
+      "osType": "Windows",
+      "osName": "Windows Server 2022 Datacenter",
+      "osVersion": "10.0.20348.2340",
+      "vmSize": "Standard_D2s_v3",
+      "powerState": "VM running",
+      "provisioningState": "Succeeded",
+      "vmId": "aaaa-bbbb-cccc-dddd",
+      "privateIPAddress": "10.0.1.10",
+      "publicIpAddress": "",
+      "tags": {}
+    },
+    {
+      "id": "/subscriptions/sub-001/resourceGroups/rg-prod/providers/Microsoft.Compute/virtualMachines/vm-db-01",
+      "name": "vm-db-01",
+      "type": "microsoft.compute/virtualmachines",
+      "location": "eastus",
+      "resourceGroup": "rg-prod",
+      "subscriptionId": "sub-001",
+      "computerName": "vm-db-01",
+      "osType": "Linux",
+      "osName": "Ubuntu 22.04",
+      "osVersion": "22.04",
+      "vmSize": "Standard_E4s_v3",
+      "powerState": "VM running",
+      "provisioningState": "Succeeded",
+      "vmId": "eeee-ffff-gggg-hhhh",
+      "privateIPAddress": "10.0.1.11",
+      "publicIpAddress": "",
+      "tags": {}
+    }
+  ]
+}

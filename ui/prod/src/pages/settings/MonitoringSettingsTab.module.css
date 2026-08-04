@@ -1,0 +1,144 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Mirrors EmailSettingsTab.module.css tokens/layout so the Monitoring ->
+   Forwarding form matches neighboring System/settings tabs. */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+/* "Enable metrics forwarding" sits standalone above the cards so it reads as a
+   master switch for the whole tab, not a row buried inside a section. */
+.enableRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+/* SettingsSection's body has tight default padding meant for grid rows; form
+   fields need more room, so wrap children in this block and override. */
+.cardBody {
+  padding: 6px 18px 14px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.row:last-child {
+  margin-bottom: 0;
+}
+
+.row label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.row input,
+.row select {
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+}
+
+.row input:focus,
+.row select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.hint {
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+/* External-labels key=value editor. */
+.labelList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.labelRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.labelRow input {
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+}
+
+.labelRow input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.removeBtn {
+  height: 30px;
+  width: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.removeBtn:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.addBtn {
+  align-self: flex-start;
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  padding: 2px 0;
+}
+
+.emptyLabels {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  /* Match CategorySettings so Save sits at the same offset across System tabs. */
+  padding: 2px 14px 4px 0;
+}

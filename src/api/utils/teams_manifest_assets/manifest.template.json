@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "{{TEAMS_BOT_APP_ID}}",
+  "developer": {
+    "name": "{{ORG_NAME}}",
+    "websiteUrl": "{{ASSETATLAS_PUBLIC_BASE_URL}}",
+    "privacyUrl": "{{ASSETATLAS_PUBLIC_BASE_URL}}/privacy",
+    "termsOfUseUrl": "{{ASSETATLAS_PUBLIC_BASE_URL}}/terms"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "AssetAtlas",
+    "full": "AssetAtlas Chat"
+  },
+  "description": {
+    "short": "Chat with your AssetAtlas data inside Teams.",
+    "full": "Ask AssetAtlas about your IT assets, alerts, and posture from inside Microsoft Teams. Streams replies, renders charts, and links to your AssetAtlas account."
+  },
+  "accentColor": "#1F6FEB",
+  "bots": [
+    {
+      "botId": "{{TEAMS_BOT_APP_ID}}",
+      "scopes": ["personal"],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "permissions": ["identity"],
+  "validDomains": [
+    "{{ASSETATLAS_PUBLIC_HOSTNAME}}"
+  ]
+}

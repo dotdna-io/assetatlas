@@ -1,0 +1,39 @@
+groups:
+  - name: assetatlas-services
+    interval: 30s
+    rules:
+      - alert: api-down
+        expr: up{job="assetatlas-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: AssetAtlas API is down
+          description: "Prometheus has been unable to scrape the AssetAtlas API for 2 minutes."
+
+      - alert: postgres-down
+        expr: up{job="postgres-exporter"} == 0 or pg_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: PostgreSQL is down
+          description: "postgres-exporter cannot reach the database for 2+ minutes."
+
+      - alert: redis-down
+        expr: up{job="redis-exporter"} == 0 or redis_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Redis is down
+          description: "redis-exporter cannot reach Redis for 2+ minutes."
+
+      - alert: nginx-down
+        expr: up{job="nginx-exporter"} == 0 or nginx_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: nginx is down
+          description: "nginx-exporter cannot reach nginx stub_status for 2+ minutes."

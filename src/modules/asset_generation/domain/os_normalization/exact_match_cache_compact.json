@@ -1,0 +1,802 @@
+{
+  "Windows 11 Enterprise": {
+    "cpe": "cpe:2.3:o:microsoft:windows_11:11:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_11",
+    "version": "11",
+    "edition": "enterprise",
+    "confidence": 1.0
+  },
+  "Windows 10 Enterprise": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": "enterprise",
+    "confidence": 1.0
+  },
+  "Windows 10 Enterprise LTSC 2019": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": "enterprise",
+    "confidence": 1.0
+  },
+  "Windows Server 2019 Standard": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2019:2019:*:standard:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2019",
+    "version": "2019",
+    "edition": "standard",
+    "confidence": 1.0
+  },
+  "Windows 10 Pro": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:professional:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": "professional",
+    "confidence": 1.0
+  },
+  "Windows 10.0.19045.5131": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.19045.5131:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.19045.5131",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "cisco ios  ": {
+    "cpe": "cpe:2.3:o:cisco:ios:-:*:*:*:*:*:*:*",
+    "vendor": "cisco",
+    "product": "ios",
+    "version": null,
+    "edition": null,
+    "confidence": 0.75
+  },
+  "Windows Server 2016 Standard": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2016:2016:*:standard:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2016",
+    "version": "2016",
+    "edition": "standard",
+    "confidence": 1.0
+  },
+  "RHEL 8.8": {
+    "cpe": "cpe:2.3:o:amazon_ec2:enterprise_linux:8.8:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "enterprise_linux",
+    "version": "8.8",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "RHEL 7.9": {
+    "cpe": "cpe:2.3:o:amazon_ec2:enterprise_linux:7.9:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "enterprise_linux",
+    "version": "7.9",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "CentOS 7.9": {
+    "cpe": "cpe:2.3:o:amazon_ec2:centos:7.9:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "centos",
+    "version": "7.9",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 11 Pro": {
+    "cpe": "cpe:2.3:o:microsoft:windows_11:11:*:professional:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_11",
+    "version": "11",
+    "edition": "professional",
+    "confidence": 1.0
+  },
+  "Windows Server 2022 Standard": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2022:2022:*:standard:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2022",
+    "version": "2022",
+    "edition": "standard",
+    "confidence": 1.0
+  },
+  "Windows 10 Enterprise 2016 LTSB": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": "enterprise",
+    "confidence": 1.0
+  },
+  "RHEL 8.9": {
+    "cpe": "cpe:2.3:o:amazon_ec2:enterprise_linux:8.9:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "enterprise_linux",
+    "version": "8.9",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Amazon Linux 2": {
+    "cpe": "cpe:2.3:o:amazon_ec2:amazon_linux:2:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "amazon_linux",
+    "version": "2",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "ios  ": {
+    "cpe": "cpe:2.3:o:apple:iphone_os:-:*:*:*:*:*:*:*",
+    "vendor": "apple",
+    "product": "iphone_os",
+    "version": null,
+    "edition": null,
+    "confidence": 0.75
+  },
+  "windows 10 enterprise ltsc": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": "enterprise",
+    "confidence": 0.95
+  },
+  "Oracle Linux 8.9": {
+    "cpe": "cpe:2.3:o:amazon_ec2:linux:8.9:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "linux",
+    "version": "8.9",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Ubuntu 20.04": {
+    "cpe": "cpe:2.3:o:amazon_ec2:ubuntu_linux:20.04:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "ubuntu_linux",
+    "version": "20.04",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "junos os  ": {
+    "cpe": "cpe:2.3:o:juniper_networks:junos:-:*:*:*:*:*:*:*",
+    "vendor": "juniper_networks",
+    "product": "junos",
+    "version": null,
+    "edition": null,
+    "confidence": 0.75
+  },
+  "cisco ios xe  ": {
+    "cpe": "cpe:2.3:o:cisco:ios:-:*:*:*:*:*:*:*",
+    "vendor": "cisco",
+    "product": "ios",
+    "version": null,
+    "edition": null,
+    "confidence": 0.75
+  },
+  "Windows Server 2012 R2 Standard": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2012:2012:*:standard:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2012",
+    "version": "2012",
+    "edition": "standard",
+    "confidence": 1.0
+  },
+  "Windows Server 2016 Datacenter": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2016:2016:*:datacenter:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2016",
+    "version": "2016",
+    "edition": "datacenter",
+    "confidence": 1.0
+  },
+  "windows 10": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": null,
+    "confidence": 0.85
+  },
+  "windows server 2019 standard": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2019:2019:*:standard:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2019",
+    "version": "2019",
+    "edition": "standard",
+    "confidence": 0.95
+  },
+  "Windows Server 2019 Datacenter": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2019:2019:*:datacenter:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2019",
+    "version": "2019",
+    "edition": "datacenter",
+    "confidence": 1.0
+  },
+  "Firmware: 13.3.1": {
+    "cpe": "cpe:2.3:o:emerson:firmware:13.3.1:*:*:*:*:*:*:*",
+    "vendor": "emerson",
+    "product": "firmware",
+    "version": "13.3.1",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows server 2022 standard": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2022:2022:*:standard:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2022",
+    "version": "2022",
+    "edition": "standard",
+    "confidence": 0.95
+  },
+  "windows server 2012 r2 standard": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2012:2012:*:standard:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2012",
+    "version": "2012",
+    "edition": "standard",
+    "confidence": 1.0
+  },
+  "Windows 7 Enterprise": {
+    "cpe": "cpe:2.3:o:microsoft:windows_7:7:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_7",
+    "version": "7",
+    "edition": "enterprise",
+    "confidence": 1.0
+  },
+  "windows server 2016 standard": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2016:2016:*:standard:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2016",
+    "version": "2016",
+    "edition": "standard",
+    "confidence": 1.0
+  },
+  "Windows CE 6.0": {
+    "cpe": "cpe:2.3:o:microsoft:windows_ce:6.0:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_ce",
+    "version": "6.0",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows server 2019 datacenter": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2019:2019:*:datacenter:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2019",
+    "version": "2019",
+    "edition": "datacenter",
+    "confidence": 1.0
+  },
+  "Windows 10 Enterprise for Virtual Desktops": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": "enterprise",
+    "confidence": 1.0
+  },
+  "windows server 2012 r2 datacenter": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2012:2012:*:datacenter:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2012",
+    "version": "2012",
+    "edition": "datacenter",
+    "confidence": 1.0
+  },
+  "RHEL 8.3": {
+    "cpe": "cpe:2.3:o:amazon_ec2:enterprise_linux:8.3:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "enterprise_linux",
+    "version": "8.3",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 7 Professional": {
+    "cpe": "cpe:2.3:o:microsoft:windows_7:7:*:professional:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_7",
+    "version": "7",
+    "edition": "professional",
+    "confidence": 1.0
+  },
+  "windows 7 enterprise ": {
+    "cpe": "cpe:2.3:o:microsoft:windows_7:7:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_7",
+    "version": "7",
+    "edition": "enterprise",
+    "confidence": 0.95
+  },
+  "windows server 2016 datacenter": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2016:2016:*:datacenter:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2016",
+    "version": "2016",
+    "edition": "datacenter",
+    "confidence": 1.0
+  },
+  "Windows 10 Pro for Workstations": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:professional:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": "professional",
+    "confidence": 1.0
+  },
+  "Firmware: 13.3.1.6383.xr": {
+    "cpe": "cpe:2.3:o:emerson:firmware:13.3.1.6383:*:*:*:*:*:*:*",
+    "vendor": "emerson",
+    "product": "firmware",
+    "version": "13.3.1.6383",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "RHEL 9.2": {
+    "cpe": "cpe:2.3:o:amazon_ec2:enterprise_linux:9.2:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "enterprise_linux",
+    "version": "9.2",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "CentOS 7.8": {
+    "cpe": "cpe:2.3:o:amazon_ec2:centos:7.8:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "centos",
+    "version": "7.8",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "RHEL 7.6": {
+    "cpe": "cpe:2.3:o:amazon_ec2:enterprise_linux:7.6:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "enterprise_linux",
+    "version": "7.6",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "RHEL 8.5": {
+    "cpe": "cpe:2.3:o:amazon_ec2:enterprise_linux:8.5:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "enterprise_linux",
+    "version": "8.5",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 10.0.19045.5011": {
+    "cpe": "cpe:2.3:o:microsoft:windows_11:10.0.19045.5011:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_11",
+    "version": "10.0.19045.5011",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows 7 professional ": {
+    "cpe": "cpe:2.3:o:microsoft:windows_7:7:*:professional:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_7",
+    "version": "7",
+    "edition": "professional",
+    "confidence": 0.95
+  },
+  "windows server 2016 version 1607 build 14393": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2016:2016:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2016",
+    "version": "2016",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows 10.0.19045.4046": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.19045.4046:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.19045.4046",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows server 2019 version 1803 build 17763": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2019:2019:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2019",
+    "version": "2019",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows server 2008 r2 standard ": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2008:2008:*:standard:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2008",
+    "version": "2008",
+    "edition": "standard",
+    "confidence": 0.95
+  },
+  "windows server 2012 r2 datacenter (full installation) build 9600": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2012:2012:*:datacenter:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2012",
+    "version": "2012",
+    "edition": "datacenter",
+    "confidence": 1.0
+  },
+  "Windows 10 / Server 2016": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2016:10:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2016",
+    "version": "10",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows Server 2022 Datacenter": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2022:2022:*:datacenter:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2022",
+    "version": "2022",
+    "edition": "datacenter",
+    "confidence": 1.0
+  },
+  "Oracle Linux 7.9": {
+    "cpe": "cpe:2.3:o:amazon_ec2:linux:7.9:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "linux",
+    "version": "7.9",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows server 2022 datacenter azure edition": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2022:2022:*:datacenter:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2022",
+    "version": "2022",
+    "edition": "datacenter",
+    "confidence": 1.0
+  },
+  "windows 10.0.19045.3930": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.19045.3930:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.19045.3930",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Ubuntu 22.04": {
+    "cpe": "cpe:2.3:o:amazon_ec2:ubuntu_linux:22.04:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "ubuntu_linux",
+    "version": "22.04",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "RHEL 8.7": {
+    "cpe": "cpe:2.3:o:amazon_ec2:enterprise_linux:8.7:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "enterprise_linux",
+    "version": "8.7",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Firmware: 04.04.00": {
+    "cpe": "cpe:2.3:o:siemens:firmware:04.04.00:*:*:*:*:*:*:*",
+    "vendor": "siemens",
+    "product": "firmware",
+    "version": "04.04.00",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 11 Enterprise multi-session": {
+    "cpe": "cpe:2.3:o:microsoft:windows_11:11:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_11",
+    "version": "11",
+    "edition": "enterprise",
+    "confidence": 1.0
+  },
+  "windows 10 enterprise n ltsc": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": "enterprise",
+    "confidence": 0.95
+  },
+  "Windows 10.0.19045.4894": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.19045.4894:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.19045.4894",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 10.0.22631.4460": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.22631.4460:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.22631.4460",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows Server 2012 R2 Datacenter": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2012:2012:*:datacenter:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2012",
+    "version": "2012",
+    "edition": "datacenter",
+    "confidence": 1.0
+  },
+  "Windows XP": {
+    "cpe": "cpe:2.3:o:microsoft:windows_xp:-:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_xp",
+    "version": null,
+    "edition": null,
+    "confidence": 0.75
+  },
+  "RHEL 9.3": {
+    "cpe": "cpe:2.3:o:amazon_ec2:enterprise_linux:9.3:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "enterprise_linux",
+    "version": "9.3",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 7": {
+    "cpe": "cpe:2.3:o:microsoft:windows_7:7:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_7",
+    "version": "7",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "CentOS 7.6": {
+    "cpe": "cpe:2.3:o:hp:centos:7.6:*:*:*:*:*:*:*",
+    "vendor": "hp",
+    "product": "centos",
+    "version": "7.6",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 10 Enterprise LTSC 2021": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": "enterprise",
+    "confidence": 1.0
+  },
+  "Windows 7 SP1 / Server 2008 R2 SP1": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2008:7:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2008",
+    "version": "7",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows server (unknown) build 19043": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2019:19043:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2019",
+    "version": "19043",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "ios/ipados 17.3.1": {
+    "cpe": "cpe:2.3:o:apple:iphone_os:17.3.1:*:*:*:*:*:*:*",
+    "vendor": "apple",
+    "product": "iphone_os",
+    "version": "17.3.1",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows 10 enterprise": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10:*:enterprise:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10",
+    "edition": "enterprise",
+    "confidence": 0.95
+  },
+  "windows server (unknown) build 20348": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2019:20348:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2019",
+    "version": "20348",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows 10.0.19042.2965": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.19042.2965:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.19042.2965",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows 10.0.19045.2965": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.19045.2965:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.19045.2965",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "ios/ipados 16.6.1": {
+    "cpe": "cpe:2.3:o:apple:iphone_os:16.6.1:*:*:*:*:*:*:*",
+    "vendor": "apple",
+    "product": "iphone_os",
+    "version": "16.6.1",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows server 2022 datacenter": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2022:2022:*:datacenter:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2022",
+    "version": "2022",
+    "edition": "datacenter",
+    "confidence": 1.0
+  },
+  "ipados  ": {
+    "cpe": "cpe:2.3:o:apple:iphone_os:-:*:*:*:*:*:*:*",
+    "vendor": "apple",
+    "product": "iphone_os",
+    "version": null,
+    "edition": null,
+    "confidence": 0.75
+  },
+  "Windows 7 SP1": {
+    "cpe": "cpe:2.3:o:microsoft:windows_7:7:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_7",
+    "version": "7",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "ios/ipados 17.2.1": {
+    "cpe": "cpe:2.3:o:apple:iphone_os:17.2.1:*:*:*:*:*:*:*",
+    "vendor": "apple",
+    "product": "iphone_os",
+    "version": "17.2.1",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "ios/ipados 16.3.1": {
+    "cpe": "cpe:2.3:o:apple:iphone_os:16.3.1:*:*:*:*:*:*:*",
+    "vendor": "apple",
+    "product": "iphone_os",
+    "version": "16.3.1",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Ubuntu 18.04": {
+    "cpe": "cpe:2.3:o:amazon_ec2:ubuntu_linux:18.04:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "ubuntu_linux",
+    "version": "18.04",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows 10.0.19045.3803": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.19045.3803:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.19045.3803",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "android  ": {
+    "cpe": "cpe:2.3:o:samsung_electronics:android:-:*:*:*:*:*:*:*",
+    "vendor": "samsung_electronics",
+    "product": "android",
+    "version": null,
+    "edition": null,
+    "confidence": 0.75
+  },
+  "Amazon Linux 2023": {
+    "cpe": "cpe:2.3:o:amazon_ec2:amazon_linux:2023:*:*:*:*:*:*:*",
+    "vendor": "amazon_ec2",
+    "product": "amazon_linux",
+    "version": "2023",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 10 / Server 2019": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2019:10:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2019",
+    "version": "10",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows Server 2016": {
+    "cpe": "cpe:2.3:o:microsoft:windows_server_2016:2016:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_server_2016",
+    "version": "2016",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows 10.0.18363.2274": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.18363.2274:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.18363.2274",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows 10.0.19045.3570": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.19045.3570:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.19045.3570",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 11": {
+    "cpe": "cpe:2.3:o:microsoft:windows_11:11:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_11",
+    "version": "11",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "ios/ipados 16.6": {
+    "cpe": "cpe:2.3:o:apple:iphone_os:16.6:*:*:*:*:*:*:*",
+    "vendor": "apple",
+    "product": "iphone_os",
+    "version": "16.6",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "windows 10.0.19045.3693": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.19045.3693:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.19045.3693",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 10.0.19045.5247": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.19045.5247:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.19045.5247",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Firmware: 14.001": {
+    "cpe": "cpe:2.3:o:dell:firmware:14.001:*:*:*:*:*:*:*",
+    "vendor": "dell",
+    "product": "firmware",
+    "version": "14.001",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "ios/ipados 17.1.2": {
+    "cpe": "cpe:2.3:o:apple:iphone_os:17.1.2:*:*:*:*:*:*:*",
+    "vendor": "apple",
+    "product": "iphone_os",
+    "version": "17.1.2",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Firmware: 3.2.8": {
+    "cpe": "cpe:2.3:o:siemens:firmware:3.2.8:*:*:*:*:*:*:*",
+    "vendor": "siemens",
+    "product": "firmware",
+    "version": "3.2.8",
+    "edition": null,
+    "confidence": 0.9
+  },
+  "Windows 10.0.26100.2314": {
+    "cpe": "cpe:2.3:o:microsoft:windows_10:10.0.26100.2314:*:*:*:*:*:*:*",
+    "vendor": "microsoft",
+    "product": "windows_10",
+    "version": "10.0.26100.2314",
+    "edition": null,
+    "confidence": 0.9
+  }
+}

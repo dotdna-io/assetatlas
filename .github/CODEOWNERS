@@ -1,0 +1,8 @@
+# Code owners for AssetAtlas.
+# These owners are requested for review automatically on matching pull requests.
+# Docs: https://docs.github.com/articles/about-code-owners
+#
+# Later, more specific rules override earlier ones. This single default rule
+# assigns every path in the repository to the maintainer.
+
+* @andrei-dotdna

@@ -1,0 +1,37 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  /* DataTable cards size to their full content (25/50 rows) so they
+     don't need an internal scrollbar. `minmax(162px, auto)` keeps
+     standard rows at the regular 162px while letting tall content
+     (the table) grow the row track it spans. */
+  grid-auto-rows: minmax(162px, auto);
+  gap: 9px;
+  position: relative;
+  min-height: 400px;
+  /* Without this, align-content defaults to stretch: when the layout has a
+     single occupied row, that lone track stretches to fill min-height (400px)
+     and every card in the row doubles in height — e.g. shrinking a 2-row
+     chart to a 1-row size visibly inflated its neighbours. */
+  align-content: start;
+}
+
+.placeholder {
+  border: 1px dashed rgba(100, 116, 139, 0.15);
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+
+.placeholder:hover {
+  background: rgba(59, 130, 246, 0.05);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+:global(body.dark-mode) .placeholder {
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+:global(body.dark-mode) .placeholder:hover {
+  background: rgba(59, 130, 246, 0.08);
+}

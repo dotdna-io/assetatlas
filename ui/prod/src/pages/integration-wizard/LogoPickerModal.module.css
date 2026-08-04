@@ -1,0 +1,275 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.header {
+  margin-bottom: var(--space-3);
+}
+
+.searchWrap {
+  position: relative;
+  width: 100%;
+}
+
+.search {
+  width: 100%;
+  height: 36px;
+  padding: 0 36px 0 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search:focus {
+  border-color: var(--accent);
+}
+
+.searchClear {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.searchClear:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.count {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-3);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: var(--space-2);
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.logoItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: none;
+  transition: all var(--transition-fast);
+}
+
+.logoItem:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border);
+}
+
+.logoItemSelected {
+  border-color: var(--accent);
+  background: var(--bg-secondary);
+}
+
+.logoImg {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.logoName {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.2;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.empty {
+  text-align: center;
+  padding: var(--space-6);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------------------------------------------------------------------------
+ * Tabs (Library | Upload)
+ * Match the .tabs/.tab/.tabActive styles used by the explorer/edit modal so
+ * the picker visually belongs to the same family.
+ * ------------------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  flex-direction: row;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-3);
+  gap: 0;
+}
+
+.tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  background: none;
+  font-family: var(--font-family);
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tabActive {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+.tabPanel {
+  /* No padding-top — the tab strip already has bottom margin. */
+}
+
+/* ---------------------------------------------------------------------------
+ * Library grid: .uploadedBadge marks custom logos in the grid.
+ * ------------------------------------------------------------------------- */
+
+.logoItem {
+  position: relative;
+}
+
+.uploadedBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Upload tab — drop zone, preview, validation message, action row.
+ * ------------------------------------------------------------------------- */
+
+.dropZone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 220px;
+  padding: var(--space-6);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.dropZone:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-secondary));
+}
+
+.fileInput {
+  /* Cover the entire drop zone so a click anywhere opens the file picker. */
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.dropIcon {
+  color: var(--text-tertiary);
+}
+
+.dropPrimary {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.dropHint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.dropPreview {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+}
+
+.dropMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.dropMetaSub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.error {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: color-mix(in srgb, var(--danger, #d33) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger, #d33) 30%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--danger, #d33);
+  font-size: var(--font-size-sm);
+}
+
+.uploadHelp {
+  margin-top: var(--space-3);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+.uploadActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}

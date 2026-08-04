@@ -1,0 +1,84 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  text-transform: capitalize;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.logo {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.fallbackIcon {
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+/* Glossy brand-tinted chip holding the logo (the `tinted` variant). Tint
+   colour is applied inline; the gloss sheen reuses the shared Badge gloss
+   vars so the chat panel can flatten it. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background-image: var(--badge-gloss-image, linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0) 50%
+  ));
+  box-shadow: var(--badge-gloss-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.12));
+}
+
+:global(body:not(.dark-mode)) .chip {
+  background-image: var(--badge-gloss-image, linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.05) 100%
+  ));
+  box-shadow: var(--badge-gloss-shadow,
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05)
+  );
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+/* Name for the tinted (chip) variant — brand-coloured, slightly heavier to
+   match the category tag. */
+.tagName {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}

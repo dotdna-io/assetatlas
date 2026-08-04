@@ -1,0 +1,50 @@
+{
+  "data": {
+    "site": {
+      "assetResources": {
+        "total": 1,
+        "items": [
+          {
+            "key": "asset-001",
+            "url": "https://app.lansweeper.com/asset/asset-001",
+            "siteId": "site-001",
+            "assetBasicInfo": {
+              "name": "DESKTOP-WIN001",
+              "type": "Windows",
+              "subType": "Desktop",
+              "ipAddress": "10.0.1.10",
+              "mac": "AA:BB:CC:DD:EE:01",
+              "fqdn": "desktop-win001.contoso.local",
+              "domain": "contoso.local",
+              "userName": "jsmith",
+              "userDomain": "CONTOSO",
+              "description": "Standard desktop",
+              "firstSeen": "2024-01-15T08:00:00Z",
+              "lastSeen": "2026-03-18T10:00:00Z",
+              "lastChanged": "2026-03-18T09:00:00Z",
+              "lastActiveScan": "2026-03-18T08:00:00Z"
+            },
+            "operatingSystem": {
+              "caption": "Microsoft Windows 11 Enterprise",
+              "version": "10.0.22621",
+              "buildNumber": "22621"
+            },
+            "assetCustom": {
+              "manufacturer": "Dell Inc.",
+              "model": "OptiPlex 7090",
+              "serialNumber": "SN-001",
+              "location": "Floor 3",
+              "department": "Engineering",
+              "contact": "John Smith",
+              "stateName": "Active",
+              "warrantyDate": "2027-01-15",
+              "dnsName": "desktop-win001",
+              "lastPatched": "2026-03-10T06:00:00Z"
+            }
+          }
+        ],
+        "pagination": {}
+      }
+    }
+  }
+}

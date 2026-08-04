@@ -1,0 +1,16 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        {"name": "Computer", "type": "string"},
+        {"name": "ComputerIP", "type": "string"},
+        {"name": "OSType", "type": "string"},
+        {"name": "OSName", "type": "string"}
+      ],
+      "rows": [
+        ["DESKTOP-WIN001", "10.0.1.10", "Windows", "Windows 11"]
+      ]
+    }
+  ]
+}

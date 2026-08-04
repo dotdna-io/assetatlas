@@ -1,0 +1,150 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ============================================================
+   Card surfaces — two-tier liquid glass.
+
+   .glossyCard — QUIET tier, the app-wide default. Same material
+   language as the hero tier at roughly half the volume: workhorse
+   pages (settings, tables, detail views) are reading surfaces, so
+   the glass stays out of the content's way. Cheaper blur too.
+
+   .glossyCardHero — HERO tier: full liquid glass for presentation
+   moments only (homepage cards, auth pages). Composes the quiet
+   tier and turns the material up — glare 0.55 light / 0.14 dark
+   (white reads much louder on dark, so dark sits well below
+   light's numbers).
+
+   Composing components keep their own layout (padding, flex,
+   border-radius) but get the surface treatment for free.
+   Pseudo-elements need position: relative on the host.
+   ============================================================ */
+
+.glossyCard {
+  position: relative;
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  /* The dark quiet tier is a perfectly even panel: no glare, no sheen, no
+     vignette. Every gradient tried here read as a lit or smudged corner on
+     data pages — even the black bottom vignette made the opposite corner
+     look glowing by contrast. Flat fill only; depth comes from the border,
+     hairlines and shadow. The fill sits at the sidebar's tone (Sidebar
+     .module.css dark: rgb(32,33,38)→(24,25,30) at ~0.5) so cards lift off
+     the page background instead of melting into it. */
+  background: rgba(28, 29, 34, 0.52);
+  /* Dark edges sit lower than the hero tier's: light-on-dark edge contrast
+     (rim, hairlines, black halo) is what makes a card read as outlined, so
+     the quiet tier keeps just enough to separate from the page. */
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 12px 32px -14px rgba(0, 0, 0, 0.26),
+    0 2px 8px -2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 1px 0 0 rgba(255, 255, 255, 0.03),
+    inset -1px 0 0 rgba(0, 0, 0, 0.10);
+}
+
+.glossyCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.10) 50%, transparent 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.glossyCard::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 18%;
+  right: 18%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+:global(body:not(.dark-mode)) .glossyCard {
+  background:
+    radial-gradient(ellipse 85% 55% at 8% -4%, rgba(255, 255, 255, 0.40) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 45% at 100% 100%, rgba(70, 75, 85, 0.04) 0%, transparent 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.32) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 12px 34px -14px rgba(60, 65, 80, 0.17),
+    0 2px 8px -3px rgba(60, 65, 80, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 1px 0 0 rgba(255, 255, 255, 0.32),
+    inset -1px 0 0 rgba(255, 255, 255, 0.14);
+}
+
+:global(body:not(.dark-mode)) .glossyCard::before {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.65) 50%, transparent 100%);
+}
+
+:global(body:not(.dark-mode)) .glossyCard::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.32) 50%, transparent 100%);
+}
+
+/* ── HERO tier ─────────────────────────────────────────────── */
+
+.glossyCardHero {
+  composes: glossyCard;
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  backdrop-filter: blur(28px) saturate(170%);
+  /* Dark glare is tighter and dimmer than light's (60%/0.09 vs 85%/0.55):
+     hero cards are large, and a card-relative glare at 0.14 read as a
+     white wash over the whole upper area rather than a corner kiss.
+     Tint and geometry are both variables, because the corner kiss only
+     works where something sits behind the card to justify a light source
+     off to one side. A card standing alone on a flat page overrides
+     --hero-glare-shape to a wide top sheen instead — see
+     LoginPage.module.css. Dark only; the light stack below carries its
+     own glare. */
+  --hero-glare-dark: rgba(255, 255, 255, 0.09);
+  --hero-glare-shape: ellipse 60% 42% at 8% -4%;
+  background:
+    radial-gradient(var(--hero-glare-shape), var(--hero-glare-dark) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 45% at 100% 100%, rgba(0, 0, 0, 0.16) 0%, transparent 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%),
+    rgba(24, 25, 30, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 16px 40px -16px rgba(0, 0, 0, 0.40),
+    0 2px 8px -2px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 1px 0 0 rgba(255, 255, 255, 0.07),
+    inset -1px 0 0 rgba(0, 0, 0, 0.12);
+}
+
+.glossyCardHero::before {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.22) 50%, transparent 100%);
+}
+
+.glossyCardHero::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.10) 50%, transparent 100%);
+}
+
+:global(body:not(.dark-mode)) .glossyCardHero {
+  background:
+    radial-gradient(ellipse 85% 55% at 8% -4%, rgba(255, 255, 255, 0.55) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 45% at 100% 100%, rgba(70, 75, 85, 0.05) 0%, transparent 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.50) 0%, rgba(255, 255, 255, 0.30) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow:
+    0 16px 44px -18px rgba(60, 65, 80, 0.20),
+    0 2px 10px -4px rgba(60, 65, 80, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 1px 0 0 rgba(255, 255, 255, 0.45),
+    inset -1px 0 0 rgba(255, 255, 255, 0.20);
+}
+
+:global(body:not(.dark-mode)) .glossyCardHero::before {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.9) 50%, transparent 100%);
+}
+
+:global(body:not(.dark-mode)) .glossyCardHero::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
+}

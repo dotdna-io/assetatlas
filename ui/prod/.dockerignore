@@ -1,0 +1,9 @@
+node_modules/
+dist/
+e2e/
+_legacy/
+playwright-report/
+test-results/
+*.bak
+*.backup
+.DS_Store

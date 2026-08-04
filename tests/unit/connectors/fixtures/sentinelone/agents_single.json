@@ -1,0 +1,63 @@
+{
+  "data": [
+    {
+      "id": "agent-001",
+      "uuid": "uuid-001",
+      "computerName": "DESKTOP-WIN001",
+      "serialNumber": "SN-001",
+      "domain": "corp.example.com",
+      "osType": "windows",
+      "osName": "Windows 10 Pro",
+      "osRevision": "19044",
+      "osArch": "64 bit",
+      "machineType": "desktop",
+      "modelName": "LENOVO - ThinkPad T14",
+      "manufacturer": "LENOVO",
+      "cpuId": "Intel Core i7",
+      "cpuCount": 1,
+      "coreCount": 8,
+      "totalMemory": 16384,
+      "externalIp": "203.0.113.1",
+      "lastIpToMgmt": "10.0.1.100",
+      "isActive": true,
+      "isDecommissioned": false,
+      "isUpToDate": true,
+      "infected": false,
+      "activeThreats": 0,
+      "agentVersion": "21.7.5.1120",
+      "detectionState": "full_mode",
+      "mitigationMode": "protect",
+      "activeProtection": ["agent-policy", "firewall"],
+      "lastActiveDate": "2026-03-19T10:00:00Z",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "registeredAt": "2024-01-01T00:00:00Z",
+      "siteName": "HQ",
+      "siteId": "site-001",
+      "accountName": "Acme Corp",
+      "groupName": "Workstations",
+      "activeDirectory": {
+        "computerDistinguishedName": "CN=DESKTOP-WIN001,OU=Workstations,DC=corp,DC=example,DC=com",
+        "computerMemberOf": ["CN=Domain Computers,CN=Users,DC=corp,DC=example,DC=com"],
+        "lastUserDistinguishedName": "CN=jdoe,OU=Users,DC=corp,DC=example,DC=com",
+        "lastUserMemberOf": ["CN=Domain Users,CN=Users,DC=corp,DC=example,DC=com"],
+        "userPrincipalName": "jdoe@corp.example.com"
+      },
+      "cloudProviders": {},
+      "tags": {
+        "sentinelone": ["production", "managed"]
+      },
+      "networkInterfaces": [
+        {
+          "name": "Ethernet",
+          "physical": "AA:BB:CC:DD:EE:FF",
+          "inet": ["10.0.1.100"],
+          "inet6": ["fe80::1"]
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "nextCursor": null,
+    "totalItems": 1
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "data": {
+    "site": {
+      "assetResources": {
+        "total": 3,
+        "items": [
+          {
+            "key": "asset-001",
+            "url": "https://app.lansweeper.com/asset/asset-001",
+            "siteId": "site-001",
+            "assetBasicInfo": {
+              "name": "DESKTOP-WIN001",
+              "type": "Windows",
+              "subType": "Desktop",
+              "ipAddress": "10.0.1.10",
+              "mac": "AA:BB:CC:DD:EE:01",
+              "fqdn": "desktop-win001.contoso.local",
+              "domain": "contoso.local",
+              "userName": "jsmith",
+              "userDomain": "CONTOSO",
+              "description": "Standard desktop",
+              "firstSeen": "2024-01-15T08:00:00Z",
+              "lastSeen": "2026-03-18T10:00:00Z",
+              "lastChanged": "2026-03-18T09:00:00Z",
+              "lastActiveScan": "2026-03-18T08:00:00Z"
+            },
+            "operatingSystem": {
+              "caption": "Microsoft Windows 11 Enterprise",
+              "version": "10.0.22621",
+              "buildNumber": "22621"
+            },
+            "assetCustom": {
+              "manufacturer": "Dell Inc.",
+              "model": "OptiPlex 7090",
+              "serialNumber": "SN-001",
+              "location": "Floor 3",
+              "department": "Engineering",
+              "contact": "John Smith",
+              "stateName": "Active",
+              "warrantyDate": "2027-01-15",
+              "dnsName": "desktop-win001",
+              "lastPatched": "2026-03-10T06:00:00Z"
+            }
+          },
+          {
+            "key": "asset-002",
+            "url": "https://app.lansweeper.com/asset/asset-002",
+            "siteId": "site-001",
+            "assetBasicInfo": {
+              "name": "LAPTOP-MAC002",
+              "type": "Mac OS X",
+              "subType": "Laptop",
+              "ipAddress": "10.0.1.20",
+              "mac": "AA:BB:CC:DD:EE:02",
+              "fqdn": "laptop-mac002.contoso.local",
+              "domain": "contoso.local",
+              "userName": "jdoe",
+              "userDomain": "CONTOSO",
+              "description": "Developer laptop",
+              "firstSeen": "2024-02-01T12:00:00Z",
+              "lastSeen": "2026-03-18T09:00:00Z",
+              "lastChanged": "2026-03-17T14:00:00Z",
+              "lastActiveScan": "2026-03-17T08:00:00Z"
+            },
+            "operatingSystem": {
+              "caption": "macOS Sonoma",
+              "version": "14.3.1",
+              "buildNumber": "23D60"
+            },
+            "assetCustom": {
+              "manufacturer": "Apple Inc.",
+              "model": "MacBook Pro 14-inch",
+              "serialNumber": "SN-002",
+              "location": "Floor 2",
+              "department": "Engineering",
+              "contact": "Jane Doe",
+              "stateName": "Active",
+              "warrantyDate": "2027-06-01",
+              "dnsName": "laptop-mac002",
+              "lastPatched": "2026-03-12T06:00:00Z"
+            }
+          }
+        ],
+        "pagination": {
+          "next": "cursor-page2-abc"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,174 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/AlertChannelsTab.module.css */
+
+/* ---------------------------------------------------------------------------
+   Empty state
+--------------------------------------------------------------------------- */
+
+.emptyState {
+  composes: glossyCard from '../../styles/shared.module.css';
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   Table
+--------------------------------------------------------------------------- */
+
+.tableWrapper {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.headerRow th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  /* Subtle single-pixel divider, matching the Access → Users table header. */
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.dataRow td {
+  padding: 12px;
+  color: var(--text-primary);
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+:global(body:not(.dark-mode)) .dataRow td {
+  border-bottom-color: rgba(0,0,0,0.05);
+}
+
+.dataRow:last-child td {
+  border-bottom: none;
+}
+
+.nameCell {
+  font-weight: 500;
+}
+
+/* Actions column pinned to the far right. */
+.actionsHead {
+  text-align: right !important;
+}
+
+.actionsCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* Enabled column: affirmative green / negative red, colored text only. */
+.enabledYes {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.enabledNo {
+  color: var(--error);
+  font-weight: 600;
+}
+
+
+.testResultRow {
+  font-size: 12px;
+  padding: 0 12px 10px;
+}
+
+.success { color: var(--success); }
+.failure { color: var(--error); }
+
+.deleteError {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--danger, #dc2626);
+}
+
+/* ---------------------------------------------------------------------------
+   Add/Edit modal form fields — mirrors UnifiedFieldModal.module.css
+--------------------------------------------------------------------------- */
+
+.field {
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.input,
+.select {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--input-bg, rgba(255,255,255,0.05));
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+:global(body:not(.dark-mode)) .input,
+:global(body:not(.dark-mode)) .select {
+  background: #fff;
+  border-color: rgba(0,0,0,0.15);
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--accent, #3B82F6);
+}
+
+.enableRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.hint {
+  margin: 8px 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.footer {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+:global(body:not(.dark-mode)) .footer {
+  border-top-color: rgba(0,0,0,0.08);
+}

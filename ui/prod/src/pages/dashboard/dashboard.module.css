@@ -1,0 +1,1708 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ============================================================
+   Shared Dashboard Styles
+   ============================================================ */
+
+/* --- Card base --- */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+/* ============================================================
+   Skeleton loaders (used while queries are pending)
+   ============================================================ */
+.skeleton {
+  position: relative;
+  display: inline-block;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.10) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  color: transparent;
+  user-select: none;
+  pointer-events: none;
+}
+
+:global(body:not(.dark-mode)) .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 0%,
+    rgba(0, 0, 0, 0.10) 50%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+  background-size: 200% 100%;
+}
+
+.skelBlock { display: block; }
+
+.skelCircle { border-radius: 50%; }
+
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-tertiary);
+  margin-bottom: 14px;
+}
+
+/* ============================================================
+   ROW 1 — Hero Bar (total + visibility) and Category Strip,
+   on one line: left block on the left, categories filling the
+   rest, vertically centred against the left block.
+   ============================================================ */
+.heroRow {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 24px;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Number with "Total Assets" to its right, baseline-aligned. */
+.heroTopline {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.heroNum {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+
+.heroSub {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Data freshness — colour set inline (green/orange/red by age). */
+.heroUpdated {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.heroUpdatedDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.catStrip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Each category: count centred above the icon + name. */
+.catPill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+.catPillCount {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.catPillLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.catPillIcon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.catPillName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Vertical rule between categories (and a leading one dividing the strip
+   from the total-assets block). */
+.catSep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 36px;
+  background: var(--card-border);
+}
+
+/* ============================================================
+   ROW 3 — Posture Chevron Flow
+   ============================================================ */
+.postureFlow {
+  display: flex;
+  margin-bottom: 24px;
+}
+
+.flowSeg {
+  /* Equal explicit basis instead of flex:1 — with basis 0% the flex
+     algorithm floors each segment at its own padding (the middle one has
+     20px more), making the three chevrons unequal. They must be exactly
+     equal so the alerts card below can width-match Secured: each box is
+     (100% + 28px) / 3 wide (two -14px overlaps). */
+  flex: 0 0 calc((100% + 28px) / 3);
+  min-width: 0;
+  position: relative;
+  padding: 22px 24px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  animation: fadeUp 0.4s ease forwards;
+  opacity: 0;
+}
+
+.flowSeg:nth-child(1) { animation-delay: 0s; }
+.flowSeg:nth-child(2) { animation-delay: 0.08s; }
+.flowSeg:nth-child(3) { animation-delay: 0.16s; }
+
+/* Chevron shapes — arrows point LEFT (toward Secured) */
+.flowSegFirst {
+  border-radius: 12px 0 0 12px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 28px) 50%, 100% 100%, 0 100%);
+  padding-right: 48px;
+}
+
+.flowSegMiddle {
+  clip-path: polygon(28px 0, 100% 0, calc(100% - 28px) 50%, 100% 100%, 28px 100%, 0 50%);
+  margin-left: -14px;
+  padding-left: 44px;
+  padding-right: 48px;
+}
+
+.flowSegLast {
+  border-radius: 0 12px 12px 0;
+  clip-path: polygon(28px 0, 100% 0, 100% 100%, 28px 100%, 0 50%);
+  margin-left: -14px;
+  padding-left: 44px;
+}
+
+/* Segment backgrounds — light mode glassy effect */
+.secured {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 40%, transparent 100%),
+    linear-gradient(135deg, rgba(16, 185, 129, 0.42) 0%, rgba(16, 185, 129, 0.22) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(0, 0, 0, 0.05), 0 2px 12px rgba(16, 185, 129, 0.22);
+  border: 1px solid rgba(16, 185, 129, 0.30);
+}
+
+.monitored {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 40%, transparent 100%),
+    linear-gradient(135deg, rgba(245, 158, 11, 0.38) 0%, rgba(245, 158, 11, 0.18) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(0, 0, 0, 0.05), 0 2px 12px rgba(245, 158, 11, 0.22);
+  border: 1px solid rgba(245, 158, 11, 0.30);
+}
+
+.discovered {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 40%, transparent 100%),
+    linear-gradient(135deg, rgba(239, 68, 68, 0.35) 0%, rgba(239, 68, 68, 0.18) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(0, 0, 0, 0.05), 0 2px 12px rgba(239, 68, 68, 0.22);
+  border: 1px solid rgba(239, 68, 68, 0.30);
+}
+
+/* Dark mode — richer glass to match website hero vibrancy */
+:global(body.dark-mode) .flowSeg { border: none; }
+
+:global(body.dark-mode) .secured {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 45%, transparent 100%),
+    linear-gradient(135deg, rgba(16, 185, 129, 0.38) 0%, rgba(16, 185, 129, 0.16) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(0, 0, 0, 0.08), 0 2px 12px rgba(16, 185, 129, 0.18);
+}
+
+:global(body.dark-mode) .monitored {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 45%, transparent 100%),
+    linear-gradient(135deg, rgba(245, 158, 11, 0.35) 0%, rgba(245, 158, 11, 0.14) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(0, 0, 0, 0.08), 0 2px 12px rgba(245, 158, 11, 0.18);
+}
+
+:global(body.dark-mode) .discovered {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 45%, transparent 100%),
+    linear-gradient(135deg, rgba(239, 68, 68, 0.32) 0%, rgba(239, 68, 68, 0.14) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(0, 0, 0, 0.08), 0 2px 12px rgba(239, 68, 68, 0.18);
+}
+
+.flowTier {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+
+/* Confidence chevrons (experiment): horizontal header + tighter height.
+   Scoped under .confFlow so the posture chevrons are untouched. Only the
+   VERTICAL padding is overridden — the per-position classes keep their larger
+   horizontal padding so content clears the angled chevron notch. */
+.confFlow .flowSeg {
+  min-height: 0;
+  padding-top: 26px;
+  padding-bottom: 26px;
+}
+
+.confFlow .flowCats {
+  gap: 2px;
+}
+
+/* Bigger band titles, coloured to match their gauges. Dark mode already uses
+   the bright tokens (which the bars use too); light mode needs the deeper
+   shades the bars use there. */
+.confFlow .flowTier {
+  font-size: 13px;
+}
+
+:global(body:not(.dark-mode)) .confFlow .flowTierSecured { color: #047857; }
+:global(body:not(.dark-mode)) .confFlow .flowTierMonitored { color: #b45309; }
+:global(body:not(.dark-mode)) .confFlow .flowTierDiscovered { color: #b91c1c; }
+
+.flowCatPct {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  min-width: 34px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.confHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.confHeaderText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.confHeaderText .flowTier {
+  margin-bottom: 0;
+}
+
+.confSub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.flowTierSecured { color: var(--success); }
+.flowTierMonitored { color: var(--warning); }
+.flowTierDiscovered { color: var(--error); }
+
+.flowNum {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.flowChange {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-bottom: 14px;
+}
+
+/* Category mini bars inside chevron */
+.flowCats {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.flowCatRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.flowCatName {
+  width: 76px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.flowCatBarWrap {
+  flex: 1;
+  height: 4px;
+  /* Black-alpha reads on every chevron tint (the previous 4% white was
+     invisible on the green/yellow/red glassy bg). Light mode uses a
+     lower opacity since those tints are pastel; dark mode keeps a
+     slightly stronger value via the override below. */
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+:global(body.dark-mode) .flowCatBarWrap {
+  background: rgba(0, 0, 0, 0.09);
+}
+
+.flowCatBar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.flowCatCount {
+  width: 44px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: right;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Mini bar chart background */
+/* Clickable tier header → posture settings. No hover highlight — the pointer
+   cursor is the affordance. z-index keeps it clickable over the background
+   bars it overlaps. */
+.flowHeader {
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.flowBars {
+  position: absolute;
+  top: 24px;
+  right: 50px;
+  width: 42%;
+  height: 58.5px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  opacity: 0.4;
+}
+
+.flowBar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  transform-origin: bottom;
+  transform: scaleY(0);
+  animation: barGrow 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes barGrow {
+  to { transform: scaleY(1); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   ROW 4 — Two Columns
+   ============================================================ */
+.gridAlertsTimeline {
+  display: grid;
+  /* Left column (alerts) matches the Secured chevron's bounding box above:
+     the posture flow is three flex:1 segments with two -14px overlaps, so
+     each segment's box is (100% + 28px) / 3 wide. */
+  grid-template-columns: calc((100% + 28px) / 3) minmax(0, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+/* -- Alerts Card -- */
+.alertsCard {
+  composes: glossyCardHero from '../../styles/shared.module.css';
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* -- Added & removed assets card (homepage butterfly) --
+   Mirrors the data-source details card so the two read identically. */
+.butterflyCard {
+  padding: 16px 24px;
+  min-height: 299px;
+}
+
+/* Wraps so a long metric title never truncates: at narrow card widths the
+   legend, then the time picker, drop to new lines instead of clipping. */
+.butterflyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+  min-height: 22px;
+}
+
+/* Title + legend, grouped on the left so the time picker stays hard-right.
+   Wraps internally (legend under the title) and never shrinks below its
+   content — that would clip the title or let it overlap the time picker. */
+.butterflyHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+}
+
+/* Compact legend for the 3-series (added_removed) metric, sitting right
+   after the title. Mirrors the New / Returned / Departed bar colours. */
+.butterflyLegend {
+  display: flex;
+  gap: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  flex: 0 0 auto;
+}
+
+.butterflyLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.butterflyLegendDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+}
+
+.butterflyTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Metric picker styled to read like the card title, with a caret on the LEFT.
+   Both the caret and label flash blue twice on mount so the user spots that
+   it's selectable. */
+.trendPicker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.trendCaret {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  animation: trendAttention 1.8s ease-in-out 0.5s 1;
+}
+
+.trendSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  /* Size to the SELECTED option (not the widest one) so the legend sits snug
+     after the title. Progressive enhancement — unsupported browsers fall back
+     to the widest-option width (a gap before the legend), never truncation. */
+  field-sizing: content;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  /* Match the "Latest Alerts" section label (.sLabel) exactly. */
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px 0 2px 22px;
+  transition: color var(--transition-fast);
+}
+
+.trendSelect:hover { color: var(--text-primary); }
+.trendSelect:focus { outline: none; }
+
+/* Two blue pulses, then settle back to the resting colour. */
+@keyframes trendAttention {
+  0%, 40%, 80%, 100% { color: var(--text-tertiary); }
+  20%, 60% { color: var(--accent); }
+}
+
+/* Inline text-style time picker — no chrome, just options and pipes. */
+.inlineTimePicker {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.inlineTimePickerSlot {
+  display: inline-flex;
+  align-items: center;
+}
+
+.inlineTimePickerOpt {
+  background: none;
+  border: none;
+  padding: 2px 8px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  transition: color var(--transition-fast);
+}
+
+.inlineTimePickerOpt:hover {
+  color: var(--text-primary);
+}
+
+.inlineTimePickerOptActive {
+  color: var(--text-primary);
+}
+
+.inlineTimePickerSep {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+  user-select: none;
+}
+
+.butterflyBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  /* Shift the chart down a touch: the top (added) bar was crowding the header
+     while the bottom had spare room. Padding moved from bottom to top keeps the
+     chart the same height, just lower. */
+  padding-top: 8px;
+  padding-bottom: 2px;
+}
+
+.butterflyBody > * {
+  flex: 1;
+  min-height: 0;
+}
+
+.chartEmpty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+
+/* Section label — shared style for all section headers */
+.sLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-tertiary);
+  margin-bottom: 14px;
+}
+
+.alertsTitle {
+  composes: sLabel;
+}
+
+.alertsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.alertRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.alertRow:last-child {
+  border-bottom: none;
+}
+
+.alertRowBorder {
+  width: 3px;
+  height: 20px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.alertRowName {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.alertRowName:hover {
+  text-decoration: underline;
+}
+
+.alertRowTime {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  min-width: 70px;
+  text-align: right;
+}
+
+.alertsEmpty {
+  padding: 32px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+/* -- Data Intelligence -- */
+.intelCard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.intelCardTitle {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 2px 0 0;
+  margin-bottom: -4px;
+}
+
+/* Glossy metric cards */
+.metricGlossyRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.metricGlossyCard {
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+  text-align: center;
+}
+
+.metricGlossyLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+
+.metricGlossyValue {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.intelTop {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.intelMetric {
+  padding: 16px;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.intelMetricQuality {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, transparent 50%), linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.06) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+}
+
+.intelMetricVisibility {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, transparent 50%), linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0.06) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);
+}
+
+:global(body.dark-mode) .intelMetricQuality {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%), linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(16, 185, 129, 0.04) 100%);
+  border-color: rgba(16, 185, 129, 0.1);
+}
+
+:global(body.dark-mode) .intelMetricVisibility {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%), linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(245, 158, 11, 0.04) 100%);
+  border-color: rgba(245, 158, 11, 0.1);
+}
+
+.intelMetricLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.intelMetricNum {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.metricGood { color: var(--success); }
+.metricDeveloping { color: var(--warning); }
+.metricPoor { color: var(--error); }
+
+.intelMetricSub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Sunset layout: metrics left, chart right */
+.intelLayout {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.intelMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 160px;
+  flex-shrink: 0;
+  margin-top: -35px;
+}
+
+.intelMetricItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border-left: 3px solid;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+:global(body:not(.dark-mode)) .intelMetricItem {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.intelMetricLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+}
+
+.intelMetricValue {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sunsetWrap {
+  flex: 1;
+  overflow: hidden;
+  margin: -20px -24px 10px -16px;
+  align-self: flex-end;
+}
+
+.sunsetWrap svg {
+  display: block;
+  flex-shrink: 0;
+  max-height: 300px;
+}
+
+.radialSlice {
+  transform: scale(0);
+  animation: growRadialSlice 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes growRadialSlice {
+  0% { transform: scale(0); opacity: 0; }
+  60% { opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.radialLabel {
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--text-secondary);
+  font-family: var(--font-family);
+  opacity: 0;
+  animation: fadeInLabel 0.3s ease forwards;
+}
+
+@keyframes fadeInLabel {
+  to { opacity: 1; }
+}
+
+.sunsetTooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 5px 10px;
+  border-radius: 4px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-color);
+  border: 1px solid var(--tooltip-border);
+  box-shadow: var(--tooltip-shadow);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ============================================================
+   ROW 5 — Data Source Groups (above) + Data Sources (below)
+   ============================================================ */
+
+/* Wrapper for the groups block — leaves vertical breathing room before
+   the standalone Data Sources section that follows. */
+.groupsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* Flat, expandable group rows — same row language as the data sources
+   below (no card), with members revealing inline when a group is open. */
+.groupList {
+  display: flex;
+  flex-direction: column;
+}
+
+.groupRow {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 13px 6px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-family);
+  text-align: left;
+  color: var(--text-primary);
+  transition: background var(--transition-fast);
+}
+
+.groupRow:hover .groupRowLogo { transform: scale(1.18); }
+.groupRow:hover .groupRowName { color: var(--accent); }
+
+/* Open state stays marked by the rotated chevron + accent name. */
+.groupRowOpen .groupRowName { color: var(--accent); }
+
+.groupRowLogo {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.groupRowName {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--transition-fast);
+}
+
+.groupRowCount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.groupRowCountLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.groupRowChev {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: transform var(--transition-fast), color var(--transition-fast);
+}
+
+.groupRowChevOpen {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+/* Member 2-up table inset beneath an open group. */
+.groupMembers {
+  padding: 6px 0 12px 22px;
+}
+
+/* Whole data-sources section (groups + standalone) in one glossy card,
+   consistent with the other dashboard cards. */
+.sourcesCard {
+  composes: glossyCardHero from '../../styles/shared.module.css';
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+/* ── Data Sources: dense 2-up table of source rows ──
+   logo · name · total · category mix · sync, two sources per row. */
+.srcTable {
+  display: grid;
+  /* minmax(0, 1fr) — NOT 1fr — so a long source name can't blow the column
+     past its half; the track stays bounded and the name ellipsis-truncates. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 40px;
+  position: relative;
+}
+
+/* Vertical separator centred in the column gap — same token as the
+   row dividers so it stays subtle-but-visible in both themes. */
+.srcTable::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: linear-gradient(180deg, transparent 0%, var(--card-border) 10%, var(--card-border) 90%, transparent 100%);
+  pointer-events: none;
+}
+
+.srcRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 13px;
+  padding: 13px 6px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background var(--transition-fast);
+}
+
+/* No background highlight on hover — instead the logo nudges up in size and
+   the name takes the accent colour, a lighter-touch "this is clickable" cue. */
+.srcRow:hover .srcRowLogo { transform: scale(1.18); }
+.srcRow:hover .srcRowName { color: var(--accent); }
+
+/* Thin vertical separator between row segments. */
+.srcSep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.srcRowLogo {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition-fast);
+}
+
+.srcRowLogo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.srcRowName {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+
+.srcRowCount {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Categories present in a source — a coloured icon each, dominant first. */
+.srcIcons {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.srcIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.srcIconsEmpty {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* Source confidence level — plain coloured text. */
+.srcRowConf {
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+  min-width: 96px;
+}
+
+.srcConfHigh { color: var(--success); }
+.srcConfMed { color: var(--warning); }
+.srcConfLow { color: var(--error); }
+
+.srcRowSync {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  min-width: 62px;
+}
+
+.syncDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.syncDotOk { background: var(--success); }
+.syncDotAging { background: var(--warning); }
+.syncDotStale { background: var(--error); }
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 1200px) {
+  .postureFlow { flex-direction: column; }
+  .flowSeg {
+    clip-path: none !important;
+    margin-left: 0 !important;
+    padding: 18px 20px !important;
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 900px) {
+  .gridAlertsTimeline { grid-template-columns: 1fr; }
+  .srcTable { grid-template-columns: minmax(0, 1fr); column-gap: 0; }
+  .srcTable::before { content: none; }
+  .catStrip { flex-wrap: wrap; }
+}
+
+/* ============================================================
+   Homepage chevron glass. Cards get the app-wide liquid-glass
+   surface from .glossyCard (styles/shared.module.css); the rules
+   below are the chevrons' own colored-glass treatment, scoped to
+   .homepageGlass.
+   ============================================================ */
+
+/* Posture chevrons — aggressive glass that preserves the semantic
+   green/amber/red identity. flowSeg already has position: relative,
+   so ::before/::after are clipped to the polygon naturally.
+   Note: no backdrop-filter here — combining it with clip-path triggers
+   a Chromium recomposite bug where polygon edges flash visibly when
+   another element on the page (e.g. sidebar hover label) animates its
+   own backdrop-filter. The chevron backgrounds are nearly opaque, so
+   the filter was contributing nothing useful anyway. We also promote
+   each chevron to its own GPU layer (isolation + will-change) so it
+   doesn't get re-rasterized when nearby backdrop-filter layers update,
+   which otherwise causes visible polygon-edge halos in dark mode. */
+
+.homepageGlass .flowSeg {
+  isolation: isolate;
+  will-change: transform;
+}
+
+/* Light mode: deeper, glossier glass. The colour stays saturated (no fade to
+   pale) and darkens toward the bottom-right; a tight specular sheen sits at the
+   top, and a darker-tone depth glow replaces the washing white bottom radial —
+   bringing the richness closer to the dark-mode treatment. */
+.homepageGlass .secured {
+  background:
+    radial-gradient(ellipse 85% 55% at 8% -4%, rgba(255, 255, 255, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 55% at 100% 100%, rgba(4, 120, 87, 0.36) 0%, transparent 62%),
+    linear-gradient(135deg, rgba(16, 185, 129, 0.60) 0%, rgba(5, 150, 105, 0.66) 100%);
+  border: none;
+  box-shadow:
+    0 20px 52px -14px rgba(16, 185, 129, 0.50),
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    inset 1px 0 0 rgba(255, 255, 255, 0.22),
+    inset -1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+}
+
+.homepageGlass .monitored {
+  background:
+    radial-gradient(ellipse 85% 55% at 8% -4%, rgba(255, 255, 255, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 55% at 100% 100%, rgba(180, 83, 9, 0.34) 0%, transparent 62%),
+    linear-gradient(135deg, rgba(245, 158, 11, 0.58) 0%, rgba(217, 119, 6, 0.66) 100%);
+  border: none;
+  box-shadow:
+    0 20px 52px -14px rgba(245, 158, 11, 0.50),
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    inset 1px 0 0 rgba(255, 255, 255, 0.22),
+    inset -1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+}
+
+.homepageGlass .discovered {
+  background:
+    radial-gradient(ellipse 85% 55% at 8% -4%, rgba(255, 255, 255, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 55% at 100% 100%, rgba(185, 28, 28, 0.32) 0%, transparent 62%),
+    linear-gradient(135deg, rgba(239, 68, 68, 0.54) 0%, rgba(185, 28, 28, 0.64) 100%);
+  border: none;
+  box-shadow:
+    0 20px 52px -14px rgba(239, 68, 68, 0.50),
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    inset 1px 0 0 rgba(255, 255, 255, 0.22),
+    inset -1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Boost text contrast on the chevron color backgrounds. The light-mode
+   glass is now deeper/more saturated, so the row text and counts need close
+   to full strength to stay legible. */
+.homepageGlass .flowCatName,
+.homepageGlass .flowChange,
+.homepageGlass .confSub {
+  color: var(--text-primary);
+  opacity: 0.85;
+}
+
+.homepageGlass .flowCatPct {
+  color: var(--text-primary);
+  opacity: 0.6;
+}
+
+.homepageGlass .flowCatCount {
+  color: var(--text-primary);
+  opacity: 0.9;
+}
+
+/* In light mode the chevron backgrounds are now a saturated tier colour, so
+   the same-colour bars (category gauges + background sparkline) blend in.
+   Override them — inline style sets the tier colour, so !important is needed —
+   to a darker shade of the tier colour that reads against the medium-light
+   glass. Dark mode keeps its lighter colour bars (they pop on its dark bg). */
+:global(body:not(.dark-mode)) .homepageGlass .flowBars {
+  opacity: 0.9;
+}
+
+:global(body:not(.dark-mode)) .homepageGlass .secured .flowCatBar,
+:global(body:not(.dark-mode)) .homepageGlass .secured .flowBar {
+  background: #047857 !important;
+}
+
+:global(body:not(.dark-mode)) .homepageGlass .monitored .flowCatBar,
+:global(body:not(.dark-mode)) .homepageGlass .monitored .flowBar {
+  background: #b45309 !important;
+}
+
+:global(body:not(.dark-mode)) .homepageGlass .discovered .flowCatBar,
+:global(body:not(.dark-mode)) .homepageGlass .discovered .flowBar {
+  background: #b91c1c !important;
+}
+
+/* Slightly stronger track so the empty portion of each gauge stays readable
+   against the colour. */
+:global(body:not(.dark-mode)) .homepageGlass .flowCatBarWrap {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+:global(body.dark-mode) .homepageGlass .secured {
+  background:
+    radial-gradient(ellipse 85% 55% at 8% -4%, rgba(255, 255, 255, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(0, 0, 0, 0.25) 0%, transparent 70%),
+    linear-gradient(135deg, rgba(16, 185, 129, 0.45) 0%, rgba(16, 185, 129, 0.18) 100%);
+  box-shadow:
+    0 18px 48px -14px rgba(16, 185, 129, 0.30),
+    0 6px 18px -4px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    inset 1px 0 0 rgba(255, 255, 255, 0.10),
+    inset -1px 0 0 rgba(0, 0, 0, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+:global(body.dark-mode) .homepageGlass .monitored {
+  background:
+    radial-gradient(ellipse 85% 55% at 8% -4%, rgba(255, 255, 255, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(0, 0, 0, 0.25) 0%, transparent 70%),
+    linear-gradient(135deg, rgba(245, 158, 11, 0.42) 0%, rgba(245, 158, 11, 0.16) 100%);
+  box-shadow:
+    0 18px 48px -14px rgba(245, 158, 11, 0.30),
+    0 6px 18px -4px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    inset 1px 0 0 rgba(255, 255, 255, 0.10),
+    inset -1px 0 0 rgba(0, 0, 0, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+:global(body.dark-mode) .homepageGlass .discovered {
+  background:
+    radial-gradient(ellipse 85% 55% at 8% -4%, rgba(255, 255, 255, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(0, 0, 0, 0.25) 0%, transparent 70%),
+    linear-gradient(135deg, rgba(239, 68, 68, 0.40) 0%, rgba(239, 68, 68, 0.16) 100%);
+  box-shadow:
+    0 18px 48px -14px rgba(239, 68, 68, 0.30),
+    0 6px 18px -4px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    inset 1px 0 0 rgba(255, 255, 255, 0.10),
+    inset -1px 0 0 rgba(0, 0, 0, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================================
+   Skeleton sizings (per section)
+   ============================================================ */
+
+/* HeroBar skeletons */
+.skelHeroNum {
+  width: 180px;
+  height: 44px;
+  border-radius: 8px;
+}
+
+.skelHeroSub {
+  width: 90px;
+  height: 13px;
+  margin-top: 6px;
+}
+
+.skelHeroUpdated {
+  width: 150px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+
+/* CategoryStrip skeletons */
+.skelCatPill {
+  flex: 1;
+  height: 48px;
+  border-radius: 6px;
+}
+
+/* DataIntelligence skeletons */
+.skelMetricLabel {
+  width: 70%;
+  height: 10px;
+}
+
+.skelMetricValue {
+  width: 60%;
+  height: 22px;
+  margin-top: 6px;
+}
+
+.skelSunset {
+  width: 100%;
+  height: 220px;
+  border-radius: 12px;
+}
+
+/* ActivityFeed skeletons */
+.skelAlertRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.skelAlertRow:last-child {
+  border-bottom: none;
+}
+
+.skelAlertBorder {
+  width: 3px;
+  height: 20px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.skelAlertTitle {
+  flex: 1;
+  height: 13px;
+}
+
+.skelAlertTime {
+  width: 60px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+/* DataSources skeletons */
+.skelSrcLogo {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.skelSrcName {
+  flex: 1;
+  height: 15px;
+}
+
+.skelSrcCount {
+  width: 52px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.skelSrcIcons {
+  width: 88px;
+  height: 18px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.skelSrcSync {
+  width: 56px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Homepage ambient aurora. The liquid-glass card material lives
+   in .glossyCard (styles/shared.module.css) app-wide; this
+   aurora is the homepage's signature backdrop — it's what makes
+   the cards' blur read as glass over the flat --bg-primary.
+   Static on purpose: no animated backdrop-filter, per the
+   chevron recomposite note above.
+   isolation: isolate keeps the aurora (z-index: -1) inside this
+   page's stacking context so it can't slip behind app chrome.
+   ============================================================ */
+
+.homepageGlass {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Ambient aurora — brand lime (new logo green) high right, quiet
+   steel counterweight low left. Whisper-level on purpose. */
+.homepageGlass::before {
+  content: '';
+  position: absolute;
+  inset: -48px -64px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 44% 30% at 80% 4%, rgba(132, 204, 22, 0.12) 0%, transparent 65%),
+    radial-gradient(ellipse 52% 38% at 8% 60%, rgba(90, 125, 205, 0.10) 0%, transparent 68%),
+    radial-gradient(ellipse 40% 30% at 92% 94%, rgba(132, 204, 22, 0.05) 0%, transparent 70%);
+  /* Feather all four edges — the glows overshoot the box, and an
+     unmasked box edge cuts them into a visible vertical band. */
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+  mask-composite: intersect;
+}
+
+/* Dark mode: no aurora — the page background stays plain black, glass on
+   the cards only (same rule as the shell backdrop, AppShell.module.css).
+   Light keeps the brand-lime aurora. */
+:global(body.dark-mode) .homepageGlass::before {
+  background: none;
+}
+
+/* ── Dark mode: light the hero cards from above ────────────────
+   Same move as the auth cards (LoginPage.module.css has the reasoning).
+   The hero tier's default highlight is a top-left corner kiss, which
+   implies a light source off to one side; these cards sit on a flat page
+   with only the ambient aurora behind them, so it reads as a smudge on
+   one corner rather than as glass. A wide, shallow sheen along the top
+   edge plus a brighter specular hairline reads as lit from above — the
+   one direction that needs nothing behind the card to explain it.
+
+   Dark only: the light-mode stack carries its own glare, and
+   white-on-white already reads as sheen rather than a stain. */
+/* Dark mode: the homepage cards drop the hero material and take the quiet
+   tier's flat panel (shared.module.css .glossyCard) — same sidebar-tone
+   fill, soft edges, no glare. Only the hero bar chevrons and the auth
+   pages keep the full hero glass in the dark. Light mode is untouched:
+   these stay hero there. */
+:global(body.dark-mode) .alertsCard,
+:global(body.dark-mode) .sourcesCard,
+:global(body.dark-mode) .firstRun {
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  background: rgba(28, 29, 34, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 12px 32px -14px rgba(0, 0, 0, 0.26),
+    0 2px 8px -2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 1px 0 0 rgba(255, 255, 255, 0.03),
+    inset -1px 0 0 rgba(0, 0, 0, 0.10);
+}
+
+:global(body.dark-mode) .alertsCard::before,
+:global(body.dark-mode) .sourcesCard::before,
+:global(body.dark-mode) .firstRun::before {
+  left: 10%;
+  right: 10%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.10) 50%, transparent 100%);
+}
+
+:global(body.dark-mode) .alertsCard::after,
+:global(body.dark-mode) .sourcesCard::after,
+:global(body.dark-mode) .firstRun::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+}
+
+
+/* ── First run: no integration configured yet ──────────────────
+   Replaces the dashboard rows (see FirstRunPanel.tsx for why). Hero
+   tier is right here: it is the only thing on the homepage, and the
+   homepage is one of the two places that tier is allowed. */
+.firstRun {
+  composes: glossyCardHero from '../../styles/shared.module.css';
+  border-radius: var(--radius-lg);
+  padding: 46px 52px 44px;
+}
+
+.firstRunMasthead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+/* Mark only, no wordmark — the sidebar already carries the full lockup. */
+.firstRunMark {
+  width: 38px;
+  height: auto;
+  display: block;
+}
+
+/* Eyebrow, not a badge: it labels the moment rather than tagging a status,
+   so it carries no chip chrome. Accent-coloured because it sits beside the
+   logo mark — in grey it read as part of the lockup. */
+.firstRunEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.firstRunTitle {
+  margin: 0 0 10px;
+  font-size: 27px;
+  font-weight: 650;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.firstRunLede {
+  margin: 0 0 34px;
+  max-width: 60ch;
+  font-size: var(--font-size-base);
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* A genuine sequence — connect, then sync, then use — so the steps are
+   numbered and ordered. */
+.firstRunSteps {
+  list-style: none;
+  margin: 0 0 36px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.firstRunStep {
+  padding-right: 26px;
+}
+
+.firstRunStep + .firstRunStep {
+  padding-left: 26px;
+  border-left: 1px solid var(--border);
+}
+
+.firstRunStepNum {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.firstRunStepTitle {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 620;
+  color: var(--text-primary);
+}
+
+.firstRunStepBody {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-tertiary);
+}
+
+.firstRunActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Narrow viewports: the three-up sequence stacks, and the rule that
+   separated the columns becomes the rule between rows. */
+@media (max-width: 900px) {
+  .firstRun {
+    padding: 32px 24px 30px;
+  }
+
+  .firstRunSteps {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .firstRunStep {
+    padding-right: 0;
+  }
+
+  .firstRunStep + .firstRunStep {
+    padding-left: 0;
+    padding-top: 20px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .firstRunActions {
+    flex-wrap: wrap;
+  }
+}

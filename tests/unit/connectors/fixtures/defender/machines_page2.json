@@ -1,0 +1,27 @@
+{
+  "value": [
+    {
+      "id": "machine-id-003",
+      "computerDnsName": "SERVER-PROD003.contoso.com",
+      "firstSeen": "2023-06-01T06:00:00Z",
+      "lastSeen": "2026-03-18T23:50:00Z",
+      "osPlatform": "WindowsServer2019",
+      "version": "1809",
+      "osBuild": 17763,
+      "osArchitecture": "64-bit",
+      "lastIpAddress": "10.0.0.10",
+      "lastExternalIpAddress": null,
+      "healthStatus": "Active",
+      "onboardingStatus": "Onboarded",
+      "riskScore": "Medium",
+      "exposureLevel": "Medium",
+      "deviceValue": "High",
+      "aadDeviceId": null,
+      "isAadJoined": false,
+      "rbacGroupId": 3,
+      "rbacGroupName": "Servers",
+      "machineTags": ["server", "prod"],
+      "ipAddresses": []
+    }
+  ]
+}

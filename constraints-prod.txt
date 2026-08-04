@@ -1,0 +1,209 @@
+# AssetAtlas runtime constraints — the VERSION half of the runtime manifest.
+#
+# requirements-prod.txt states INTENT: which packages the runtime needs, and the
+# floors/caps that intent implies. It stays readable and stays hand-edited.
+# This file states VERSIONS: the full transitive closure, pinned exactly. Every
+# site that installs requirements-prod.txt passes it with `-c` (Dockerfile.base,
+# Dockerfile.base.online, the three test jobs in .github/workflows/tests.yml).
+#
+# WHY (#1262). Of the 52 lines in requirements-prod.txt, 49 declare a `>=` floor
+# with no upper bound (two are pinned exactly, and only mcp is capped), so a
+# COLD resolve takes whatever is latest that minute. On 2026-07-28 `mcp`
+# published 2.0.0, which removed `mcp.server.fastmcp` — a module 22 files
+# under src/mcp/ import — and nothing in dev CI went red for three
+# releases. It could not: the self-hosted fleet's 8 runners share one persistent
+# site-packages, so `pip install -r` reports "Requirement already satisfied" for
+# anything whose installed version still clears the floor. The fleet never
+# upgrades and therefore never resolves cold. Only two things do — the public
+# mirror's ephemeral runners, and a base-image rebuild — and the second one is
+# the one that ships. Production survived on luck: release.yml's deps-fingerprint
+# guard kept reusing the previously-built base by digest, so the broken resolve
+# was never baked. #1261 capped `mcp` specifically; this file removes the class.
+#
+# HOW IT WAS SEEDED. Not from a fresh resolve — from `pip list` inside the
+# published base image (ghcr.io/dotdna-io/assetatlas-base, deps-sha 4bdd2d3f…),
+# i.e. the exact package set every current deployment is running. Adopting
+# today's latest for 50 uncapped packages would have swapped a proven dependency
+# set for one nobody has run, under cover of a change advertised as "pinning".
+# These pins are content-neutral by construction: rebuilding the base against
+# them produces the image that is already deployed.
+#
+# torch is absent on purpose and must stay absent. It is not in
+# requirements-prod.txt, not installed by Dockerfile.base (ONNX Runtime replaced
+# it in #1070), and not in the published base. A plain `pip install torch`
+# resolves the CUDA build on linux/amd64 and drags in ~2.8 GB of nvidia-* wheels.
+#
+# REGENERATING. uv 0.12+; targets the platform Dockerfile.base builds for.
+#
+#   # re-resolve after editing requirements-prod.txt, keeping existing pins:
+#   uv pip compile requirements-prod.txt \
+#     --python-version 3.13 --python-platform x86_64-manylinux_2_28 \
+#     --no-header --no-annotate -o constraints-prod.txt
+#
+#   # bump one package (or --upgrade for all — read the diff before committing):
+#   uv pip compile requirements-prod.txt --upgrade-package <name> … -o constraints-prod.txt
+#
+# Then re-add this header: `uv pip compile` writes the body only.
+#
+# This file is in scripts/deps-fingerprint.sh, so ANY edit here — including one
+# to this comment — invalidates the published base image and blocks releases
+# until scripts/publish-base-image.sh is re-run. That is the point: a pin the
+# base can drift away from is not a pin.
+#
+# ── generated body below: `uv pip compile` output, do not hand-edit ───────────
+aiohappyeyeballs==2.7.1
+aiohttp==3.14.3
+aiosignal==1.4.0
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anthropic==0.120.2
+anyio==4.14.2
+apscheduler==3.11.3
+attrs==26.1.0
+authlib==1.7.0
+azure-core==1.41.0
+backports-zstd==1.6.0
+bcrypt==5.0.0
+beautifulsoup4==4.15.0
+blinker==1.9.0
+botbuilder-core==4.17.1
+botbuilder-schema==4.17.1
+botframework-connector==4.17.1
+botframework-streaming==4.17.1
+boto3==1.43.62
+botocore==1.43.62
+brotli==1.2.0
+build==1.5.0
+cachelib==0.15.0
+certifi==2026.7.22
+cffi==2.1.0
+charset-normalizer==3.4.9
+chromadb==1.5.9
+click==8.4.2
+croniter==6.2.4
+cryptography==50.0.0
+defusedxml==0.7.1
+distro==1.9.0
+dnspython==2.8.0
+docstring-parser==0.18.0
+durationpy==0.10
+email-validator==2.3.0
+et-xmlfile==2.0.0
+filelock==3.32.2
+flasgger==0.9.7.1
+flask==3.1.3
+flask-caching==2.4.1
+flask-compress==1.24
+flask-cors==6.0.5
+flask-jwt-extended==4.7.4
+flatbuffers==25.12.19
+frozenlist==1.8.0
+fsspec==2026.7.0
+googleapis-common-protos==1.75.0
+grpcio==1.83.0
+gunicorn==26.0.0
+h11==0.16.0
+hf-xet==1.5.2
+httpcore==1.0.9
+httptools==0.8.0
+httpx==0.28.1
+httpx-sse==0.4.3
+huggingface-hub==1.26.0
+idna==3.18
+importlib-resources==7.1.0
+intervaltree==3.2.1
+isodate==0.7.2
+itsdangerous==2.2.0
+jinja2==3.1.6
+jiter==0.16.0
+jmespath==1.1.0
+joblib==1.5.3
+joserfc==1.7.4
+jsonpath-ng==1.8.0
+jsonpickle==3.4.2
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+kubernetes==36.0.3
+ldap3==2.9.1
+levenshtein==0.27.3
+markdown-it-py==4.2.0
+markupsafe==3.0.3
+maxminddb==3.1.1
+mcp==1.29.0
+mdurl==0.1.2
+mistune==3.3.4
+mmh3==5.2.1
+msal==1.37.0
+msrest==0.7.1
+multidict==6.7.1
+networkx==3.6.1
+numpy==2.5.1
+oauthlib==3.3.1
+onnxruntime==1.28.0
+openai==2.52.0
+openpyxl==3.1.5
+opentelemetry-api==1.44.0
+opentelemetry-exporter-otlp-proto-common==1.44.0
+opentelemetry-exporter-otlp-proto-grpc==1.44.0
+opentelemetry-proto==1.44.0
+opentelemetry-sdk==1.44.0
+opentelemetry-semantic-conventions==0.65b0
+orjson==3.11.9
+overrides==7.7.0
+packaging==26.2
+pandas==3.0.5
+pillow==12.3.0
+prometheus-client==0.26.0
+prometheus-flask-exporter==0.23.2
+propcache==0.5.2
+protobuf==7.35.1
+psycopg2-binary==2.9.12
+pyasn1==0.6.4
+pybase64==1.4.3
+pycparser==3.0
+pydantic==2.13.4
+pydantic-core==2.46.4
+pydantic-settings==2.14.2
+pygments==2.20.0
+pyjwt==2.13.0
+pyotp==2.9.0
+pypika==0.51.1
+pyproject-hooks==1.2.0
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.2
+python-json-logger==4.1.0
+python-levenshtein==0.27.3
+python-multipart==0.0.32
+pytz==2026.3.post1
+pyyaml==6.0.3
+rapidfuzz==3.14.5
+redis==8.1.0
+referencing==0.37.0
+requests==2.34.2
+requests-oauthlib==2.0.0
+rich==15.0.0
+rpds-py==2026.6.3
+s3transfer==0.19.2
+shellingham==1.5.4
+six==1.17.0
+sniffio==1.3.1
+sortedcontainers==2.4.0
+soupsieve==2.9.1
+sse-starlette==3.4.6
+starlette==1.3.1
+tenacity==9.1.4
+thefuzz==0.22.1
+tokenizers==0.23.1
+tqdm==4.70.0
+typer==0.27.0
+typing-extensions==4.16.0
+typing-inspection==0.4.2
+tzlocal==5.4.4
+urllib3==2.7.0
+uvicorn==0.52.0
+uvloop==0.22.1
+watchfiles==1.2.0
+websocket-client==1.9.0
+websockets==17.0.1
+werkzeug==3.1.8
+yarl==1.24.5

@@ -1,0 +1,12 @@
+{
+  "data": [
+    {
+      "id": "acct-001",
+      "name": "Acme Corp"
+    }
+  ],
+  "pagination": {
+    "nextCursor": null,
+    "totalItems": 1
+  }
+}

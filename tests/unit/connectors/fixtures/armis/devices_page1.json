@@ -1,0 +1,56 @@
+{
+  "success": true,
+  "data": {
+    "count": 2,
+    "total": 3,
+    "next": 2,
+    "results": [
+      {
+        "id": 1001,
+        "name": "DESKTOP-WIN001",
+        "type": "Laptops",
+        "category": "Computers",
+        "ipAddress": "10.0.1.10",
+        "macAddress": "AA:BB:CC:DD:EE:01",
+        "manufacturer": "Dell Inc.",
+        "model": "Latitude 5520",
+        "serialNumber": "SN-ARMIS-001",
+        "operatingSystem": "Windows 11 Enterprise",
+        "operatingSystemVersion": "22H2",
+        "firstSeen": "2024-01-15T08:00:00Z",
+        "lastSeen": "2026-03-18T10:00:00Z",
+        "riskLevel": 35,
+        "purdueLevel": 2,
+        "site": {"name": "HQ Office", "location": "New York"},
+        "sensor": {"name": "sensor-hq-01", "type": "Physical"},
+        "tags": ["Production"],
+        "dataSources": [{"name": "CrowdStrike"}],
+        "businessImpact": "Medium",
+        "visibility": "Full"
+      },
+      {
+        "id": 1002,
+        "name": "LAPTOP-MAC002",
+        "type": "Laptops",
+        "category": "Computers",
+        "ipAddress": "10.0.1.20",
+        "macAddress": "AA:BB:CC:DD:EE:02",
+        "manufacturer": "Apple Inc.",
+        "model": "MacBook Pro 14-inch",
+        "serialNumber": "SN-ARMIS-002",
+        "operatingSystem": "macOS Sonoma",
+        "operatingSystemVersion": "14.3",
+        "firstSeen": "2024-02-01T12:00:00Z",
+        "lastSeen": "2026-03-18T09:00:00Z",
+        "riskLevel": 20,
+        "purdueLevel": 2,
+        "site": {"name": "HQ Office", "location": "New York"},
+        "sensor": {"name": "sensor-hq-01", "type": "Physical"},
+        "tags": ["Engineering"],
+        "dataSources": [{"name": "Jamf"}],
+        "businessImpact": "Low",
+        "visibility": "Full"
+      }
+    ]
+  }
+}

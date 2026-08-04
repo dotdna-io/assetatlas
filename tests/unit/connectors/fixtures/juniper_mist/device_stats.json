@@ -1,0 +1,14 @@
+[
+  {
+    "id": "dev-001",
+    "name": "AP-LOBBY-01",
+    "mac": "AA:BB:CC:DD:EE:01",
+    "ip": "10.0.1.10",
+    "version": "0.14.29205",
+    "status": "connected",
+    "last_seen": 1710756000,
+    "uptime": 86400,
+    "site_name": "HQ",
+    "num_clients": 25
+  }
+]

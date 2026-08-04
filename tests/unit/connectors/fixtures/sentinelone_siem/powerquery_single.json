@@ -1,0 +1,14 @@
+{
+  "status": "success",
+  "columns": [
+    {"name": "endpoint.name"},
+    {"name": "endpoint.ip"},
+    {"name": "endpoint.os"},
+    {"name": "endpoint.mac"},
+    {"name": "event.type"}
+  ],
+  "values": [
+    ["DESKTOP-WIN001", "10.0.1.100", "Windows 10 Pro", "AA:BB:CC:DD:EE:FF", "endpoint.status"]
+  ],
+  "matchingEvents": 1
+}

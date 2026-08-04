@@ -1,0 +1,32 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "0123-456789-abc",
+      "cluster_name": "analytics-cluster",
+      "state": "RUNNING",
+      "spark_version": "13.3.x-scala2.12",
+      "node_type_id": "i3.xlarge",
+      "num_workers": 4,
+      "cluster_cores": 16.0,
+      "cluster_memory_mb": 61440,
+      "creator_user_name": "user@example.com",
+      "cluster_source": "UI",
+      "start_time": 1700000000000,
+      "last_state_loss_time": 1700100000000,
+      "autotermination_minutes": 120,
+      "enable_elastic_disk": true,
+      "data_security_mode": "USER_ISOLATION",
+      "runtime_engine": "PHOTON",
+      "is_pinned": true,
+      "default_tags": {
+        "ClusterId": "0123-456789-abc",
+        "ClusterName": "analytics-cluster",
+        "Vendor": "Databricks"
+      },
+      "custom_tags": {
+        "Environment": "production",
+        "Team": "data-engineering"
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+# Runtime deps for the standalone teams-bridge image (#1069).
+#
+# src/teams_bridge/ imports nothing from the rest of src/ — it is a pure HTTP
+# client of the API (state.AssetAtlasClient). An AST walk over the package
+# gives exactly four third-party roots: aiohttp, botbuilder, botframework and
+# prometheus_client. Everything else it touches is stdlib.
+#
+# The pins are copied verbatim from requirements-prod.txt rather than tightened
+# or expanded, so this image resolves the same versions the bridge already runs
+# with. botframework-connector is deliberately NOT listed: it arrives
+# transitively via botbuilder-core, which is how requirements-prod.txt has
+# always supplied it. Adding it here would be a second, independently drifting
+# declaration of the same dependency.
+#
+# Keep this file OUT of scripts/deps-fingerprint.sh: that fingerprint governs
+# whether the shared base image needs republishing, and this file cannot affect
+# the base.
+prometheus-client>=0.21.0
+botbuilder-core>=4.16.0
+botbuilder-schema>=4.16.0
+aiohttp>=3.10.0

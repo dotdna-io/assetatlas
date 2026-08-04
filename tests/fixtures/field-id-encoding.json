@@ -1,0 +1,15 @@
+[
+  {"encoded": "static:Hostname", "field_id": {"kind": "static", "name": "Hostname"}},
+  {"encoded": "static:Confidence%20Score", "field_id": {"kind": "static", "name": "Confidence Score"}},
+  {"encoded": "core:Public%20IP", "field_id": {"kind": "core_enrichment", "name": "Public IP"}},
+  {"encoded": "ext:Intune%20Full:deviceEnrollmentType_s", "field_id": {"kind": "extended_attribute", "source": "Intune Full", "attribute": "deviceEnrollmentType_s"}},
+  {"encoded": "group:Jamf:deviceType", "field_id": {"kind": "integration_group", "group": "Jamf", "attribute": "deviceType"}},
+  {"encoded": "tag:ProductionAsset", "field_id": {"kind": "tag", "name": "ProductionAsset"}},
+  {"encoded": "tag:Tag%20With%20Spaces", "field_id": {"kind": "tag", "name": "Tag With Spaces"}},
+  {"encoded": "posture_state:secured", "field_id": {"kind": "posture", "category": "secured", "read": "state"}},
+  {"encoded": "posture_output:secured", "field_id": {"kind": "posture", "category": "secured", "read": "output"}},
+  {"encoded": "virtual:confidence_level", "field_id": {"kind": "virtual", "name": "confidence_level"}},
+  {"encoded": "virtual:lentity", "field_id": {"kind": "virtual", "name": "lentity"}},
+  {"encoded": "ext:Source%20With%3Acolon:attr", "field_id": {"kind": "extended_attribute", "source": "Source With:colon", "attribute": "attr"}},
+  {"encoded": "ext:Intune%20%28Beta%29%21%27%2A:attr", "field_id": {"kind": "extended_attribute", "source": "Intune (Beta)!'*", "attribute": "attr"}}
+]

@@ -1,0 +1,77 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.section {
+  margin-bottom: 16px;
+}
+
+/* Recessed rail. The rules below are glossy cards, and the previous header —
+   an xs uppercase tertiary label — was both weightless beside them and nearly
+   identical to the page's own section title above, so it read as a faded copy
+   rather than a level of its own.
+   Sitting *below* the content plane rather than above it is what separates it
+   from the cards: they float, this recedes. Depth rather than hue, so four or
+   five of these down a long page stay quiet instead of competing with the
+   accent colour that real controls use. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 14px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.header:hover {
+  background: rgba(0, 0, 0, 0.36);
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+/* Light mode inverts the idea: a recess there is a tinted grey, not a
+   darker black, which would read as a hole punched in the page. */
+:global(body:not(.dark-mode)) .header {
+  background: rgba(60, 65, 80, 0.07);
+  border-color: rgba(60, 65, 80, 0.10);
+}
+
+:global(body:not(.dark-mode)) .header:hover {
+  background: rgba(60, 65, 80, 0.11);
+  border-color: rgba(60, 65, 80, 0.16);
+}
+
+/* Sentence case at body size. The page's section title above is uppercase,
+   tracked and bold; matching that treatment is what made the two levels
+   indistinguishable. */
+.title {
+  font-size: var(--font-size-sm);
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+}
+
+.header:hover .title {
+  color: var(--text-primary);
+}
+
+/* Tabular figures so the counts hold a column as groups expand and collapse. */
+.count {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chev {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transform: rotate(-90deg); /* collapsed → points right */
+  transition: transform var(--transition-fast);
+}
+
+.chevOpen {
+  transform: rotate(0deg); /* expanded → points down */
+}

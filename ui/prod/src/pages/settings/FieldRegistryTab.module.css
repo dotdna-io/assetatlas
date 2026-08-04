@@ -1,0 +1,323 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/FieldRegistryTab.module.css */
+
+/* Section header — intro paragraph on the left, the global
+   "Regenerate All" action on the right. The button is the primary
+   action for the whole tab, so it sits up here rather than in the
+   toolbar with the per-field search. */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 0 18px;
+}
+
+.intro {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 880px;
+}
+
+/* AI description toggle — sits between the intro and the Regenerate
+   Synonyms button in the header. The hint below reuses the intro's
+   font-size and the stats' muted tertiary color. */
+.aiToggle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aiToggleHint {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+/* ---------------------------------------------------------------------------
+   Toolbar
+--------------------------------------------------------------------------- */
+
+.toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.stats {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.stats strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Group card (glossy card pattern)
+--------------------------------------------------------------------------- */
+
+.group {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   Group header
+--------------------------------------------------------------------------- */
+
+.groupHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.groupHeader:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+:global(body:not(.dark-mode)) .groupHeader:hover {
+  background: rgba(0,0,0,0.02);
+}
+
+.groupTitle {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Field-count after the group title. No chip — just plain text in the
+   accent blue, sized larger than the previous 11px pill so it reads as
+   a real number you can scan instead of a tiny badge. */
+.groupCount {
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.chevron {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.chevronExpanded {
+  transform: rotate(90deg);
+}
+
+/* ---------------------------------------------------------------------------
+   Group content
+--------------------------------------------------------------------------- */
+
+.groupContent {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+:global(body:not(.dark-mode)) .groupContent {
+  border-top-color: rgba(0,0,0,0.08);
+}
+
+/* ---------------------------------------------------------------------------
+   Table
+--------------------------------------------------------------------------- */
+
+.fieldTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHeaderRow th {
+  padding: 8px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.01);
+  white-space: nowrap;
+}
+
+:global(body:not(.dark-mode)) .tableHeaderRow th {
+  border-bottom-color: rgba(0,0,0,0.08);
+  background: rgba(0,0,0,0.02);
+}
+
+.tableRow td {
+  padding: 10px 16px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+:global(body:not(.dark-mode)) .tableRow td {
+  border-bottom-color: rgba(0,0,0,0.05);
+}
+
+.tableRow:last-child td {
+  border-bottom: none;
+}
+
+.tableRow:hover td {
+  background: rgba(255,255,255,0.02);
+}
+
+:global(body:not(.dark-mode)) .tableRow:hover td {
+  background: rgba(0,0,0,0.02);
+}
+
+/* ---------------------------------------------------------------------------
+   Field name cell (monospace, blue)
+--------------------------------------------------------------------------- */
+
+.fieldName {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------------------
+   Description cell (truncated)
+--------------------------------------------------------------------------- */
+
+/* Show up to three lines of description before clipping with ellipsis,
+   instead of the previous one-line truncation. The wider max-width and
+   line-clamp let synonym lists fit on screen without forcing the user
+   to open the edit modal just to read them. The full text is still
+   available in the title attribute on hover. */
+.fieldDescription {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 640px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+   Source badge
+--------------------------------------------------------------------------- */
+
+.sourceBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------
+   Searchable indicator
+--------------------------------------------------------------------------- */
+
+/* Searchable indicator — plain colored text, no dot. "Yes" reads as a
+   green affirmative, "No" sits in neutral tertiary so the eye scans
+   the green ones first when looking at what's wired into search. */
+.searchableYes {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--success);
+}
+
+.searchableNo {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+/* ---------------------------------------------------------------------------
+   Actions
+--------------------------------------------------------------------------- */
+
+.actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.coreLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------------------
+   Loading / empty
+--------------------------------------------------------------------------- */
+
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   Synonyms cell — preview of the first aliases + a +N affordance that opens
+   a read-only modal listing all of them. The whole cell is a button so the
+   modal is reachable for Core fields too (they have no Edit modal).
+--------------------------------------------------------------------------- */
+.synonymCell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  max-width: 220px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.synonymPreview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.synonymMore {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.synonymCell:hover .synonymPreview,
+.synonymCell:hover .synonymMore {
+  text-decoration: underline;
+}
+
+.synonymEmpty {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}

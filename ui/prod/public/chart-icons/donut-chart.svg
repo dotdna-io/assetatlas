@@ -1,0 +1,30 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="donut-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="donut-grad-2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="donut-grad-3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="donut-grad-4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EF4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DC2626;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full circle donut with 4 segments using stroke-dasharray -->
+  <circle cx="60" cy="60" r="42" fill="none" stroke="url(#donut-grad-1)" stroke-width="20"
+          stroke-dasharray="66 198" transform="rotate(-90 60 60)" opacity="0.9"/>
+  <circle cx="60" cy="60" r="42" fill="none" stroke="url(#donut-grad-4)" stroke-width="20"
+          stroke-dasharray="66 198" transform="rotate(0 60 60)" opacity="0.9"/>
+  <circle cx="60" cy="60" r="42" fill="none" stroke="url(#donut-grad-3)" stroke-width="20"
+          stroke-dasharray="66 198" transform="rotate(90 60 60)" opacity="0.9"/>
+  <circle cx="60" cy="60" r="42" fill="none" stroke="url(#donut-grad-2)" stroke-width="20"
+          stroke-dasharray="66 198" transform="rotate(180 60 60)" opacity="0.9"/>
+</svg>

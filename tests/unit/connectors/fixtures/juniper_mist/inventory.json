@@ -1,0 +1,18 @@
+[
+  {
+    "id": "dev-001",
+    "type": "ap",
+    "model": "AP43",
+    "serial": "SN-AP001",
+    "mac": "AA:BB:CC:DD:EE:01",
+    "site_id": "site-001"
+  },
+  {
+    "id": "dev-002",
+    "type": "switch",
+    "model": "EX4100",
+    "serial": "SN-SW001",
+    "mac": "AA:BB:CC:DD:EE:02",
+    "site_id": "site-001"
+  }
+]

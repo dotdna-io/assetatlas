@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Alert distribution by rule category — left third of the alerts top
+   section: rotating pie (shared charts/RotatingPie) + legend with the
+   exact counts. The legend keeps all four categories visible (including
+   zeros) so the panel stays stable as the time picker changes. */
+
+.panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  height: 100%;
+  /* Nudge the pie + legend group left of true center. */
+  padding-right: 40px;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legendRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.legendLabel {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.legendCount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}

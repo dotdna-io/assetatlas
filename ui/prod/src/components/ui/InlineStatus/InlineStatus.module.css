@@ -1,0 +1,110 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.status {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Default layout — used inside cards / boxes / modals.
+   Block, centered, with bottom margin so subsequent content has room. */
+.center {
+  display: block;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+/* Inline layout — used right next to the action button that produced the
+   status. No margins, sits in line with the button. */
+.inline {
+  display: inline-block;
+  margin: 0 0 0 12px;
+  vertical-align: middle;
+}
+
+.error {
+  color: #ef4444;
+}
+
+/* Screen-reader-only announcement for successes rendered by a button
+   (status.action set) — visually the button shows the confirmation. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── Success flash overlay ──
+   Centered translucent glass pane — it's on screen ~1.2s and
+   pointer-transparent, so briefly overlapping a modal is fine.
+   Always on top (above modals at z 10000). In 160ms, hold, out
+   300ms — the phase timing lives in InlineStatus.tsx. */
+.flashOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.flashPane {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 28px;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--success);
+  background: rgba(20, 21, 26, 0.38);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  box-shadow:
+    0 16px 48px -16px rgba(0, 0, 0, 0.45),
+    0 0 44px -6px rgba(16, 185, 129, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  animation: flashIn 160ms ease-out;
+}
+
+:global(body:not(.dark-mode)) .flashPane {
+  color: #059669;
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(5, 150, 105, 0.35);
+  box-shadow:
+    0 16px 44px -18px rgba(60, 65, 80, 0.25),
+    0 0 44px -6px rgba(16, 185, 129, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.flashOut {
+  animation: flashOutFade 300ms ease-in forwards;
+}
+
+@keyframes flashIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes flashOutFade {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flashPane {
+    animation: none;
+  }
+}

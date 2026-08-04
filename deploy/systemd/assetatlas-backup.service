@@ -1,0 +1,11 @@
+[Unit]
+Description=AssetAtlas nightly database backup
+Wants=assetatlas-backup.timer
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/assetatlas
+ExecStart=/usr/local/bin/assetatlas-cli backup --scheduled
+
+[Install]
+WantedBy=multi-user.target

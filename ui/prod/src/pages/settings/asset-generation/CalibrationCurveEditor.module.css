@@ -1,0 +1,186 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* CalibrationCurveEditor.module.css */
+
+/* Plain wrapper — no glossy surface here. The outer SettingsSection
+   in ConfidenceTab provides the card surface and the section title;
+   doubling them up was the card-inside-card. The surrounding
+   SettingsFullWidthBlock supplies the inner padding. */
+.card {
+  display: block;
+}
+
+.description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   Editor layout
+--------------------------------------------------------------------------- */
+
+.editor {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.graphWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* SVG styles */
+
+.svg {
+  display: block;
+  cursor: default;
+}
+
+.svg :global(.grid-major) {
+  stroke: rgba(255,255,255,0.06);
+  stroke-width: 1;
+}
+
+.svg :global(.grid-minor) {
+  stroke: rgba(255,255,255,0.03);
+  stroke-width: 0.5;
+}
+
+:global(body:not(.dark-mode)) .svg :global(.grid-major) {
+  stroke: rgba(0,0,0,0.08);
+}
+
+:global(body:not(.dark-mode)) .svg :global(.grid-minor) {
+  stroke: rgba(0,0,0,0.04);
+}
+
+.svg :global(.axis-label) {
+  fill: var(--text-tertiary);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.svg :global(.title-label) {
+  fill: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.svg :global(.ref-line) {
+  stroke: var(--text-tertiary);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  opacity: 0.5;
+}
+
+.svg :global(.curve-area) {
+  fill: rgba(var(--accent-rgb), 0.08);
+}
+
+.svg :global(.curve-line) {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.svg :global(.curve-point) {
+  fill: var(--accent);
+  stroke: var(--bg-primary);
+  stroke-width: 2;
+  cursor: grab;
+  transition: r 0.1s ease;
+}
+
+.svg :global(.curve-point):hover {
+  r: 9;
+}
+
+.svg :global(.curve-point.dragging) {
+  cursor: grabbing;
+  r: 9;
+  fill: var(--accent-hover);
+}
+
+/* Tooltip */
+
+.tooltip {
+  position: absolute;
+  display: none;
+  padding: 4px 8px;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
+  border-radius: 4px;
+  box-shadow: var(--tooltip-shadow);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.tooltipVisible {
+  composes: tooltip;
+  display: block;
+}
+
+/* ---------------------------------------------------------------------------
+   Value table
+--------------------------------------------------------------------------- */
+
+.valueTable {
+  flex: 1;
+  min-width: 160px;
+}
+
+.curveTable {
+  /* Span the whole column so the three centered columns space out
+     evenly across the available width — without this the table sized
+     to its content and left a wide gutter to the right of the graph. */
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.curveTable th {
+  text-align: center;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+:global(body:not(.dark-mode)) .curveTable th {
+  border-bottom-color: rgba(0,0,0,0.08);
+}
+
+.curveTable td {
+  padding: 3px 12px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.curveTable td:nth-child(2) {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.shiftUp { color: var(--success); }
+.shiftDown { color: var(--error); }
+.shiftNeutral { color: var(--text-tertiary); }
+
+/* ---------------------------------------------------------------------------
+   Actions
+--------------------------------------------------------------------------- */
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}

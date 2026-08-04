@@ -1,0 +1,13 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.testSection { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); padding: var(--space-4); }
+.testingRow { display: flex; align-items: center; gap: var(--space-3); }
+.statusIcon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.statusIcon svg { width: 16px; height: 16px; }
+.statusSuccess { background: var(--success); }
+.statusFailed { background: var(--error); }
+.statusRow { display: flex; align-items: center; gap: var(--space-3); }
+.message { font-size: var(--font-size-sm); color: var(--text-secondary); margin: 0; }
+.statusText { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin: 0; }
+.sampleInfo { font-size: var(--font-size-sm); color: var(--text-tertiary); margin: 0; }
+.skipRow { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; margin-top: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--border); align-self: stretch; }
+.skipLabel { font-size: var(--font-size-sm); color: var(--text-secondary); }

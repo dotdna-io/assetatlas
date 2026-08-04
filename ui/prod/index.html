@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AssetAtlas</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="stylesheet" href="/dotdna_charts_js/dotdna.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- DotDNA Charts Library (registers classes on window for React DotDNAChart wrapper).
+         defer preserves execution order while unblocking HTML parsing. -->
+    <script defer src="/dotdna_charts_js/dotdna.js"></script>
+    <script defer src="/dotdna_charts_js/charts/SVGChartBase.js"></script>
+    <script defer src="/dotdna_charts_js/charts/AnimatedCircleChart.js"></script>
+    <script defer src="/dotdna_charts_js/charts/AnimatedDonutModern.js"></script>
+    <script defer src="/dotdna_charts_js/charts/AnimatedPie.js"></script>
+    <script defer src="/dotdna_charts_js/charts/AnimatedRadialBar.js"></script>
+    <script defer src="/dotdna_charts_js/charts/ButterflyTimeline.js"></script>
+    <script defer src="/dotdna_charts_js/charts/CircleGauge.js"></script>
+    <script defer src="/dotdna_charts_js/charts/CleanSegmentedHorizontalBar.js"></script>
+    <script defer src="/dotdna_charts_js/charts/CleanSegmentedVerticalBar.js"></script>
+    <script defer src="/dotdna_charts_js/charts/DataTable.js"></script>
+    <script defer src="/dotdna_charts_js/charts/ElegantGauge.js"></script>
+    <script defer src="/dotdna_charts_js/charts/ForceGraph.js"></script>
+    <script defer src="/dotdna_charts_js/charts/LinearGauge.js"></script>
+    <script defer src="/dotdna_charts_js/charts/LineChart.js"></script>
+    <script defer src="/dotdna_charts_js/charts/MetricBar.js"></script>
+    <script defer src="/js/shared/data-source-logos.js"></script>
+    <script defer src="/dotdna_charts_js/charts/MetricCard.js"></script>
+    <script defer src="/dotdna_charts_js/charts/NumberCard.js"></script>
+    <script defer src="/dotdna_charts_js/charts/PunchCard.js"></script>
+    <script defer src="/dotdna_charts_js/charts/Sankey.js"></script>
+    <script defer src="/dotdna_charts_js/charts/StackedColumn.js"></script>
+    <script defer src="/dotdna_charts_js/charts/TimeSeriesPyramid.js"></script>
+    <script defer src="/dotdna_charts_js/charts/UltraNumber.js"></script>
+    <script defer src="/dotdna_charts_js/charts/VerticalPyramid.js"></script>
+
+    <!-- React app (must load after chart library) -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

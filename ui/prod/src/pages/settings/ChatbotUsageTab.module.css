@@ -1,0 +1,136 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/ChatbotUsageTab.module.css */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Top bar — time-range picker docked right, same convention as alerts /
+   audit. */
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Single big glossy card hosts everything ────────────────── */
+
+.usageCard {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Stats strip (Messages: 26 | Sessions: 3 | …) ───────────── */
+
+.statsLine {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.statItem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.statKey {
+  color: var(--text-tertiary);
+}
+
+.statValue {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.statSep {
+  color: var(--text-tertiary);
+  opacity: 0.45;
+  margin-right: var(--space-1);
+}
+
+/* ── Sub-sections inside the card (Top users / Tokens / Tools) ─ */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+}
+
+.section + .section {
+  border-top: 1px solid var(--border);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* ── Tables ────────────────────────────────────────────────── */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.table th,
+.table td {
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-size: var(--font-size-xs);
+  border-bottom: 1px solid var(--border);
+}
+
+.table td {
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+:global(body:not(.dark-mode)) .table td {
+  border-bottom-color: rgba(0, 0, 0, 0.04);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Empty / error states ──────────────────────────────────── */
+
+.empty {
+  padding: var(--space-3) 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.errorBox {
+  padding: var(--space-4);
+  color: var(--error);
+  background: rgba(var(--error-rgb), 0.08);
+  border: 1px solid rgba(var(--error-rgb), 0.3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}

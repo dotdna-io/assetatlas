@@ -1,0 +1,15 @@
+{
+  "catalogs": [
+    {
+      "name": "main",
+      "catalog_type": "MANAGED_CATALOG",
+      "comment": "Main catalog",
+      "owner": "admin@example.com",
+      "created_at": 1700000000000,
+      "created_by": "admin@example.com",
+      "metastore_id": "ms-abc-123",
+      "isolation_mode": "OPEN",
+      "full_name": "main"
+    }
+  ]
+}

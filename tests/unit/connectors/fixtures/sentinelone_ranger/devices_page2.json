@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "id": "device-003",
+      "localIp": "10.0.1.70",
+      "macAddress": "AA:BB:CC:DD:EE:03",
+      "deviceType": "Camera",
+      "manufacturer": "Axis",
+      "managedState": "not_managed"
+    }
+  ],
+  "pagination": {
+    "nextCursor": null,
+    "totalItems": 3
+  }
+}

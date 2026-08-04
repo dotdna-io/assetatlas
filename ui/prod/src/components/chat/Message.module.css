@@ -1,0 +1,197 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.row {
+  display: flex;
+  margin-bottom: var(--space-3);
+}
+
+.user {
+  justify-content: flex-end;
+}
+
+.assistant,
+.tool,
+.system {
+  justify-content: flex-start;
+}
+
+.bubble {
+  max-width: 85%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* User bubble — subtle green wash, on-brand and quietly distinctive
+   without the loud blue from before. */
+.userBubble {
+  background:
+    linear-gradient(160deg, rgba(16, 185, 129, 0.22) 0%, rgba(16, 185, 129, 0.12) 100%);
+  color: var(--text-primary);
+  border: 1px solid rgba(16, 185, 129, 0.30);
+  border-bottom-right-radius: 4px;
+  white-space: pre-wrap;
+}
+
+/* Assistant bubble — recessed canvas tone, sits inside the lifted panel.
+   Uses the full row width so longer answers and chart artifacts get
+   the lateral space they need; the user bubble stays at 85% (the .bubble
+   default) so it still reads like a chat message. */
+.assistantBubble {
+  max-width: 100%;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+/* Dark mode: the canvas tone is near-black and read as a hard void behind
+   answers; lift it to the flat panel fill the cards use (sidebar tone). */
+:global(body.dark-mode) .assistantBubble {
+  background-color: rgba(28, 29, 34, 0.52);
+}
+
+.assistantBubble :global(p) {
+  margin: 0 0 var(--space-2) 0;
+}
+
+.assistantBubble :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.assistantBubble :global(ul),
+.assistantBubble :global(ol) {
+  margin: 0 0 var(--space-2) var(--space-3);
+  padding-left: var(--space-3);
+}
+
+.assistantBubble :global(code) {
+  background: var(--bg-tertiary);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  font-size: 0.95em;
+}
+
+.assistantBubble :global(pre) {
+  background: var(--bg-tertiary);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  margin: 0 0 var(--space-2) 0;
+}
+
+.assistantBubble :global(pre code) {
+  background: transparent;
+  padding: 0;
+}
+
+/* Markdown tables. Tools that already render an inline artifact are told
+   (in the system prompt) not to repeat the data here, but a few tools
+   without artifacts (get_alerts, get_dashboard, etc.) may still produce
+   one. Keep the bubble usable by giving the table real padding, borders,
+   and horizontal scroll so cells don't collide with category badges. */
+.assistantBubble :global(table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+  margin: 0 0 var(--space-2) 0;
+  display: block;
+  overflow-x: auto;
+}
+
+.assistantBubble :global(thead th) {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.assistantBubble :global(tbody td) {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+  vertical-align: top;
+}
+
+.assistantBubble :global(tbody tr:last-child td) {
+  border-bottom: none;
+}
+
+.systemBubble {
+  background-color: transparent;
+  color: var(--text-tertiary);
+  font-style: italic;
+  font-size: var(--font-size-xs);
+  white-space: pre-wrap;
+}
+
+.thinkingToggle {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-family: inherit;
+  font-style: italic;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.thinkingToggle:hover {
+  color: var(--text-secondary);
+}
+
+.caret {
+  display: inline-block;
+  font-size: 10px;
+  width: 10px;
+  text-align: center;
+}
+
+.thinkingBody {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--border);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+/* Expanded "Used <tools>" detail: one row per tool call (status, name,
+   arguments). Mirrors the recessed, monospace treatment of inline code. */
+.toolDetails {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.toolDetail {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-xs);
+}
+
+.toolDetailStatus {
+  color: var(--text-tertiary);
+}
+
+.toolDetailName {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.toolDetailArgs {
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  word-break: break-all;
+}

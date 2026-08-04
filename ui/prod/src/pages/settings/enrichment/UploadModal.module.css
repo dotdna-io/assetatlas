@@ -1,0 +1,264 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/enrichment/UploadModal.module.css */
+
+/* ---------------------------------------------------------------------------
+   Form layout
+--------------------------------------------------------------------------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------------------
+   Inputs
+--------------------------------------------------------------------------- */
+
+.input,
+.select {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--input-bg, rgba(255,255,255,0.05));
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+:global(body:not(.dark-mode)) .input,
+:global(body:not(.dark-mode)) .select {
+  background: #fff;
+  border-color: rgba(0,0,0,0.15);
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--accent, #3B82F6);
+}
+
+/* ---------------------------------------------------------------------------
+   Column mapping grid
+--------------------------------------------------------------------------- */
+
+.columnGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   Drag-and-drop zone
+--------------------------------------------------------------------------- */
+
+.dropZone {
+  border: 2px dashed rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  color: var(--text-secondary);
+  font-size: 13px;
+  user-select: none;
+}
+
+:global(body:not(.dark-mode)) .dropZone {
+  border-color: rgba(0,0,0,0.15);
+}
+
+.dropZone:hover,
+.dropZoneActive {
+  border-color: var(--accent, #6366f1);
+}
+
+.dropHint {
+  color: var(--text-tertiary);
+}
+
+.fileName {
+  color: var(--text-primary);
+}
+
+.fileSize {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   Radio group
+--------------------------------------------------------------------------- */
+
+.radioGroup {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.radioDisabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------------------
+   Help text
+--------------------------------------------------------------------------- */
+
+.helpText {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* ---------------------------------------------------------------------------
+   Error
+--------------------------------------------------------------------------- */
+
+.error {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+  font-size: 13px;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
+/* ---------------------------------------------------------------------------
+   Footer (buttons)
+--------------------------------------------------------------------------- */
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+:global(body:not(.dark-mode)) .footer {
+  border-top-color: rgba(0,0,0,0.08);
+}
+
+/* ---------------------------------------------------------------------------
+   Success banner
+--------------------------------------------------------------------------- */
+
+.successBanner {
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.2);
+  margin-bottom: 16px;
+}
+
+.successTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: #10b981;
+  margin-bottom: 4px;
+}
+
+.successBody {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------------------
+   Preview table
+--------------------------------------------------------------------------- */
+
+.previewLabel {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+.previewWrapper {
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+}
+
+:global(body:not(.dark-mode)) .previewWrapper {
+  border-color: rgba(0,0,0,0.1);
+}
+
+.previewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.previewTable thead th {
+  position: sticky;
+  top: 0;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid rgba(255,255,255,0.08);
+  /* Must be opaque: this header is position:sticky inside a scrolling
+     container, so a translucent background (e.g. --bg-secondary, which is
+     rgba(255,255,255,0.06) in dark mode) lets scrolled rows bleed through it. */
+  background: var(--card-bg, #1e1e22);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+:global(body:not(.dark-mode)) .previewTable thead th {
+  border-bottom-color: rgba(0,0,0,0.1);
+  background: #f3f4f6;
+}
+
+.previewTable tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+:global(body:not(.dark-mode)) .previewTable tbody td {
+  border-bottom-color: rgba(0,0,0,0.06);
+}
+
+.previewTable tbody tr:last-child td {
+  border-bottom: none;
+}

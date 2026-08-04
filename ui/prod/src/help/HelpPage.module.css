@@ -1,0 +1,35 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.shot { max-width: 100%; border-radius: 6px; cursor: zoom-in; display: block; margin: 12px 0; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.8); display: flex;
+  align-items: center; justify-content: center; z-index: 1000; cursor: zoom-out; }
+.lightboxImg { max-width: 92vw; max-height: 92vh; border-radius: 6px; }
+
+.page { display: flex; gap: 24px; height: 100%; }
+.toc { width: 260px; flex-shrink: 0; overflow-y: auto; padding-right: 8px; }
+.search { width: 100%; margin-bottom: 16px; padding: 8px 10px;
+  background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-primary); font-size: 13px; }
+.search:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tocGroup { margin-bottom: 14px; }
+.tocCat { font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--text-tertiary); margin: 0 0 6px; }
+.tocItem { display: block; padding: 6px 8px; border-radius: 5px;
+  color: var(--text-secondary); text-decoration: none; font-size: 13px; }
+.tocItem:hover { background: var(--bg-secondary); color: var(--text-primary); }
+.tocItemActive { background: var(--bg-secondary); color: var(--text-primary); font-weight: 600; }
+.content { flex: 1; overflow-y: auto; max-width: 820px; line-height: 1.6; }
+.placeholder { color: var(--text-secondary); }
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.backLink { display: inline-block; font-size: 13px; color: var(--text-secondary); text-decoration: none; }
+.backLink:hover { color: var(--text-primary); }
+.newTab { color: var(--text-secondary); display: inline-flex; }
+.newTab:hover { color: var(--text-primary); }
+
+.content h1 { margin: 0 0 0.75rem; }
+.content h2 { margin: 2.5rem 0 0.85rem; }
+.content h2:first-of-type { margin-top: 1.25rem; }
+.content p { margin: 0.85rem 0; }
+.content ul, .content ol { margin: 0.85rem 0; padding-left: 1.35rem; }
+.content li { margin: 0.45rem 0; }
+.content li > p { margin: 0.3rem 0; }
+.content hr { margin: 2.25rem 0; border: none; border-top: 1px solid var(--border); }

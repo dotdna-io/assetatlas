@@ -1,0 +1,56 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.section {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+:global(body:not(.dark-mode)) .header {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-tertiary);
+}
+
+/* Descriptive variant — used when the "title" is a sentence-length
+   preamble describing the section. Larger, regular case, primary text
+   colour, and the header lets it wrap instead of right-aligning a meta
+   chunk next to it. */
+/* A descriptive header is a sentence or two of prose, not a one-word chip, so
+   the shared 10px left it crowding the divider underneath. A full line of
+   breathing room lets the preamble read as its own block. */
+.headerDescriptive {
+  align-items: flex-start;
+  padding-bottom: 20px;
+}
+.titleDescriptive {
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.subtitle {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.body {
+  padding: 4px 0;
+}

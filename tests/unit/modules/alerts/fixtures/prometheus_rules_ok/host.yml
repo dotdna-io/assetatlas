@@ -1,0 +1,14 @@
+groups:
+  - name: assetatlas-host
+    interval: 30s
+    rules:
+      - alert: host-disk-full-90
+        expr: |
+          (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+             / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) > 0.90
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host disk above 90% on {{ $labels.mountpoint }}
+          description: "Filesystem at {{ $value | humanizePercentage }}."

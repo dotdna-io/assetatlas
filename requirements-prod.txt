@@ -1,0 +1,103 @@
+# AssetAtlas Backend - Production Requirements
+# Only packages needed for Flask API and pipeline runtime
+# Python 3.13 compatible versions
+
+# Core Data Processing
+numpy>=1.26.0
+pandas>=2.2.0
+openpyxl>=3.1.2
+
+# Database
+psycopg2-binary>=2.9.9
+
+# Web Framework and API
+Flask>=3.0.0
+werkzeug>=3.0.0
+flask-cors>=4.0.0
+flask-compress>=1.23
+flask-jwt-extended>=4.6.0
+PyJWT>=2.8.0
+Flask-Caching>=2.1.0
+flasgger>=0.9.7
+gunicorn>=21.2.0
+pydantic[email]>=2.10.0
+requests>=2.32.0
+urllib3>=2.0.0
+beautifulsoup4>=4.12.0
+
+# Scheduler
+APScheduler>=3.10.0
+croniter>=2.0.0
+
+# Monitoring and Logging
+prometheus-client>=0.21.0
+prometheus-flask-exporter>=0.23.0
+python-json-logger>=3.0.0
+
+# Caching
+redis>=5.0.0
+
+# Utilities
+pytz>=2024.1
+python-dateutil>=2.8.0
+python-dotenv>=1.0.0
+joblib>=1.4.0
+tqdm>=4.67.0
+intervaltree>=3.1.0
+networkx>=3.4.0
+jsonpath-ng>=1.6.0
+
+# NLP / Fuzzy Matching (needed for pipeline)
+thefuzz>=0.22.0
+python-levenshtein>=0.25.0
+
+# Auth & Encryption
+authlib==1.7.0
+bcrypt>=4.0.0
+cryptography>=42.0.0
+pyotp==2.9.0
+
+# LDAP (Active Directory connector).
+# ldap3 is LGPL-3.0 and upstream releases have stalled (latest 2.10.2rc4).
+# Migration target tracked under issue #596 H28: python-ldap, after the 4.x
+# release that resolves CVE-2025-61912.
+ldap3>=2.9.1
+
+# Semantic Search (Explorer suggestions)
+# Embeddings run on ONNX Runtime (issue #1070). Both were already present as
+# chromadb dependencies; they are declared explicitly because
+# src/services/embedding/onnx_backend.py imports them directly, and an
+# import must not rely on another package's transitive pin.
+onnxruntime>=1.17.0
+tokenizers>=0.15.0
+chromadb>=0.4.0
+
+# IP Geolocation
+maxminddb>=2.6.0
+
+# Image processing (integration logo uploads)
+Pillow>=10.4.0
+defusedxml>=0.7.1
+
+# MCP Server
+# Capped below 2.0 (published 2026-07-28): 2.x drops `mcp.server.fastmcp`,
+# which 27 modules under src/mcp/ and tests/unit/test_mcp/ import for
+# `Context` / `FastMCP`. Do NOT lift the cap before src/mcp/ is ported — dev
+# CI cannot catch a regression here, because the self-hosted fleet's warm
+# site-packages already satisfy the floor, so pip reports "already satisfied"
+# and never resolves cold. Only the public mirror (ephemeral runners) and a
+# base-image rebuild resolve cold, and both ship broken. See #1261 / #1262.
+mcp>=1.9.0,<2
+
+# Chat feature LLM clients (CHAT_ENABLED defaults to true; without these the
+# chat blueprint fails to import and `/api/chat/*` returns 404 — even when
+# operators have no intent to use chat. See src/api/blueprints/chat/llm/.)
+anthropic>=0.40.0
+openai>=1.40.0
+boto3>=1.34
+botocore>=1.34
+
+# Microsoft Teams bridge
+botbuilder-core>=4.16.0
+botbuilder-schema>=4.16.0
+aiohttp>=3.10.0

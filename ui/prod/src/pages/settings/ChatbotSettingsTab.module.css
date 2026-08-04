@@ -1,0 +1,360 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/ChatbotSettingsTab.module.css */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.warningBanner {
+  padding: 12px 16px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+/* "No provider enabled" — plain text, no box or border. */
+.noProviderNotice {
+  padding: 4px 2px;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+/* Banner-context inline code keeps the chip treatment so it reads against
+   the warning bg. */
+.warningBanner code {
+  padding: 1px 5px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* Field-hint inline code — mono font is enough; no chip background. */
+.fieldHint code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+/* ── Provider card grid ─────────────────────────────────────── */
+
+/* Always 3 cards per row; the 4th wraps to its own row beneath. On
+   narrow viewports (<900px) the cards stack to a single column so they
+   stay readable on tablets. */
+.providerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+@media (max-width: 900px) {
+  .providerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.providerCard {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+/* Active card — subtle accent ring so the chosen provider reads as the
+   live one without competing with the glossy card surface. !important is
+   the unambiguous signal-of-intent here: the shared glossyCard's
+   light-mode override (`:global(body:not(.dark-mode)) .glossyCard`)
+   ties on specificity *and* paints multiple inset white highlights that
+   visually mask a 1px accent border. Forcing the accent border + halo
+   over both is the simplest correct answer. */
+.providerCardActive {
+  border: 1px solid var(--accent) !important;
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 14px rgba(var(--accent-rgb), 0.25) !important;
+}
+
+/* ── Card header (logo + title + radio dot) ─────────────────── */
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cardLogo {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  /* `cover` instead of `contain` because the asset assets aren't a uniform
+     aspect ratio (Claude.png is 1:1, ChatGPT.png is 16:9). Cover crops the
+     padded margins so the logo glyph fills the same visual footprint
+     regardless of the source PNG's canvas. */
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Monochrome black glyphs (OpenAI) vanish on the dark surfaces; force them
+   to pure white in dark mode. brightness(0) flattens any grey first so the
+   invert lands on true white. Light mode keeps the original black. */
+:global(body.dark-mode) .cardLogoMono {
+  filter: brightness(0) invert(1);
+}
+
+/* The Bedrock brain glyph is centred slightly below the canvas mid-line in
+   the source PNG, which makes it sit 2px lower than Claude / ChatGPT in
+   the card row. Nudge it back up so the row reads as one baseline. */
+.cardLogoBedrock {
+  transform: translateY(-2px);
+}
+
+.cardTitleBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardTitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.cardSubtitle {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+
+/* ── Card body (fields) ─────────────────────────────────────── */
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.fieldLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.fieldHint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
+/* ── Inputs ─────────────────────────────────────────────────── */
+
+.textInput {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast);
+}
+
+.textInput:focus {
+  border-color: var(--accent);
+}
+
+.textInput:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── API-key control ────────────────────────────────────────── */
+
+.keyRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.keyRow .textInput {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Eye-inside-input wrapper — input grows to fill the row, the eye sits
+   absolutely-positioned inside the input's right padding so the field
+   reads as one control with an inline reveal toggle. */
+.keyInputWrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.textInputWithEye {
+  padding-right: 36px;
+}
+
+.keyEyeBtn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.keyEyeBtn:hover {
+  color: var(--text-primary);
+}
+
+/* Read-only preview slot — same shape as .textInput so the layout
+   doesn't jump when toggling between view and edit modes. */
+.keyPreview {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keyPreview code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+}
+
+.keyPreviewEmpty {
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
+/* Borderless 36px icon buttons — only the glyph is visible. Hover just
+   brightens the colour to --text-primary; no red, no chip, no border. */
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.iconBtn:hover {
+  color: var(--text-primary);
+}
+
+/* ── Per-card footer (Cancel left, Test + Save right) ───────── */
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+}
+
+.cardFooterRight {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ── Test connection feedback ───────────────────────────────── */
+
+/* Inline "Test successful" shown in a card footer, between the Cancel
+   button and the Test/Save button group. */
+.testOkInline {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #10b981;
+  white-space: nowrap;
+}
+
+/* Failed-test modal body. */
+.testErrorText {
+  margin: 0 0 16px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.testErrorActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.radioGroup {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.radioOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.modelSelectRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.modelSelectRow select {
+  flex: 1;
+}

@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "query_time": 0.015,
+    "pagination": {
+      "total": 1
+    },
+    "powered_by": "device-api",
+    "trace_id": "aaaa-bbbb-cccc-dddd"
+  },
+  "resources": [
+    {
+      "device_id": "dev-001",
+      "cid": "cust-001",
+      "hostname": "DESKTOP-WIN001",
+      "machine_domain": "contoso.local",
+      "local_ip": "10.0.1.10",
+      "external_ip": "203.0.113.1",
+      "mac_address": "AA:BB:CC:DD:EE:01",
+      "platform_name": "Windows",
+      "platform_id": "0",
+      "os_version": "Windows 11",
+      "os_build": "22621",
+      "os_product_name": "Windows 11 Enterprise",
+      "product_type": "1",
+      "product_type_desc": "Workstation",
+      "serial_number": "SN-001",
+      "system_manufacturer": "Dell Inc.",
+      "system_product_name": "OptiPlex 7090",
+      "chassis_type": "3",
+      "chassis_type_desc": "Desktop",
+      "bios_manufacturer": "Dell Inc.",
+      "bios_version": "2.14.0",
+      "agent_version": "7.10.18012.0",
+      "status": "normal",
+      "first_seen": "2024-01-15T08:00:00Z",
+      "last_seen": "2026-03-18T10:00:00Z",
+      "modified_timestamp": "2026-03-18T10:00:00Z",
+      "tags": ["SensorGroupingTags/Production", "SensorGroupingTags/US-East"],
+      "groups": ["group-aaa", "group-bbb"],
+      "device_policies": {
+        "prevention": {
+          "policy_id": "pol-prev-001",
+          "applied": true
+        },
+        "sensor_update": {
+          "policy_id": "pol-sensor-001",
+          "applied": true
+        }
+      }
+    }
+  ],
+  "errors": []
+}

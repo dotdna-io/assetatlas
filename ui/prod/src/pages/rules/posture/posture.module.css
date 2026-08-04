@@ -1,0 +1,697 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* ui/prod/src/pages/settings/posture/posture.module.css */
+
+/* ─── Category Card ─────────────────────────────────────────────────────── */
+
+.categoryCard {
+  composes: glossyCard from '../../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.categoryHeader:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.categoryIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.categoryMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* "Posture" label as coloured text before the category toggle (mirrors the
+   type text on alert/tag rule cards). */
+.metaText {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.metaSep {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+  user-select: none;
+}
+
+.categoryName {
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+.categoryCount {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.categoryDesc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: 0 20px 8px;
+  margin: 0;
+}
+
+/* Asset-category badges — render via the shared <Badge> component
+   (glossy, colored from the same palette the Explorer table uses).
+   `margin-left: auto` in the header pushes the row to the right of
+   the row so it sits next to the divider/edit/toggle cluster.
+   In the expanded body's two-column layout the auto margin is reset
+   so the row hugs the left column's left edge. */
+.assetBadgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* Vertical hairline separating the badge row from the edit/toggle
+   action cluster, so the eye reads them as two distinct zones in the
+   header. */
+.headerDivider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.10);
+  margin: 0 4px 0 8px;
+  flex-shrink: 0;
+}
+
+:global(body:not(.dark-mode)) .headerDivider {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* Header actions cluster — Edit icon + enable/disable toggle. Sits to
+   the right of the divider, before the chevron. The wrapping div
+   stops clicks from bubbling to the row's expand/collapse handler. */
+.categoryActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.coverageBreakdown {
+  padding: 8px 20px 16px;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.12);
+}
+
+.coverageBreakdownTitle {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.coverageBreakdownRows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.coverageBreakdownRow {
+  display: grid;
+  grid-template-columns: 140px 1fr 110px;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--font-size-sm);
+}
+
+.coverageBreakdownLabel {
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coverageBreakdownBar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(100, 116, 139, 0.15);
+  overflow: hidden;
+}
+
+.coverageBreakdownFill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.coverageBreakdownCount {
+  text-align: right;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform 0.2s;
+}
+
+.chevronExpanded {
+  transform: rotate(180deg);
+}
+
+/* ─── Stats bar ──────────────────────────────────────────────────────────── */
+
+.statsBar {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 0 20px 6px;
+  background: rgba(100, 116, 139, 0.15);
+}
+
+.statsSegmentPass {
+  background: var(--success, #22c55e);
+  height: 100%;
+}
+
+.statsSegmentFail {
+  background: var(--error, #ef4444);
+  height: 100%;
+}
+
+.statsSegmentNa {
+  background: rgba(100, 116, 139, 0.25);
+  height: 100%;
+}
+
+.statsCounts {
+  display: flex;
+  gap: 12px;
+  padding: 0 20px 12px;
+  font-size: 12px;
+}
+
+.statsPass {
+  color: var(--success, #22c55e);
+}
+
+.statsFail {
+  color: var(--error, #ef4444);
+}
+
+.statsNa {
+  color: var(--text-tertiary);
+}
+
+/* ─── Sub-rules ──────────────────────────────────────────────────────────── */
+
+/* "Rules" section header — same visual weight as the filter section
+   headers in the rules wizard so the structure reads consistently. */
+.subRulesTitle {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 12px 20px 6px;
+}
+
+.subRules {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+:global(body:not(.dark-mode)) .subRules {
+  border-top-color: rgba(0,0,0,0.06);
+}
+
+.emptySubRules {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  padding: 12px 20px;
+  margin: 0;
+}
+
+.subRuleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+:global(body:not(.dark-mode)) .subRuleRow {
+  border-bottom-color: rgba(0,0,0,0.04);
+}
+
+.subRuleInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.subRuleName {
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.subRuleChips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  font-size: 11px;
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.chipMuted {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* Section label that precedes a group of chips ("Target:",
+   "Criteria (any):", "Output:"). Slightly more weight than the
+   AND/OR separators so the boolean structure reads clearly. */
+.chipGroupLabel {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.chipSep {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.subRuleActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Stacked up/down chevrons on the left of each sub-rule row.
+   Sub-rules execute top-down so position carries meaning — the
+   vertical stack reads as "move this rule earlier/later". */
+.reorderControls {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.reorderBtn {
+  width: 24px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  transition: all var(--transition-fast);
+}
+
+.reorderBtn:hover:not(:disabled) {
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--text-primary);
+}
+
+.reorderBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.iconBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.iconBtn:hover {
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--text-primary);
+}
+
+
+.iconBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── Category footer ────────────────────────────────────────────────────── */
+
+.categoryFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+}
+
+.addSubRuleBtn {
+  background: none;
+  border: 1px dashed rgba(100, 116, 139, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.addSubRuleBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── Form elements (used inside wizard steps) ─────────────────────────── */
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.required {
+  color: var(--error, #ef4444);
+  margin-left: 2px;
+}
+
+.formInput {
+  height: 36px;
+  border: 1px solid var(--border-color, rgba(0,0,0,0.12));
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  padding: 0 10px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.formInput:focus {
+  border-color: var(--accent);
+}
+
+.formHint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin: 0 0 4px;
+}
+
+.formCheckbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ─── Logic toggle ───────────────────────────────────────────────────────── */
+
+.logicToggle {
+  display: flex;
+  gap: 0;
+  align-self: flex-start;
+}
+
+.logicBtn {
+  height: 32px;
+  padding: 0 14px;
+  font-size: var(--font-size-sm);
+  border: 1px solid rgba(100,116,139,0.25);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.logicBtn:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  border-right: none;
+}
+
+.logicBtn:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.logicBtnActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ─── Inline filter editor ───────────────────────────────────────────────── */
+
+.filterEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filterRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filterInput,
+.filterSelect,
+.filterFieldSelect {
+  height: 32px;
+  border: 1px solid var(--border-color, rgba(0,0,0,0.12));
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  padding: 0 8px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.filterInput:focus,
+.filterSelect:focus,
+.filterFieldSelect:focus {
+  border-color: var(--accent);
+}
+
+.filterFieldSelect {
+  min-width: 180px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.filterSelect {
+  min-width: 120px;
+  cursor: pointer;
+}
+
+.filterInputValue {
+  flex: 1;
+}
+
+.filterRemoveBtn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.filterRemoveBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error, #ef4444);
+}
+
+.addFilterBtn {
+  align-self: flex-start;
+  background: none;
+  border: 1px dashed rgba(100,116,139,0.3);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.addFilterBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── Preview box ────────────────────────────────────────────────────────── */
+
+.targetMatchIndicator {
+  margin-top: 10px;
+  font-size: var(--font-size-sm);
+  min-height: 24px;
+}
+
+.targetMatchCount {
+  color: var(--accent);
+}
+
+.previewBox {
+  border: 1px solid rgba(100,116,139,0.2);
+  border-radius: var(--radius-sm);
+  background: rgba(100,116,139,0.05);
+  padding: 10px 14px;
+  font-size: var(--font-size-sm);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.previewPending {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.previewIdle {
+  color: var(--text-tertiary);
+}
+
+.previewResult {
+  color: var(--text-primary);
+}
+
+.previewPass {
+  color: var(--success, #22c55e);
+  font-weight: 600;
+}
+
+.previewFail {
+  color: var(--error, #ef4444);
+  font-weight: 600;
+}
+
+/* Coverage-by-asset-category block — full width, below the Rules list,
+   separated from Rules by a top hairline. */
+.coverageBlock {
+  padding: 14px 20px 16px;
+  border-top: 1px solid rgba(100, 116, 139, 0.12);
+}
+
+/* ─── Output preview panel ─────────────────────────────────────────────── */
+
+.previewPanel {
+  margin-top: 10px;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: var(--radius-sm);
+  background: rgba(100, 116, 139, 0.04);
+  padding: 10px 14px;
+}
+
+.previewPanelTitle {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.previewEmpty {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.previewError {
+  color: var(--error, #ef4444);
+  font-size: var(--font-size-sm);
+}
+
+.previewMuted {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.previewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.previewTable th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 4px 8px 4px 0;
+}
+
+.previewTable td {
+  padding: 3px 8px 3px 0;
+  color: var(--text-primary);
+  vertical-align: top;
+}
+
+/* ─── Last-edit chip ───────────────────────────────────────────────────── */
+
+.lastEditChip {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  margin-left: 6px;
+}
+

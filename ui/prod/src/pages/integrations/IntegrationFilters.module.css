@@ -1,0 +1,68 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.searchInput {
+  grid-column: 1;
+  height: 36px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  outline: none;
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.newIntegrationBtn {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.searchInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+}
+
+.viewToggle {
+  display: flex;
+  gap: 0;
+}
+
+.viewButton {
+  width: 28px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 16px;
+  transition: color var(--transition-fast);
+  padding: 0;
+}
+
+.viewButton:hover {
+  color: var(--text-secondary);
+}
+
+.viewButtonActive,
+.viewButtonActive:hover {
+  color: var(--accent);
+}
+

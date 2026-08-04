@@ -1,0 +1,95 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Wrap the whole tab in a single glossy card so it matches the rest
+   of the Settings sub-tabs. The inner status / confirm blocks below
+   are flattened (no border, just an inset shade) so we don't get a
+   card-inside-card. */
+.container {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-sm);
+  padding: 18px 22px 22px;
+  margin-bottom: 14px;
+}
+
+.header h2 {
+  margin: 0 0 0.5rem;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.header p {
+  margin: 0 0 0.5rem;
+  max-width: 720px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.statusCard {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  margin: 1rem 0;
+  max-width: 600px;
+}
+
+:global(body:not(.dark-mode)) .statusCard {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.statusRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+}
+
+.label { color: var(--text-muted); }
+
+.actions { display: flex; gap: 0.75rem; margin: 1rem 0; }
+
+.result {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  max-height: 300px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.muted { color: var(--text-muted); }
+
+.statusFailed { color: var(--danger, #dc2626); }
+
+.table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; max-width: 1000px; }
+.table th, .table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.confirmPanel {
+  background: rgba(var(--accent-rgb), 0.06);
+  border: 1px solid rgba(var(--accent-rgb), 0.30);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  margin: 1rem 0;
+  max-width: 720px;
+}
+.confirmPanel h3 { margin-top: 0; }
+.datasetList {
+  margin: 0.5rem 0 1rem 1rem;
+  padding: 0;
+  color: var(--text);
+}
+.datasetList li { padding: 0.15rem 0; }
+
+.linkButton {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+.linkButton:disabled { opacity: 0.5; cursor: not-allowed; }

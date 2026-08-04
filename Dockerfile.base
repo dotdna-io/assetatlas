@@ -1,0 +1,137 @@
+# AssetAtlas Base Image
+# Contains: Python runtime, all pip packages, ML model, reference data
+# Rebuild only when dependencies, model, or reference data change
+# App code is NOT included — see Dockerfile for the thin app image
+#
+# Size discipline. This image is pulled on every fresh online install, so three
+# things below are deliberate (together they took it from 4.85 GB to ~1.1 GB):
+#
+#  1. torch is NOT installed at all (#1070). Inference moved to ONNX Runtime,
+#     which chromadb already pulled in, so the swap cost zero added bytes and
+#     removed torch (625 MB installed) + sentence-transformers + transformers +
+#     sympy: 282 MB compressed. Vectors are unchanged to float32 noise — same
+#     weights, same maths, different kernel — with identical top-10 ranking over
+#     2000 real strings, enforced by tests/unit/services/embedding/
+#     test_onnx_parity.py. Do NOT reintroduce a plain `pip install torch`: it
+#     resolves the CUDA build on linux/amd64 and drags in ~2.8 GB of nvidia-*
+#     wheels.
+#  2. The embedding model ships as ONNX ONLY. The upstream HuggingFace cache
+#     also carries pytorch_model.bin and model.safetensors: the same weights a
+#     second and third time (~874 MB) that the ONNX backend never loads.
+#     ONNX rather than safetensors since #1070: it is the same fp32 export of the
+#     same weights (436 MB vs 438 MB, so no saving there), but it removes the need
+#     for torch entirely — worth 282 MB compressed, see note 4.
+#  3. The app user is created BEFORE the COPYs, with ownership set inline via
+#     COPY --chown. A trailing `chown -R /app` rewrites every file's metadata,
+#     which makes Docker store a whole second copy of the tree (measured: an
+#     836 MB layer that carried nothing new).
+
+# --- stage 1: prune the embedding-model cache --------------------------------
+# Pruned in a throwaway stage so the discarded weights never land in a layer of
+# the final image. Deleting them in a later RUN would not help: image layers are
+# additive, so the bytes would still ship inside the earlier COPY layer.
+FROM python:3.13-slim AS model-cache
+COPY models/cache/models--BAAI--bge-base-en-v1.5/ /cache/models--BAAI--bge-base-en-v1.5/
+RUN set -eux; \
+    cd /cache/models--BAAI--bge-base-en-v1.5; \
+    # The HF cache keeps content-addressed blobs behind snapshot symlinks, so
+    # dropping a symlink frees nothing on its own — the orphaned blobs are
+    # garbage-collected right after.
+    rm -f snapshots/*/pytorch_model.bin; \
+    rm -f snapshots/*/model.safetensors; \
+    find snapshots -type l -exec readlink {} \; | sed 's#.*/##' | sort -u > /tmp/keep; \
+    for b in blobs/*; do \
+        grep -qxF "$(basename "$b")" /tmp/keep || rm -f "$b"; \
+    done; \
+    rm -f /tmp/keep; \
+    # Fail the build loudly if the one format we do load ever goes missing.
+    ls snapshots/*/onnx/model.onnx >/dev/null
+
+# Embedding parity gate (#1070). The ONNX backend replaced torch +
+# sentence-transformers; this asserts it still reproduces the vectors that path
+# produced, against golden references committed in tests/fixtures/embedding/.
+#
+# It runs HERE, not in CI: models/cache/ is gitignored, so the equivalent pytest
+# skips wherever the model is absent — which is every CI runner. This stage is
+# throwaway, so onnxruntime costs the final image nothing, and a drift in
+# embeddings now fails the build instead of silently degrading search.
+COPY src/services/embedding/onnx_backend.py /verify/onnx_backend.py
+COPY scripts/verify_embedding_parity.py /verify/verify_embedding_parity.py
+COPY tests/fixtures/embedding/ /verify/fixtures/
+COPY requirements-prod.txt /verify/requirements-prod.txt
+COPY constraints-prod.txt /verify/constraints-prod.txt
+# Resolve the runtime from requirements-prod.txt rather than pip's latest, so the
+# gate verifies the onnxruntime/tokenizers the FINAL image installs below. An
+# unpinned install here would attest parity for a runtime that never ships.
+#
+# The grep alone never actually did that: all three of these carry a bare `>=`
+# floor, so `pip install onnxruntime>=1.17.0` resolves to whatever is latest —
+# precisely the thing the paragraph above claims to avoid. `-c` is what makes it
+# true (#1262), and because it is the same constraints file the final stage
+# installs under, the gate now attests parity for the runtime that ships.
+RUN pip install --no-cache-dir -c /verify/constraints-prod.txt \
+      $(grep -E '^(onnxruntime|tokenizers|numpy)[<>=!]' /verify/requirements-prod.txt) \
+ && python /verify/verify_embedding_parity.py /cache /verify/fixtures
+
+# --- stage 2: the base image -------------------------------------------------
+FROM python:3.13-slim
+
+# Create the non-root user first, so every COPY below can set final ownership
+# inline (see note 3 above).
+RUN useradd -m -u 1000 assetatlas
+
+WORKDIR /app
+
+# /app is still empty here, so this recursive chown is cheap — and stays cheap.
+RUN mkdir -p /app/logs && chown -R assetatlas:assetatlas /app
+
+# System dependencies + Python dependencies in a single layer: gcc is only
+# needed while pip builds sdists, and purging it in a *later* layer would not
+# reclaim its bytes.
+#
+# The manifest is only half the install: 49 of its 52 lines declare a `>=` floor
+# with no cap (two are pinned exactly, and only mcp carries an upper bound), so
+# without `-c` this layer bakes whatever was latest the minute it ran. That is
+# how a rebuild would have shipped mcp 2.0.0 (#1262) — dev CI cannot see it,
+# because the fleet's warm site-packages never resolve cold, and a base rebuild
+# is the one cold resolve that reaches production. constraints-prod.txt pins the
+# whole transitive closure; both files are in the deps fingerprint, so the
+# published image cannot drift away from these pins.
+COPY requirements-prod.txt ./requirements.txt
+COPY constraints-prod.txt ./constraints.txt
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    gcc \
+    curl \
+    && pip install --no-cache-dir -r requirements.txt -c constraints.txt \
+    && apt-get purge -y --auto-remove gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy reference data files needed at runtime.
+#
+# Skipped (not file-backed despite historical Dockerfile.base entries):
+#   - rules.csv, ipam.csv, asset_os.csv, asset_os_normalized.csv,
+#     category_overrides.csv  → database tables populated by migrations
+#   - chromadb/                → runtime-populated at first boot
+#   - os_global.csv            → no app code reads it; phantom reference
+#   - category_subcategory_mapping.json → no app code reads it; phantom reference
+COPY --chown=assetatlas:assetatlas data/mac_ranges.csv ./data/mac_ranges.csv
+COPY --chown=assetatlas:assetatlas data/categories.json ./data/categories.json
+COPY --chown=assetatlas:assetatlas data/device_knowledge_base/ ./data/device_knowledge_base/
+
+# IP geolocation database (DB-IP Lite City, CC-BY-4.0)
+COPY --chown=assetatlas:assetatlas data/dbip-city-lite.mmdb ./data/dbip-city-lite.mmdb
+
+# Embedding model cache (BGE-base-en-v1.5, ONNX export only since #1070 —
+# required for semantic search), pruned in the model-cache stage above.
+COPY --chown=assetatlas:assetatlas --from=model-cache /cache/ ./models/cache/
+
+USER assetatlas
+
+# Force offline mode for HuggingFace/sentence-transformers (air-gapped deployment)
+ENV HF_HUB_OFFLINE=1
+ENV TRANSFORMERS_OFFLINE=1
+ENV HF_HOME=/app/models/cache
+ENV SENTENCE_TRANSFORMERS_HOME=/app/models/cache
+
+EXPOSE 5001

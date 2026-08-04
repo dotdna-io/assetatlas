@@ -1,0 +1,81 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Unified live tool-activity chip on the streaming bubble. The toggle
+   mirrors the collapsed-thinking header (Message.module.css
+   .thinkingToggle/.caret) so live progress and history read as one visual
+   language. */
+
+.toggle {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: var(--space-1) 0 0;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-family: inherit;
+  font-style: italic;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.toggle:hover {
+  color: var(--text-secondary);
+}
+
+.caret {
+  display: inline-block;
+  font-size: 10px;
+  width: 10px;
+  text-align: center;
+}
+
+/* Small ring spinner shown while any call is running (the ⟳ in the
+   approved design). Sized to sit inline with the xs label. */
+.spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--border);
+  border-top-color: var(--text-secondary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+/* Expanded per-call rows, mirroring the history view's .toolDetails rows
+   (Message.module.css). Indented to align under the label text, past the
+   caret column. */
+.details {
+  margin-top: var(--space-2);
+  margin-left: calc(10px + var(--space-1));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.detail {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-xs);
+}
+
+.detailStatus {
+  color: var(--text-tertiary);
+}
+
+.detailName {
+  color: var(--text-secondary);
+  font-weight: 600;
+}

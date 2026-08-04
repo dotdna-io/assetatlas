@@ -1,0 +1,31 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="butterfly-top" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="butterfly-bottom" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Center horizontal line -->
+  <line x1="15" y1="60" x2="105" y2="60" stroke="#9CA3AF" stroke-width="2"/>
+
+  <!-- Top bars (positive/above) -->
+  <rect x="20" y="40" width="10" height="20" rx="1" fill="url(#butterfly-top)" opacity="0.9"/>
+  <rect x="35" y="45" width="10" height="15" rx="1" fill="url(#butterfly-top)" opacity="0.9"/>
+  <rect x="50" y="35" width="10" height="25" rx="1" fill="url(#butterfly-top)" opacity="0.9"/>
+  <rect x="65" y="50" width="10" height="10" rx="1" fill="url(#butterfly-top)" opacity="0.9"/>
+  <rect x="80" y="42" width="10" height="18" rx="1" fill="url(#butterfly-top)" opacity="0.9"/>
+  <rect x="95" y="38" width="10" height="22" rx="1" fill="url(#butterfly-top)" opacity="0.9"/>
+
+  <!-- Bottom bars (negative/below) -->
+  <rect x="20" y="60" width="10" height="15" rx="1" fill="url(#butterfly-bottom)" opacity="0.9"/>
+  <rect x="35" y="60" width="10" height="20" rx="1" fill="url(#butterfly-bottom)" opacity="0.9"/>
+  <rect x="50" y="60" width="10" height="10" rx="1" fill="url(#butterfly-bottom)" opacity="0.9"/>
+  <rect x="65" y="60" width="10" height="18" rx="1" fill="url(#butterfly-bottom)" opacity="0.9"/>
+  <rect x="80" y="60" width="10" height="12" rx="1" fill="url(#butterfly-bottom)" opacity="0.9"/>
+  <rect x="95" y="60" width="10" height="8" rx="1" fill="url(#butterfly-bottom)" opacity="0.9"/>
+</svg>

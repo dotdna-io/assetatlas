@@ -1,0 +1,388 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Search bar wrapper — positions the suggestion panel */
+.searchWrap {
+  position: relative;
+  width: 100%;
+  margin-bottom: 12px;
+  z-index: 50;
+}
+
+/* Expand animation on the input only, not the wrapper */
+.searchInput {
+  animation: expandInput 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes expandInput {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Search icon — magnifying glass inside the input */
+.searchIcon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.searchInput {
+  height: 54px;
+  width: 100%;
+  padding: 0 12px 0 48px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 60%),
+    var(--input-bg, var(--card-bg));
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.30),
+    0 8px 24px -6px rgba(0, 0, 0, 0.55),
+    0 2px 6px -1px rgba(0, 0, 0, 0.35);
+}
+
+:global(body:not(.dark-mode)) .searchInput {
+  border: 1px solid var(--border);
+  background: var(--input-bg, var(--card-bg));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 6px 18px -6px rgba(60, 65, 80, 0.20),
+    0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.searchInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.30),
+    0 0 0 3px rgba(var(--accent-rgb), 0.22),
+    0 8px 26px -6px rgba(0, 0, 0, 0.60);
+}
+
+:global(body:not(.dark-mode)) .searchInput:focus {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0 0 3px rgba(var(--accent-rgb), 0.18),
+    0 8px 22px -6px rgba(60, 65, 80, 0.22);
+}
+
+.searchInputExpanded,
+.searchInputExpanded:focus {
+  border-color: var(--accent);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: transparent !important;
+}
+
+:global(body.dark-mode) .searchInputExpanded {
+  background: var(--card-bg);
+}
+
+/* -------------------------------------------------------------------
+   Suggestion panel — glassmorphic dropdown below the search input
+   ------------------------------------------------------------------- */
+
+.panel {
+  position: absolute;
+  top: calc(100%);
+  left: 0;
+  right: 0;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 200;
+  background-color: #ffffff;
+  border: 1px solid var(--accent);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 6px 0;
+}
+
+:global(body.dark-mode) .panel {
+  background-color: var(--card-bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* Hint row — floats at bottom-right of panel */
+.panelHint {
+  display: flex;
+  gap: 6px;
+  padding: 4px 8px;
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  justify-content: flex-end;
+  z-index: 1;
+  background: inherit;
+  border-radius: 3px;
+}
+
+.kbd {
+  font-size: 10px;
+  font-family: var(--font-family);
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 4px;
+  line-height: 1.4;
+}
+
+/* -------------------------------------------------------------------
+   Field suggestions — horizontal columns grouped by source
+   ------------------------------------------------------------------- */
+
+.fieldColumns {
+  display: flex;
+  overflow-x: auto;
+  gap: 0;
+}
+
+.fieldColumn {
+  min-width: 160px;
+  max-width: 220px;
+  border-right: 1px solid var(--border);
+  padding: 6px;
+  flex-shrink: 0;
+}
+
+.fieldColumn:last-child {
+  border-right: none;
+}
+
+.fieldGroupHeader {
+  padding: 4px 4px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+  user-select: none;
+}
+
+/* Data source badge overrides for field group header */
+.sourceBadge {
+  font-size: 10px;
+  margin-bottom: 4px;
+  color: #1e293b;
+}
+
+:global(body.dark-mode) .sourceBadge {
+  color: #f1f5f9;
+}
+
+.fieldItem {
+  display: block;
+  width: 100%;
+  padding: 5px 10px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background var(--transition-fast);
+}
+
+.fieldItem:hover {
+  background: var(--bg-secondary);
+}
+
+/* -------------------------------------------------------------------
+   Pill suggestions — operator and value modes
+   ------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------
+   Operator suggestions — inline text with pipe separators
+   ------------------------------------------------------------------- */
+
+.operatorRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  padding: 8px 140px 8px 12px;
+}
+
+.operatorItem {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: background var(--transition-fast);
+}
+
+.operatorItem:hover {
+  background: var(--bg-secondary);
+}
+
+.operatorSep {
+  color: var(--text-tertiary);
+  padding: 0 2px;
+  user-select: none;
+  font-size: var(--font-size-sm);
+}
+
+/* -------------------------------------------------------------------
+   Value suggestions — pill row
+   ------------------------------------------------------------------- */
+
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.pill:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.pillCount {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.pill:hover .pillCount {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* -------------------------------------------------------------------
+   Value suggestions — plain text in one row with overflow
+   ------------------------------------------------------------------- */
+
+.valueRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  padding: 8px 12px;
+}
+
+.valueItem {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: background var(--transition-fast);
+}
+
+.valueItem:hover {
+  background: var(--bg-secondary);
+}
+
+.valueSep {
+  color: var(--text-tertiary);
+  padding: 0 2px;
+  user-select: none;
+  font-size: var(--font-size-sm);
+}
+
+.valueOverflow {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.valueOverflow:hover {
+  background-color: rgba(100, 116, 139, 0.2);
+}
+
+/* -------------------------------------------------------------------
+   Shared selection highlight (keyboard navigation)
+   ------------------------------------------------------------------- */
+
+.selected {
+  background: var(--accent) !important;
+  color: white !important;
+}
+
+.selected .pillCount {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* -------------------------------------------------------------------
+   Overflow expand
+   ------------------------------------------------------------------- */
+
+.moreButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  transition: background var(--transition-fast);
+}
+
+.moreButton:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* -------------------------------------------------------------------
+   Fuzzy match highlight
+   ------------------------------------------------------------------- */
+
+.matchHighlight {
+  color: var(--accent);
+  font-weight: 600;
+}

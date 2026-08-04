@@ -1,0 +1,43 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.section { }
+.toggleRow { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+.toggleLabel { font-size: var(--font-size-base); font-weight: 600; color: var(--text-primary); }
+/* Segmented preset row — matches the look-and-feel of the alerts page
+   time-range picker: single row, no gaps, only the outer corners
+   rounded, inner borders shared between adjacent buttons. */
+.presets {
+  display: flex;
+  gap: 0;
+  margin-bottom: var(--space-4);
+  overflow-x: auto;
+}
+.presetButton {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: var(--font-family);
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  white-space: nowrap;
+}
+.presetButton:first-child { border-radius: 6px 0 0 6px; }
+.presetButton:last-child { border-radius: 0 6px 6px 0; }
+.presetButton:not(:first-child) { border-left: none; }
+.presetButtonActive {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.presetButtonActive + .presetButton { border-left: none; }
+.field { composes: field from './wizard-form.module.css'; }
+.fieldLabel { composes: fieldLabel from './wizard-form.module.css'; }
+.cronInput { height: 36px; width: 100%; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font-size: var(--font-size-sm); font-family: monospace; outline: none; }
+.cronInput:focus { border-color: var(--accent); }
+.timezoneSelect { height: 36px; width: 100%; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font-size: var(--font-size-sm); }
+.nextRuns { margin-top: var(--space-4); }
+.nextRunsTitle { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-2); }
+.nextRunsList { list-style: none; padding: 0; }
+.nextRunItem { font-size: var(--font-size-sm); color: var(--text-secondary); padding: 2px 0; }
+.disabledMessage { color: var(--text-tertiary); padding: var(--space-2) 0; font-size: var(--font-size-sm); }

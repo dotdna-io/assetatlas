@@ -1,0 +1,15 @@
+{
+  "schemas": [
+    {
+      "name": "default",
+      "full_name": "main.default",
+      "catalog_name": "main",
+      "catalog_type": "MANAGED_CATALOG",
+      "comment": "Default schema",
+      "owner": "admin@example.com",
+      "created_at": 1700000000000,
+      "created_by": "admin@example.com",
+      "schema_id": "schema-001"
+    }
+  ]
+}

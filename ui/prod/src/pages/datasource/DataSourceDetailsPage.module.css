@@ -1,0 +1,503 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* DataSourceDetailsPage — redesigned layout
+   Top region: 2-column grid
+   - Left: square source-info card with circular gauge
+   - Right: butterfly chart on top + 4 metric tiles below
+   Below: asset table with explorer-style toolbar (no internal scroll)
+*/
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.notFound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.notFoundText { font-size: 15px; color: var(--text-secondary); }
+.notFoundLink { font-size: 13px; color: var(--accent); text-decoration: none; }
+.notFoundLink:hover { text-decoration: underline; }
+
+/* ── Top region: source (left, content-width) + butterfly (right, fills
+      remaining space). Each section sits in its own glossyCard surface
+      so the visual separation comes from the cards themselves rather
+      than a divider line. Grid items stretch vertically so the
+      butterfly card matches the source card's height — the chart's
+      centre line then sits at the exact vertical middle of the row. ── */
+.topGrid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px;
+  margin-bottom: 0;
+}
+
+/* Source card: 2-column grid, three left/right pairs.
+     row 1  logo + name        ↔ asset count
+     row 2  health status      ↔ last sync
+     row 3  category pie       ↔ confidence donut gauge
+   `align-items: center` keeps the row's items vertically centred so
+   the asset count visually sits on the same line as the source name
+   in row 1, even though the two have different font sizes. Row 3
+   overrides via `align-self: start` since neither the score bars nor
+   the donut benefit from being centred in the tall row. */
+.sourceCard {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 64px;
+  row-gap: 24px;
+}
+
+.sourceGauge,
+.categoryDist {
+  align-self: start;
+}
+
+/* Definite width so the linear gauge bars render at a consistent length
+   rather than collapsing to the widest text row. */
+.categoryDist {
+  width: 250px;
+}
+
+/* Donut sits in the right column on row 3. Small margin-top nudges
+   it a few pixels below the first posture-score row so the two read
+   as visually balanced rather than the donut hugging the row top. */
+.sourceGauge {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
+.butterflyCard {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+
+/* ── Source info ── */
+
+/* Logo + name, no card chrome behind the logo */
+.logoNameGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sourceLogo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  display: block;
+}
+
+.sourceLogoFallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+.sourceName {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Left sub-column: count + "assets" */
+.countGroup {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.countValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.countLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Right sub-column: info fields — uppercase label prefix + colored value
+   on one line, optional small detail on a second line. */
+.infoField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Wrapper for the Health-status / Last-sync row inside .sourceCard.
+   Spans both columns of the parent grid and uses subgrid so the two
+   InfoFields inherit the parent's column tracks (keeping the original
+   left/right column alignment) but share a single, deterministic row
+   track — eliminating the sub-pixel offset that appeared when the two
+   cells were independent grid items. */
+.infoRow {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+.infoFieldHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.infoFieldLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.infoFieldValue {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.infoFieldDetail {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+/* Status / sync colour states — shared with .infoFieldValue */
+.statusOk      { color: var(--success); }
+.statusWarning { color: var(--warning); }
+.statusError   { color: var(--error); }
+.statusNeutral { color: var(--text-secondary); }
+
+.ok      { color: var(--success); }
+.aging   { color: var(--warning); }
+.stale   { color: var(--error); }
+.never   { color: var(--text-tertiary); }
+
+/* ── Butterfly card ── */
+
+.butterflyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  /* Match the source card's row 1 height (logo = 32px) so the chart
+     title visually sits on the same line as the source name and the
+     asset count on the left. */
+  min-height: 32px;
+}
+
+/* Title + summary stats group on the left of the header. The
+   leading offset on the wrapper (not the title itself) keeps the
+   whole group aligned with the chart's centre-line column — the
+   stats inherit the same indent and sit right next to the title. */
+.butterflyTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-left: 56px;
+}
+
+.cardTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.statAdded,
+.statReturned,
+.statRemoved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.statAdded    { color: var(--success); }
+.statReturned { color: var(--warning); }
+.statRemoved  { color: var(--error); }
+
+.statArrow {
+  flex-shrink: 0;
+}
+
+/* Inline text-style time picker — no chrome, just three options
+   separated by "|" pipes. Active value reads in primary text colour;
+   the others stay muted and brighten on hover. */
+.inlineTimePicker {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.inlineTimePickerSlot {
+  display: inline-flex;
+  align-items: center;
+}
+
+.inlineTimePickerOpt {
+  background: none;
+  border: none;
+  padding: 2px 8px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  transition: color var(--transition-fast);
+}
+
+.inlineTimePickerOpt:hover {
+  color: var(--text-primary);
+}
+
+.inlineTimePickerOptActive {
+  color: var(--text-primary);
+}
+
+.inlineTimePickerSep {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+  user-select: none;
+}
+
+.butterflyBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  /* Small tail padding keeps the bottom bars from kissing the card's
+     lower edge without shrinking the chart. The header (~24px in the
+     `sm` time-picker variant) remains above the chart area, so the
+     centre line sits slightly below the card's exact middle — but the
+     bars are large enough to look alive. */
+  padding-bottom: 16px;
+}
+
+.butterflyBody > * {
+  flex: 1;
+  min-height: 0;
+}
+
+.chartEmpty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* ── Asset table section ── */
+
+.tableSection {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toolbarLeft,
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Toolbar icons match the Explorer page's icons exactly: 32×32 hit
+   target, no border or filled background, muted resting colour, and
+   a soft tinted background on hover/active. */
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.iconBtn:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.iconBtnActive {
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.iconBtnWrap {
+  position: relative;
+}
+
+.resultCount {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* Page-size pill group — matches the Explorer page exactly: per-button
+   borders, slim vertical padding, accent fill on the active option. */
+.pageSizeGroup {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+}
+
+.pageSizeBtn {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: var(--font-family);
+  border: 1px solid var(--border);
+  background: var(--input-bg, var(--card-bg));
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.pageSizeBtn:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.pageSizeBtn:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.pageSizeBtn:not(:first-child) {
+  border-left: none;
+}
+
+.pageSizeBtnActive {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.pageSizeBtnActive + .pageSizeBtn {
+  border-left: none;
+}
+
+/* No internal scroll — page grows to fit row count */
+.tableWrap {
+  width: 100%;
+}
+
+/* ── Pagination ── */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pageBtn {
+  height: 32px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageBtn:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.pageNum {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Responsive: stack on narrow screens ── */
+@media (max-width: 1024px) {
+  .topGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .butterflyCard { min-height: 320px; }
+}
+
+@media (max-width: 720px) {
+  .sourceCard { grid-template-columns: 1fr; }
+}

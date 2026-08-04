@@ -1,0 +1,11 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "integration: tests requiring live database or external services",
+    "slow: tests that take more than 10 seconds",
+    "embedding: tests that load the sentence-transformers model (~490 MB)",
+]
+testpaths = ["tests", "src/modules/asset_generation/tests", "src/modules/tag_rules/tests", "src/modules/alert_delivery/tests", "src/modules/assets/tests"]
+pythonpath = ["."]
+addopts = "-m 'not integration and not embedding' --strict-markers"
+norecursedirs = ["_archive", "node_modules", ".git", "venv"]

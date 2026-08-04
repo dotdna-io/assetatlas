@@ -1,0 +1,58 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/**
+ * Global styles for the React application.
+ * Reset, base body styles, and shared layout primitives.
+ */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  color-scheme: light;
+  min-height: 100vh;
+  line-height: 1.6;
+  font-size: var(--font-size-base);
+}
+
+body.dark-mode {
+  background: var(--bg-primary);
+  color-scheme: dark;
+}
+
+/* Force light dropdown rendering for native selects in light mode */
+select {
+  color-scheme: light;
+}
+
+body.dark-mode select {
+  color-scheme: dark;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono);
+}

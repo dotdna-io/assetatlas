@@ -1,0 +1,143 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Report detail page — single report with chart editing */
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.headerLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.titleInput {
+  display: block;
+  width: 100%;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  margin: -4px -8px;
+  outline: none;
+  font-family: var(--font-family);
+  transition: border-color var(--transition-fast);
+}
+
+.titleInput:hover,
+.titleInput:focus {
+  border-color: var(--border);
+  background: var(--input-bg);
+}
+
+.titleInput[readonly],
+.titleInput[readonly]:hover,
+.titleInput[readonly]:focus {
+  border-color: transparent;
+  background: transparent;
+  cursor: default;
+}
+
+.titleInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.descInput {
+  display: block;
+  width: 100%;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  margin: 10px -8px 0;
+  outline: none;
+  font-family: var(--font-family);
+  resize: none;
+  transition: border-color var(--transition-fast);
+}
+
+.descInput:hover,
+.descInput:focus {
+  border-color: var(--border);
+  background: var(--input-bg);
+}
+
+.descInput[readonly],
+.descInput[readonly]:hover,
+.descInput[readonly]:focus {
+  border-color: transparent;
+  background: transparent;
+  cursor: default;
+  resize: none;
+}
+
+.descInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.saveBtn {
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.saveBtn.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 0;
+  gap: 16px;
+  color: var(--text-tertiary);
+}
+
+.emptyState p {
+  font-size: var(--font-size-sm);
+}
+
+.loadingWrap {
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
+}
+
+.iconBtn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.iconBtn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:global(body:not(.dark-mode)) .iconBtn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}

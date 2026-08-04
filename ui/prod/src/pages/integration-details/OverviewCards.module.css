@@ -1,0 +1,127 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.card {
+  composes: glossyCard from '../../styles/shared.module.css';
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+
+.cardTitle {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+:global(body:not(.dark-mode)) .cardTitle {
+  border-bottom-color: rgba(0,0,0,0.08);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+.row + .row {
+  border-top: 1px solid var(--border);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.value {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.statusDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: var(--space-1);
+}
+
+.healthy { background: var(--success); }
+.unhealthy { background: var(--error); }
+.unknown { background: var(--text-tertiary); }
+
+.recent { color: var(--success); }
+.stale { color: var(--warning); }
+.old { color: var(--error); }
+.never { color: var(--text-tertiary); }
+
+.valueOk {
+  composes: value;
+  color: var(--success);
+}
+.valueError {
+  composes: value;
+  color: var(--error);
+}
+
+.configKey {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+}
+
+.configValue {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.cardFooter {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.scrollList {
+  max-height: 420px;
+  overflow-y: auto;
+  margin-right: calc(-1 * var(--space-2));
+  padding-right: var(--space-2);
+}
+
+.nextRuns {
+  margin-top: var(--space-2);
+  list-style: none;
+  padding: 0;
+}
+
+.nextRunItem {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: 2px 0;
+}
+
+.testStatus {
+  margin-left: 8px;
+  font-size: var(--font-size-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.testSuccess { composes: testStatus; color: var(--success); }
+.testFailed  { composes: testStatus; color: var(--error); }
+
+/* Cron-style inline code chip — subtle bg so the expression reads as
+   code without competing with body text. Local to this card so we
+   don't restyle every <code> in the app. */
+.codeChip {
+  background: var(--bg-secondary);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
