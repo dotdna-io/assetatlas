@@ -61,7 +61,12 @@ class CustomHttpConnector(BaseConnector):
         self._static_body = dict(config.get("static_body") or {})
         self._timeout = int(config.get("request_timeout_seconds", 30))
         self._pagination_type = (config.get("pagination_type") or "none").lower()
-        self._max_pages = int(config.get("max_pages", 500))
+        # Default cap of 5000 pages × the default page size of 100 = 500,000
+        # records. The page size stays at 100: this connector speaks to
+        # arbitrary third-party APIs, and 100 is the size virtually all of
+        # them accept — the headroom for large estates comes from the page
+        # cap, which only binds when the API actually has more data.
+        self._max_pages = int(config.get("max_pages", 5000))
         self._page_size = int(config.get("page_size") or 100)
         self._offset_param = config.get("offset_param", "offset")
         self._limit_param = config.get("limit_param", "limit")
@@ -109,7 +114,25 @@ class CustomHttpConnector(BaseConnector):
         # writes the full blob into config. The wizard's generic
         # connector-form fallback uses this only if the custom step is not
         # rendered (e.g. when reviewing a saved config from a script).
-        return ConfigSchema().add_url("url", "Endpoint URL").build()
+        # max_pages is declared here as well so the cap stays visible and
+        # editable on that fallback form; the key name is load-bearing —
+        # customer configs already persist it.
+        return (
+            ConfigSchema()
+            .add_url("url", "Endpoint URL")
+            .add_number(
+                "max_pages", "Max Pagination Pages",
+                default=5000,
+                min_val=1,
+                max_val=100000,
+                description=(
+                    "Safety cap on API pages fetched per collection run — it stops a "
+                    "pagination loop that never terminates. At the default page size "
+                    "of 100, the default cap of 5,000 pages collects up to 500,000 records."
+                ),
+            )
+            .build()
+        )
 
     # ---- Validation ----------------------------------------------------------
 
@@ -427,6 +450,10 @@ class CustomHttpConnector(BaseConnector):
         for records in pages:
             for raw in records:
                 yield self._apply_bindings(raw)
+
+        # Static label: this string is persisted to integrations.last_error,
+        # and a configured URL can carry an API key in its query string.
+        self.warn_if_truncated(paginator, "Custom HTTP collection")
 
     def test_connection(self) -> Dict[str, Any]:
         """Single HTTP call to verify auth + endpoint reachability."""

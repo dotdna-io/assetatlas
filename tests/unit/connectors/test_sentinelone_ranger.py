@@ -205,3 +205,85 @@ class TestSentinelOneRangerConnector(ConnectorTestCase):
         """The _record_type field must be 'ranger_device'."""
         records = list(connector.fetch_data("batch-rectype"))
         assert records[0]["_record_type"] == "ranger_device"
+
+
+# ---------------------------------------------------------------------------
+# Issue #1334 — paginator cap-hit surfaces as a collection warning
+# ---------------------------------------------------------------------------
+
+
+def _devices_page(device_id, next_cursor):
+    return {
+        "data": [{"id": device_id}],
+        "pagination": {"nextCursor": next_cursor},
+    }
+
+
+class TestSentinelOneRangerTruncation:
+    """Each scope paginates independently, so a cap-hit must be relayed
+    per scope, naming the scope — an operator with 20 scopes needs to know
+    which one truncated."""
+
+    mock_config = {
+        "url": BASE_URL,
+        "api_token": "test-api-token",
+        "account_ids": "acct-001",
+        # Shrink the 500-page cap so a cap-hit takes two mocked pages.
+        "max_pagination_pages": 2,
+    }
+
+    @responses.activate
+    def test_capped_run_records_one_warning_naming_scope(self):
+        # Two full pages, each handing back a fresh cursor: more data waiting.
+        responses.add(responses.GET, RANGER_URL, json=_devices_page("dev-1", "cursor-2"), status=200)
+        responses.add(responses.GET, RANGER_URL, json=_devices_page("dev-2", "cursor-3"), status=200)
+
+        connector = SentinelOneRangerConnector(self.mock_config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 2
+        warnings = connector.collection_warnings
+        assert len(warnings) == 1, warnings
+        assert "SentinelOne Ranger devices (account acct-001)" in warnings[0]
+        assert "2-page cap" in warnings[0]
+
+    @responses.activate
+    def test_end_of_data_records_no_warning(self):
+        """The off-by-one: a final page that fills the cap but hands back no
+        cursor is end-of-data, not truncation."""
+        responses.add(responses.GET, RANGER_URL, json=_devices_page("dev-1", "cursor-2"), status=200)
+        responses.add(responses.GET, RANGER_URL, json=_devices_page("dev-2", None), status=200)
+
+        connector = SentinelOneRangerConnector(self.mock_config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 2
+        assert connector.collection_warnings == []
+
+    def test_config_schema_declares_max_pagination_pages(self):
+        """The cap is operator-settable: declared with the connector's default."""
+        field = SentinelOneRangerConnector.get_config_schema()["max_pagination_pages"]
+        assert field["type"] == "number"
+        assert field["required"] is False
+        assert field["default"] == 500
+
+    @responses.activate
+    def test_only_the_truncated_scope_warns(self):
+        """Two scopes, one truncated: exactly one warning, naming the right
+        scope. Catches a paginator instance hoisted out of the scope loop or
+        a relay placed after it — both read only the last scope's flag."""
+        # Scope acct-001 truncates: two full pages with fresh cursors.
+        responses.add(responses.GET, RANGER_URL, json=_devices_page("dev-1", "cursor-2"), status=200)
+        responses.add(responses.GET, RANGER_URL, json=_devices_page("dev-2", "cursor-3"), status=200)
+        # Scope acct-002 reaches end of data in one page.
+        responses.add(responses.GET, RANGER_URL, json=_devices_page("dev-3", None), status=200)
+
+        config = {**self.mock_config, "account_ids": "acct-001,acct-002"}
+        connector = SentinelOneRangerConnector(config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 3
+        warnings = connector.collection_warnings
+        assert len(warnings) == 1, warnings
+        assert "account acct-001" in warnings[0]
+        assert "acct-002" not in warnings[0]

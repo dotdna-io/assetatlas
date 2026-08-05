@@ -5,7 +5,7 @@ Handles all database queries for dashboard data using existing schema.
 """
 from typing import Dict, List, Optional, Any
 import logging
-from src.api.modules.settings.settings_schema import DEFAULT_CONFIDENCE_THRESHOLDS
+from src.modules.shared.confidence_thresholds import DEFAULT_CONFIDENCE_THRESHOLDS
 
 logger = logging.getLogger(__name__)
 

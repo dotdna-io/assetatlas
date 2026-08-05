@@ -445,7 +445,7 @@ class AnomalyRepository:
         shared defaults the fleet-wide bands use, so A6 bins assets identically to
         dashboard/charts/chat. Lives here so both the service (s20 histogram) and
         the A6 detector (via ctx.repo) resolve boundaries the same way."""
-        from src.api.modules.settings.settings_schema import DEFAULT_CONFIDENCE_THRESHOLDS
+        from src.modules.shared.confidence_thresholds import DEFAULT_CONFIDENCE_THRESHOLDS
         default_med, default_high = DEFAULT_CONFIDENCE_THRESHOLDS
         rows = self.db.execute_query(
             "SELECT key, value FROM system_settings WHERE category = 'asset_generation' "

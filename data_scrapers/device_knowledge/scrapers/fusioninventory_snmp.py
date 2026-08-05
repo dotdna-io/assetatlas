@@ -6,8 +6,8 @@ Clones https://github.com/fusioninventory/sysobject.ids.git and parses the
 ``sysobject.ids`` text file which maps SNMP sysObjectID OIDs to manufacturer
 and device type strings.
 
-File format (pipe-separated):
-  OID|manufacturer|device_type|model
+File format (tab-separated):
+  OID<TAB>manufacturer<TAB>device_type<TAB>model
 
 Output record shape:
   oid, manufacturer, device_type, category, subcategory, source
@@ -101,8 +101,8 @@ def _map_fi_type(fi_type: str) -> tuple[str, str] | None:
 def parse_sysobject_ids(lines: list[str]) -> list[dict[str, Any]]:
     """Parse ``sysobject.ids`` lines into structured records.
 
-    The file uses pipe-separated fields:
-      OID|Manufacturer|DeviceType[|Model]
+    The file uses tab-separated fields:
+      OID<TAB>Manufacturer<TAB>DeviceType[<TAB>Model]
 
     Lines starting with ``#`` or blank lines are skipped.
 

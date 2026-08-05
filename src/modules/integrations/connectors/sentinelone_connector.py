@@ -38,6 +38,7 @@ class SentinelOneConnector(BaseConnector):
         self.api_token = config.get('api_token')
         self.filters = config.get('filters', {})
         self.page_size = 1000
+        self.max_pagination_pages = int(config.get('max_pagination_pages', 500))
 
         if not self.base_url:
             raise ValueError("SentinelOne URL is required")
@@ -60,6 +61,17 @@ class SentinelOneConnector(BaseConnector):
                 'api_token', 'API Token',
                 required=True,
                 description='Service User API token with Account-level Viewer access (will be encrypted)',
+            )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                default=500,
+                min_val=1,
+                max_val=10000,
+                description=(
+                    'Safety cap on API pages fetched per collection run — it stops a '
+                    'pagination loop that never terminates. At the fixed page size '
+                    'of 1,000, the default cap of 500 pages collects up to 500,000 agents.'
+                ),
             )
             .build()
         )
@@ -255,10 +267,11 @@ class SentinelOneConnector(BaseConnector):
         Yields:
             Individual agent records
         """
-        paginator = CursorPaginator(max_pages=500)
+        paginator = CursorPaginator(max_pages=self.max_pagination_pages)
         for page in paginator.pages(self._fetch_agents_page):
             for agent in page:
                 yield agent
+        self.warn_if_truncated(paginator, "SentinelOne agents")
 
     def get_schema(self) -> Dict[str, Any]:
         """Return field schema for mapping configuration."""

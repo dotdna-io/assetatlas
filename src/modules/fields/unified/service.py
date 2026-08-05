@@ -6,7 +6,7 @@ catalog cache. Also powers the live preview over a sample of assets."""
 import uuid
 from typing import Any, Dict, List, Optional
 
-from src.api.middleware.error_handler import ValidationError, NotFoundError, ConflictError
+from src.modules.shared.exceptions import ValidationError, NotFoundError, ConflictError
 from src.modules.fields.encoding import encode, decode
 from src.modules.fields.models import VirtualField, InvalidFieldError
 from src.modules.fields.types import FieldDataType

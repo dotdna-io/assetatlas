@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Tests for the search blueprint (no auth required).
+"""Tests for the search blueprint (@jwt_required on all routes).
 
 Endpoints tested:
 - GET /api/search/synonyms       — synonym lookup table with ETag caching
@@ -29,31 +29,31 @@ def _restore_synonym_path(blueprint_app):
 class TestSearchSynonyms:
     """GET /api/search/synonyms -- serves static synonym JSON with ETag."""
 
-    def test_returns_200_with_json(self, client, blueprint_app):
+    def test_returns_200_with_json(self, client, blueprint_app, authed_headers):
         """Synonym endpoint returns 200 when file exists."""
-        resp = client.get("/api/search/synonyms")
+        resp = client.get("/api/search/synonyms", headers=authed_headers())
         assert resp.status_code == 200
         data = resp.get_json()
         # The real file is at static/synonym_lookup.json and should be present
         assert "synonyms" in data or "_metadata" in data
 
-    def test_etag_header_present(self, client, blueprint_app):
+    def test_etag_header_present(self, client, blueprint_app, authed_headers):
         """Response includes an ETag header for cache validation."""
-        resp = client.get("/api/search/synonyms")
+        resp = client.get("/api/search/synonyms", headers=authed_headers())
         if resp.status_code == 200:
             assert "ETag" in resp.headers
 
-    def test_cache_control_header(self, client, blueprint_app):
+    def test_cache_control_header(self, client, blueprint_app, authed_headers):
         """Response includes Cache-Control with max-age."""
-        resp = client.get("/api/search/synonyms")
+        resp = client.get("/api/search/synonyms", headers=authed_headers())
         if resp.status_code == 200:
             assert "Cache-Control" in resp.headers
             assert "max-age=3600" in resp.headers["Cache-Control"]
 
-    def test_conditional_request_304(self, client, blueprint_app):
+    def test_conditional_request_304(self, client, blueprint_app, authed_headers):
         """If-None-Match with matching ETag returns 304 Not Modified."""
         # First request to get the ETag
-        resp1 = client.get("/api/search/synonyms")
+        resp1 = client.get("/api/search/synonyms", headers=authed_headers())
         if resp1.status_code != 200:
             pytest.skip("Synonym file not found -- skipping 304 test")
 
@@ -63,15 +63,15 @@ class TestSearchSynonyms:
         # Second request with If-None-Match
         resp2 = client.get(
             "/api/search/synonyms",
-            headers={"If-None-Match": etag},
+            headers={**authed_headers(), "If-None-Match": etag},
         )
         assert resp2.status_code == 304
 
-    def test_conditional_request_stale_etag(self, client, blueprint_app):
+    def test_conditional_request_stale_etag(self, client, blueprint_app, authed_headers):
         """If-None-Match with non-matching ETag returns 200 with full body."""
         resp = client.get(
             "/api/search/synonyms",
-            headers={"If-None-Match": '"stale-etag-value"'},
+            headers={**authed_headers(), "If-None-Match": '"stale-etag-value"'},
         )
         # Should get a full response (200) or 404 if file missing
         assert resp.status_code in (200, 404)
@@ -79,28 +79,28 @@ class TestSearchSynonyms:
             data = resp.get_json()
             assert data is not None
 
-    def test_server_timestamp_added(self, client, blueprint_app):
+    def test_server_timestamp_added(self, client, blueprint_app, authed_headers):
         """Response includes _server.served_at timestamp."""
-        resp = client.get("/api/search/synonyms")
+        resp = client.get("/api/search/synonyms", headers=authed_headers())
         if resp.status_code == 200:
             data = resp.get_json()
             assert "_server" in data
             assert "served_at" in data["_server"]
 
-    def test_file_not_found_returns_404(self, client, blueprint_app):
+    def test_file_not_found_returns_404(self, client, blueprint_app, authed_headers):
         """When synonym file doesn't exist, returns 404."""
         blueprint_app.config["SYNONYM_LOOKUP_PATH"] = "/nonexistent/path/synonyms.json"
-        resp = client.get("/api/search/synonyms")
+        resp = client.get("/api/search/synonyms", headers=authed_headers())
         assert resp.status_code == 404
         data = resp.get_json()
         assert "error" in data
 
-    def test_invalid_json_returns_500(self, client, blueprint_app, tmp_path):
+    def test_invalid_json_returns_500(self, client, blueprint_app, authed_headers, tmp_path):
         """When synonym file contains invalid JSON, returns 500."""
         bad_file = tmp_path / "bad_synonyms.json"
         bad_file.write_text("{not valid json!!!")
         blueprint_app.config["SYNONYM_LOOKUP_PATH"] = str(bad_file)
-        resp = client.get("/api/search/synonyms")
+        resp = client.get("/api/search/synonyms", headers=authed_headers())
         assert resp.status_code == 500
         data = resp.get_json()
         assert "error" in data
@@ -109,21 +109,21 @@ class TestSearchSynonyms:
 class TestSearchSynonymStats:
     """GET /api/search/synonyms/stats -- synonym statistics."""
 
-    def test_stats_returns_200(self, client, blueprint_app):
+    def test_stats_returns_200(self, client, blueprint_app, authed_headers):
         """Stats endpoint returns 200 when file exists."""
-        resp = client.get("/api/search/synonyms/stats")
+        resp = client.get("/api/search/synonyms/stats", headers=authed_headers())
         # Could be 200 (file exists) or 404 (file not found)
         assert resp.status_code in (200, 404)
 
-    def test_stats_file_not_found_returns_404(self, client, blueprint_app):
+    def test_stats_file_not_found_returns_404(self, client, blueprint_app, authed_headers):
         """When synonym file doesn't exist, stats returns 404."""
         blueprint_app.config["SYNONYM_LOOKUP_PATH"] = "/nonexistent/path/synonyms.json"
-        resp = client.get("/api/search/synonyms/stats")
+        resp = client.get("/api/search/synonyms/stats", headers=authed_headers())
         assert resp.status_code == 404
         data = resp.get_json()
         assert data["exists"] is False
 
-    def test_stats_with_valid_file(self, client, blueprint_app, tmp_path):
+    def test_stats_with_valid_file(self, client, blueprint_app, authed_headers, tmp_path):
         """Stats returns expected fields when file is valid."""
         synonym_data = {
             "_metadata": {
@@ -141,7 +141,7 @@ class TestSearchSynonymStats:
         f.write_text(json.dumps(synonym_data))
         blueprint_app.config["SYNONYM_LOOKUP_PATH"] = str(f)
 
-        resp = client.get("/api/search/synonyms/stats")
+        resp = client.get("/api/search/synonyms/stats", headers=authed_headers())
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["exists"] is True

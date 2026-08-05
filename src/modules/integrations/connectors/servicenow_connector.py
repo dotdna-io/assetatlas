@@ -182,6 +182,19 @@ class ServiceNowConnector(BaseConnector):
                 max_val=10000,
                 description='Records to fetch per API request',
             )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                default=500,
+                min_val=1,
+                max_val=10000,
+                description=(
+                    'Safety cap on API pages fetched per collection run — it stops a '
+                    'pagination loop that never terminates. Applies to both the CMDB CI '
+                    'collection and each enrichment lookup table. At the default page '
+                    'size of 5,000, the default cap of 500 pages collects up to '
+                    '2,500,000 records.'
+                ),
+            )
             .add_boolean(
                 'enable_enrichment', 'Enable Data Enrichment',
                 default=True,
@@ -291,6 +304,8 @@ class ServiceNowConnector(BaseConnector):
 
                 yield ci_record
 
+        self.warn_if_truncated(paginator, "ServiceNow CMDB CIs")
+
     # ------------------------------------------------------------------
     # Internal: page fetcher for OffsetPaginator
     # ------------------------------------------------------------------
@@ -364,6 +379,12 @@ class ServiceNowConnector(BaseConnector):
                     sys_id = record.get('sys_id')
                     if sys_id:
                         lookup_data[sys_id] = record
+
+            # A truncated lookup table loses no assets — it under-enriches them.
+            self.warn_if_truncated(
+                paginator,
+                f"ServiceNow enrichment lookup table {table_name}",
+            )
 
             self.logger.info(f"Loaded {len(lookup_data)} records from {table_name}")
 

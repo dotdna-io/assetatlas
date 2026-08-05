@@ -7,7 +7,7 @@ import logging
 import psycopg2
 from typing import Any, Dict, List, Optional
 
-from src.api.middleware.error_handler import ConflictError
+from src.modules.shared.exceptions import ConflictError
 from src.modules.fields.types import FieldDataType
 
 logger = logging.getLogger(__name__)

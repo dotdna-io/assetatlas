@@ -130,6 +130,17 @@ class CrowdStrikeConnector(BaseConnector):
                 max_val=10000,
                 description='Number of device records per API request (5000 recommended)',
             )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                default=100,
+                min_val=1,
+                max_val=10000,
+                description=(
+                    'Safety cap on API pages fetched per collection run — it stops a '
+                    'pagination loop that never terminates. At the default page size '
+                    'of 5,000, the default cap of 100 pages collects up to 500,000 devices.'
+                ),
+            )
             .build()
         )
 
@@ -194,6 +205,7 @@ class CrowdStrikeConnector(BaseConnector):
             self.logger.info(f"Fetched page {page_count} ({len(page)} devices)")
             for record in page:
                 yield self._normalize_record(record)
+        self.warn_if_truncated(paginator, "CrowdStrike devices")
 
     # ------------------------------------------------------------------
     # Internal: page fetcher for CursorPaginator

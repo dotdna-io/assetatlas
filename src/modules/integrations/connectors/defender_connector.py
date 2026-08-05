@@ -45,6 +45,7 @@ class DefenderConnector(BaseConnector):
     def __init__(self, config: Dict[str, Any]):
         self.tenant_id = config.get('tenant_id', '')
         self.page_size = int(config.get('page_size', 10000))
+        self.max_pagination_pages = int(config.get('max_pagination_pages', 500))
         super().__init__(config)
 
     # ------------------------------------------------------------------
@@ -108,6 +109,17 @@ class DefenderConnector(BaseConnector):
                 max_val=10000,
                 description='Records to fetch per API request (max 10,000)',
             )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                default=500,
+                min_val=1,
+                max_val=10000,
+                description=(
+                    'Safety cap on API pages fetched per collection run — it stops a '
+                    'pagination loop that never terminates. At the default page size '
+                    'of 10,000, the default cap of 500 pages collects up to 5,000,000 machines.'
+                ),
+            )
             .build()
         )
 
@@ -156,7 +168,7 @@ class DefenderConnector(BaseConnector):
         """Fetch machines from Defender for Endpoint with @odata.nextLink pagination."""
         self.auth.authenticate()
 
-        paginator = LinkPaginator(max_pages=500)
+        paginator = LinkPaginator(max_pages=self.max_pagination_pages)
 
         page_count = 0
 
@@ -176,6 +188,7 @@ class DefenderConnector(BaseConnector):
             for record in page:
                 self._compute_network_fields(record)
                 yield record
+        self.warn_if_truncated(paginator, "Defender for Endpoint machines")
 
     # ------------------------------------------------------------------
     # Public API

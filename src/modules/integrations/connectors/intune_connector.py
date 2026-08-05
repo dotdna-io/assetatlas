@@ -47,6 +47,7 @@ class IntuneConnector(BaseConnector):
     def __init__(self, config: Dict[str, Any]):
         self.field_mode = config.get('field_mode', 'comprehensive').lower()
         self.page_size = int(config.get('page_size', 999))
+        self.max_pagination_pages = int(config.get('max_pagination_pages', 500))
         super().__init__(config)
 
     def _build_auth(self):
@@ -103,6 +104,17 @@ class IntuneConnector(BaseConnector):
                 max_val=999,
                 description='Records to fetch per API request',
             )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                default=500,
+                min_val=1,
+                max_val=10000,
+                description=(
+                    'Safety cap on API pages fetched per collection run — it stops a '
+                    'pagination loop that never terminates. At the default page size '
+                    'of 999, the default cap of 500 pages collects up to ~500,000 devices.'
+                ),
+            )
             .build()
         )
 
@@ -153,7 +165,7 @@ class IntuneConnector(BaseConnector):
         elif self.field_mode == 'comprehensive':
             params['$select'] = ','.join(self.COMPREHENSIVE_FIELDS)
 
-        paginator = LinkPaginator(max_pages=500)
+        paginator = LinkPaginator(max_pages=self.max_pagination_pages)
 
         def fetch_page(url):
             if url is None:
@@ -170,6 +182,7 @@ class IntuneConnector(BaseConnector):
             page_count += 1
             self.logger.info(f"Fetched page {page_count} ({len(page)} devices)")
             yield from page
+        self.warn_if_truncated(paginator, "Intune managed devices")
 
     def get_schema(self) -> Dict[str, Any]:
         field_metadata = {

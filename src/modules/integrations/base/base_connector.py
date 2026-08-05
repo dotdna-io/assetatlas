@@ -57,6 +57,11 @@ class BaseConnector(ABC):
         self.config = config
         self.logger = logger or self._setup_default_logger()
 
+        # Per-run collection warnings (e.g. paginator cap-hit). Re-initialised
+        # at the top of fetch_data() so each run starts clean; readable via
+        # the collection_warnings property afterwards.
+        self._collection_warnings: List[str] = []
+
         # Initialize components
         self._validate_metadata()
         self.auth = self._build_auth()
@@ -111,6 +116,7 @@ class BaseConnector(ABC):
             Individual records as dictionaries with injected metadata
         """
         self._stats = {"total": 0, "filtered": 0, "errors": 0}
+        self._collection_warnings = []
         start_time = self.log_execution_start(batch_id)
 
         try:
@@ -138,6 +144,62 @@ class BaseConnector(ABC):
                 batch_id, start_time, success=False, error_message=str(e)
             )
             raise
+
+    # ===== Collection Warnings =====
+
+    def record_collection_warning(self, message: str) -> None:
+        """Log a collection problem at WARNING and record it for this run.
+
+        Recorded warnings survive the fetch loop — integration_service holds
+        the connector instance across the run, so anything appended here is
+        readable via collection_warnings afterwards.
+
+        A message already recorded for this run is logged again but NOT
+        recorded twice: a per-catalog/per-schema paginator (e.g. Databricks
+        Unity Catalog) can hit the same cap thousands of times, and the
+        recorded list feeds operator-facing state.
+        """
+        self.logger.warning(message)
+        if message not in self._collection_warnings:
+            self._collection_warnings.append(message)
+
+    @property
+    def collection_warnings(self) -> List[str]:
+        """Warnings recorded during the current/last fetch_data() run.
+
+        Returns a copy — callers must not be able to mutate connector state.
+        """
+        return list(self._collection_warnings)
+
+    def record_truncation_warning(self, label: str, max_pages) -> None:
+        """Record that `label` stopped on a page cap rather than on end-of-data.
+
+        For connectors that paginate with their own loop instead of a
+        base/pagination.py paginator; warn_if_truncated delegates here so the
+        wording lives in exactly one place.
+        """
+        cap_text = f"the {max_pages}-page cap" if max_pages is not None else "its page cap"
+        self.record_collection_warning(
+            f"{label} truncated at {cap_text} — more pages were "
+            f"available and the remaining records were not collected."
+        )
+
+    def warn_if_truncated(self, paginator, label: str) -> None:
+        """Relay a paginator's cap-hit into a collection warning.
+
+        Call after exhausting ``paginator.pages(...)`` — the flag is only
+        meaningful once the generator is done. A genuine end-of-data leaves
+        ``truncated`` False and emits nothing; an abandoned generator (e.g.
+        the sample-data preview) is not a cap-hit either.
+
+        Both attributes are read defensively: this is a *warning* helper, and
+        an AttributeError raised here would propagate out of the connector's
+        record generator and fail the whole run.
+        """
+        if getattr(paginator, "truncated", False):
+            self.record_truncation_warning(
+                label, getattr(paginator, "max_pages", None)
+            )
 
     @abstractmethod
     def _collect_records(self, batch_id: str) -> Iterator[Dict[str, Any]]:

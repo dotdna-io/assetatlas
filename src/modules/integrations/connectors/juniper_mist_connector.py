@@ -26,7 +26,7 @@ MIST_REGIONS = {
     'eu': 'https://api.eu.mist.com/api/v1',
 }
 
-MAX_PAGINATION_PAGES = 100
+MAX_PAGINATION_PAGES = 500  # Default safety cap; overridable via max_pagination_pages config
 MAX_PAGE_SIZE = 1000
 DEFAULT_PAGE_SIZE = 100
 API_TIMEOUT = 120
@@ -75,6 +75,11 @@ class JuniperMistConnector(BaseConnector):
             self.page_size = DEFAULT_PAGE_SIZE
         else:
             self.page_size = min(int(raw_page_size), MAX_PAGE_SIZE)
+
+        # Pagination safety cap (per endpoint)
+        self.max_pagination_pages = int(
+            config.get('max_pagination_pages', MAX_PAGINATION_PAGES)
+        )
 
         # Resolve base URL from region
         self.region = config.get('region', 'global')
@@ -135,6 +140,13 @@ class JuniperMistConnector(BaseConnector):
                 min_val=1,
                 max_val=MAX_PAGE_SIZE,
                 description='Number of records per API request',
+            )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                default=MAX_PAGINATION_PAGES,
+                min_val=1,
+                max_val=10000,
+                description='Safety cap on pages fetched per endpoint (cap × page size records max)',
             )
             .add_boolean(
                 'collect_devices', 'Collect Devices',
@@ -209,7 +221,7 @@ class JuniperMistConnector(BaseConnector):
         params = dict(params or {})
         params['limit'] = self.page_size
 
-        for page in range(MAX_PAGINATION_PAGES):
+        for page in range(self.max_pagination_pages):
             params['page'] = page + 1
             data = self._request('GET', path, params=params)
 
@@ -222,6 +234,11 @@ class JuniperMistConnector(BaseConnector):
 
             if len(records) < self.page_size:
                 break
+        else:
+            # The cap, not the data, ended the loop — more pages may exist.
+            self.record_truncation_warning(
+                f'Juniper Mist {path}', self.max_pagination_pages,
+            )
 
     # ------------------------------------------------------------------
     # Organization discovery

@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TableRenderer } from '../TableRenderer';
 import { makeTableArtifact } from './fixtures';
+import { getCategoryColor } from '@/components/ui/CategoryIcon';
 
 
 describe('TableRenderer · keyvalue layout', () => {
@@ -24,15 +25,23 @@ describe('TableRenderer · keyvalue layout', () => {
     expect(screen.getByText('Hostname')).toBeInTheDocument();
     expect(screen.getByText('host1.example')).toBeInTheDocument();
     expect(screen.getByText('Category')).toBeInTheDocument();
-    // Category cell renders as a colored Badge using shared palette.
-    const cell = screen.getByText('server');
-    // Badge renders as a span with inline-style; jsdom normalizes hex to
-    // rgb(), so check for rgb(59, 130, 246) — the rgb equivalent of #3b82f6.
+    // Category cell renders as a CategoryTag: canonical display label
+    // ("server" → "Server") in the shared palette color, applied as an
+    // inline style. jsdom normalizes the hex to rgb(), so compare in
+    // normalized form — and derive the expected color from the palette
+    // itself, so a design-token change doesn't break the test.
+    const cell = screen.getByText('Server');
+    const token = getCategoryColor('server');
+    const n = parseInt(token.slice(1), 16);
+    const rgb = `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
     let el: HTMLElement | null = cell;
     let foundColor = false;
     while (el) {
       const style = el.getAttribute('style') ?? '';
-      if (style.includes('59, 130, 246')) { foundColor = true; break; }
+      if (style.includes(token) || style.includes(rgb)) {
+        foundColor = true;
+        break;
+      }
       el = el.parentElement;
     }
     expect(foundColor).toBe(true);

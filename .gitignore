@@ -25,6 +25,9 @@ test_cache/
 data_scrapers/device_knowledge/cache/
 tests_output/
 *.csv
+# Test fixtures ship with the repo (CI / the public mirror run them from a
+# clean checkout) — keep the blanket CSV rule for data dirs, not for tests/.
+!tests/**/*.csv
 *.xlsx
 data/**/*.json
 datasets/**/*.json

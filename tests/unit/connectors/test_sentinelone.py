@@ -280,3 +280,64 @@ class TestSentinelOneConnector(ConnectorTestCase):
         """The _record_type field must be 'agent'."""
         records = list(connector.fetch_data("batch-rectype"))
         assert records[0]["_record_type"] == "agent"
+
+
+# ---------------------------------------------------------------------------
+# Issue #1334 — paginator cap-hit surfaces as a collection warning
+# ---------------------------------------------------------------------------
+
+
+def _agents_page(agent_id, next_cursor):
+    return {
+        "data": [
+            {"id": agent_id, "computerName": agent_id, "networkInterfaces": []}
+        ],
+        "pagination": {"nextCursor": next_cursor},
+    }
+
+
+class TestSentinelOneTruncation:
+    """A collection stopped by the page cap must record exactly one warning
+    naming the resource and the cap — the pipeline reads a silent shortfall
+    as deleted assets."""
+
+    mock_config = {
+        "url": BASE_URL,
+        "api_token": "test-api-token",
+        # Shrink the 500-page cap so a cap-hit takes two mocked pages.
+        "max_pagination_pages": 2,
+    }
+
+    @responses.activate
+    def test_capped_run_records_one_warning(self):
+        # Two full pages, each handing back a fresh cursor: more data waiting.
+        responses.add(responses.GET, AGENTS_URL, json=_agents_page("agent-1", "cursor-2"), status=200)
+        responses.add(responses.GET, AGENTS_URL, json=_agents_page("agent-2", "cursor-3"), status=200)
+
+        connector = SentinelOneConnector(self.mock_config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 2
+        warnings = connector.collection_warnings
+        assert len(warnings) == 1, warnings
+        assert "SentinelOne agents truncated at the 2-page cap" in warnings[0]
+
+    @responses.activate
+    def test_end_of_data_records_no_warning(self):
+        """The off-by-one: a final page that fills the cap but hands back no
+        cursor is end-of-data, not truncation."""
+        responses.add(responses.GET, AGENTS_URL, json=_agents_page("agent-1", "cursor-2"), status=200)
+        responses.add(responses.GET, AGENTS_URL, json=_agents_page("agent-2", None), status=200)
+
+        connector = SentinelOneConnector(self.mock_config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 2
+        assert connector.collection_warnings == []
+
+    def test_config_schema_declares_max_pagination_pages(self):
+        """The cap is operator-settable: declared with the connector's default."""
+        field = SentinelOneConnector.get_config_schema()["max_pagination_pages"]
+        assert field["type"] == "number"
+        assert field["required"] is False
+        assert field["default"] == 500

@@ -51,6 +51,7 @@
 }
 
 .healthy { background: var(--success); }
+.warning { background: var(--warning); }
 .unhealthy { background: var(--error); }
 .unknown { background: var(--text-tertiary); }
 

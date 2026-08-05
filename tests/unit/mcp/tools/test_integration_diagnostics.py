@@ -346,6 +346,24 @@ def test_status_drilldown_hint_present_when_fresh():
     assert "Data Source" in out and "Beszel" in out
 
 
+def test_status_surfaces_partial_sync_and_its_error():
+    """A truncated collection (#1334) is not a failure, but the operator must
+    still be told: partial status + the summary persisted to last_error."""
+    svc = MagicMock()
+    svc.get_integration.return_value = _integ(
+        last_sync_status="partial",
+        last_error="Tables truncated at the 500-page cap",
+    )
+    ds = MagicMock()
+    ds.get_data_sources.return_value = {"count": 0, "sources": []}
+
+    out = get_integration_impl(svc, ds, integration=_INTEGRATION_ID,
+                               view="status")
+
+    assert "partial" in out
+    assert "Tables truncated at the 500-page cap" in out
+
+
 def test_status_without_dashboard_service_degrades_not_crashes():
     svc = MagicMock()
     svc.get_integration.return_value = _integ(

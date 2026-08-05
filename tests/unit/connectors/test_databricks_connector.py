@@ -424,8 +424,8 @@ def register_empty_core_endpoints():
 def uc_connector(**page_caps):
     """A UC-enabled connector with per-level page caps shrunk for the test.
 
-    The production caps are 100/100/500; driving truncation through the real
-    ones would mean mocking hundreds of HTTP pages.
+    The production default is 1000 pages per resource; driving truncation
+    through the real one would mean mocking hundreds of HTTP pages.
     """
     connector = DatabricksConnector(UC_CONFIG)
     connector._max_pages.update(page_caps)
@@ -446,13 +446,51 @@ class TestDatabricksPageCaps:
         in the real ones."""
         caps = DatabricksConnector(PAT_CONFIG)._max_pages
         assert caps == {
-            "clusters": 100,
-            "jobs": 500,
-            "warehouses": 100,
-            "catalogs": 100,
-            "schemas": 100,
-            "tables": 500,
+            "clusters": 1000,
+            "jobs": 1000,
+            "warehouses": 1000,
+            "catalogs": 1000,
+            "schemas": 1000,
+            "tables": 1000,
         }
+
+    def test_configured_cap_applies_to_every_resource(self):
+        """max_pagination_pages in config overrides the default for all six
+        resource listings."""
+        caps = DatabricksConnector({**PAT_CONFIG, "max_pagination_pages": 7})._max_pages
+        assert caps == {
+            "clusters": 7,
+            "jobs": 7,
+            "warehouses": 7,
+            "catalogs": 7,
+            "schemas": 7,
+            "tables": 7,
+        }
+
+    def test_config_schema_declares_max_pagination_pages(self):
+        field = DatabricksConnector.get_config_schema()["max_pagination_pages"]
+        assert field["type"] == "number"
+        assert field["required"] is False
+        assert field["default"] == 1000
+
+    @responses.activate
+    def test_configured_cap_is_honoured(self, caplog):
+        """A run driven by config (max_pagination_pages=2) stops at the cap
+        and records the truncation warning."""
+        responses.add(responses.GET, f"{WORKSPACE_URL}/api/2.0/clusters/list", json={"clusters": [{"cluster_id": "c1"}], "next_page_token": "p2"})
+        responses.add(responses.GET, f"{WORKSPACE_URL}/api/2.0/clusters/list", json={"clusters": [{"cluster_id": "c2"}], "next_page_token": "p3"})
+        responses.add(responses.GET, f"{WORKSPACE_URL}/api/2.1/jobs/list", json={"jobs": [], "has_more": False})
+        responses.add(responses.GET, f"{WORKSPACE_URL}/api/2.0/sql/warehouses", json={"warehouses": []})
+
+        connector = DatabricksConnector({**PAT_CONFIG, "max_pagination_pages": 2})
+        with caplog.at_level(logging.WARNING):
+            records = list(connector.fetch_data("test-batch"))
+
+        assert len([r for r in records if r["resource_type"] == "cluster"]) == 2
+        assert len(truncation_warnings(caplog)) == 1, warnings_logged(caplog)
+        message = truncation_warnings(caplog)[0]
+        assert "clusters" in message
+        assert "2-page cap" in message
 
 
 class TestDatabricksUnityCatalogTruncation:

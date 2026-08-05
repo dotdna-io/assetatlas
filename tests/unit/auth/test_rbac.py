@@ -11,14 +11,14 @@ Covers:
 
 Decorators run AFTER ``@jwt_required`` so they read ``current_user`` populated
 by the JWT user_lookup_loader. We exercise them by registering small test
-endpoints on the shared ``blueprint_app`` and driving them with JWT tokens
-minted via the existing ``auth_headers`` factory and a primed user cache.
+endpoints on a file-private Flask app (``rbac_app``) and driving them with JWT
+tokens minted against that app plus a primed user cache.
 """
 import pytest
 from unittest.mock import patch
 
 from flask import Blueprint, jsonify
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import create_access_token, jwt_required
 
 from src.api.utils.caching import cache
 from src.auth.middleware.rbac import (
@@ -30,12 +30,13 @@ from src.auth.middleware.rbac import (
     require_super_admin,
     ROLE_HIERARCHY,
 )
+from tests.conftest import build_mock_app
 from tests.factories import make_jwt_user
 
 
 # ---------------------------------------------------------------------------
 # Test blueprint with one endpoint per decorator we care about.
-# Registered once on the session-scoped ``blueprint_app``.
+# Registered once on this file's private ``rbac_app`` (see below).
 # ---------------------------------------------------------------------------
 
 _rbac_test_bp = Blueprint("rbac_test", __name__, url_prefix="/__rbac_test")
@@ -76,30 +77,65 @@ def _exact_roles():
     return jsonify({"ok": True}), 200
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _register_rbac_test_blueprint(blueprint_app):
-    """Mount the RBAC test blueprint exactly once per session."""
-    if "rbac_test" not in blueprint_app.blueprints:
-        blueprint_app.register_blueprint(_rbac_test_bp)
-    yield
+@pytest.fixture(scope="module")
+def rbac_app():
+    """File-private Flask app hosting the RBAC test blueprint.
+
+    These endpoints cannot live on the session-wide ``blueprint_app``: any
+    file that served a request on it earlier in the run (e.g. tests/unit/api)
+    makes Flask reject register_blueprint() with "setup method ... can no
+    longer be called". A private app registers the blueprint before its first
+    request by construction, so this file is independent of suite ordering.
+
+    The second create_app() in the process must skip the factory's
+    init_metrics — its default-registry registration collides with the
+    session app's (#596 H7). Nothing in this file asserts on metrics.
+    """
+    with patch("src.api.factory.init_metrics"):
+        app = build_mock_app()
+    app.register_blueprint(_rbac_test_bp)
+    return app
+
+
+@pytest.fixture()
+def client(rbac_app):
+    """Test client bound to this file's private app (overrides the shared one)."""
+    return rbac_app.test_client()
+
+
+@pytest.fixture()
+def auth_headers(rbac_app):
+    """JWT Authorization headers minted against this file's private app."""
+    def _make_headers(role="admin", username="testuser", user_id="test-user-id"):
+        with rbac_app.app_context():
+            token = create_access_token(
+                identity=user_id,
+                additional_claims={
+                    "role": role,
+                    "username": username,
+                },
+            )
+        return {"Authorization": f"Bearer {token}"}
+
+    return _make_headers
 
 
 # ---------------------------------------------------------------------------
-# Cache-priming helper: write a user dict to ``jwt_user:{user_id}``.
-# The session-wide ``_prime_user_cache`` autouse fixture stamps an admin in,
-# so each test that wants a different role overwrites the cache entry.
+# Cache-priming helper: write a user dict to ``jwt_user:{user_id}`` on the
+# private app's cache. Each test primes the role it needs and restores the
+# default admin afterwards, so tests stay independent of each other.
 # ---------------------------------------------------------------------------
 
-def _prime_user(blueprint_app, *, role, user_id="test-user-id", username="testuser",
+def _prime_user(rbac_app, *, role, user_id="test-user-id", username="testuser",
                 is_active=True):
     user = make_jwt_user(role=role, user_id=user_id, username=username)
     user["is_active"] = is_active
-    with blueprint_app.app_context():
+    with rbac_app.app_context():
         cache.set(f"jwt_user:{user_id}", user, timeout=300)
 
 
-def _clear_user(blueprint_app, user_id="test-user-id"):
-    with blueprint_app.app_context():
+def _clear_user(rbac_app, user_id="test-user-id"):
+    with rbac_app.app_context():
         cache.delete(f"jwt_user:{user_id}")
 
 
@@ -149,25 +185,25 @@ class TestHasRequiredRole:
 class TestRequireAdmin:
     """``@require_admin()`` allows admin + super_admin, rejects user with 403."""
 
-    def test_admin_allowed(self, client, auth_headers, blueprint_app):
-        _prime_user(blueprint_app, role="admin")
+    def test_admin_allowed(self, client, auth_headers, rbac_app):
+        _prime_user(rbac_app, role="admin")
         try:
             r = client.get("/__rbac_test/admin", headers=auth_headers("admin"))
             assert r.status_code == 200
             assert r.get_json() == {"ok": True}
         finally:
-            _prime_user(blueprint_app, role="admin")  # reset to default
+            _prime_user(rbac_app, role="admin")  # reset to default
 
-    def test_super_admin_allowed(self, client, auth_headers, blueprint_app):
-        _prime_user(blueprint_app, role="super_admin")
+    def test_super_admin_allowed(self, client, auth_headers, rbac_app):
+        _prime_user(rbac_app, role="super_admin")
         try:
             r = client.get("/__rbac_test/admin", headers=auth_headers("super_admin"))
             assert r.status_code == 200
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
-    def test_user_rejected_with_403(self, client, auth_headers, blueprint_app):
-        _prime_user(blueprint_app, role="user")
+    def test_user_rejected_with_403(self, client, auth_headers, rbac_app):
+        _prime_user(rbac_app, role="user")
         try:
             r = client.get("/__rbac_test/admin", headers=auth_headers("user"))
             assert r.status_code == 403
@@ -176,26 +212,26 @@ class TestRequireAdmin:
             assert body["required_role"] == "admin"
             assert body["user_role"] == "user"
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
-    def test_inactive_admin_rejected_with_403(self, client, auth_headers, blueprint_app):
+    def test_inactive_admin_rejected_with_403(self, client, auth_headers, rbac_app):
         """Active flag is checked even for the right role."""
-        _prime_user(blueprint_app, role="admin", is_active=False)
+        _prime_user(rbac_app, role="admin", is_active=False)
         try:
             r = client.get("/__rbac_test/admin", headers=auth_headers("admin"))
             assert r.status_code == 403
             assert r.get_json()["error"] == "account_disabled"
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
-    def test_missing_jwt_user_returns_401(self, client, auth_headers, blueprint_app):
+    def test_missing_jwt_user_returns_401(self, client, auth_headers, rbac_app):
         """If user_lookup_loader returns None, decorator returns 401."""
-        _clear_user(blueprint_app)
+        _clear_user(rbac_app)
         try:
             # Token still parses fine; cache miss + DB miss => current_user = None.
             # Patch the DB get_user_by_id used by user_lookup_loader's cache miss path.
-            with patch.object(blueprint_app.connection_manager, "begin_scope"), \
-                 patch.object(blueprint_app.connection_manager, "end_scope"), \
+            with patch.object(rbac_app.connection_manager, "begin_scope"), \
+                 patch.object(rbac_app.connection_manager, "end_scope"), \
                  patch("src.auth.repositories.user_repository.UserRepository.get_user_by_id",
                        return_value=None):
                 r = client.get("/__rbac_test/admin", headers=auth_headers("admin"))
@@ -205,23 +241,23 @@ class TestRequireAdmin:
             # not silently grant access).
             assert r.status_code in (401, 403, 422)
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
 
 class TestRequireSuperAdmin:
     """``@require_super_admin()`` allows ONLY super_admin."""
 
-    def test_super_admin_allowed(self, client, auth_headers, blueprint_app):
-        _prime_user(blueprint_app, role="super_admin")
+    def test_super_admin_allowed(self, client, auth_headers, rbac_app):
+        _prime_user(rbac_app, role="super_admin")
         try:
             r = client.get("/__rbac_test/super-admin",
                            headers=auth_headers("super_admin"))
             assert r.status_code == 200
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
-    def test_admin_rejected_with_403(self, client, auth_headers, blueprint_app):
-        _prime_user(blueprint_app, role="admin")
+    def test_admin_rejected_with_403(self, client, auth_headers, rbac_app):
+        _prime_user(rbac_app, role="admin")
         try:
             r = client.get("/__rbac_test/super-admin", headers=auth_headers("admin"))
             assert r.status_code == 403
@@ -230,33 +266,33 @@ class TestRequireSuperAdmin:
             assert body["required_role"] == "super_admin"
             assert body["user_role"] == "admin"
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
-    def test_user_rejected_with_403(self, client, auth_headers, blueprint_app):
-        _prime_user(blueprint_app, role="user")
+    def test_user_rejected_with_403(self, client, auth_headers, rbac_app):
+        _prime_user(rbac_app, role="user")
         try:
             r = client.get("/__rbac_test/super-admin", headers=auth_headers("user"))
             assert r.status_code == 403
             assert r.get_json()["error"] == "insufficient_permissions"
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
 
 class TestRequireRoleEdgeCases:
     """Direct ``@require_role()`` covers helper paths + missing-role-claim case."""
 
-    def test_user_role_satisfies_user_requirement(self, client, auth_headers, blueprint_app):
-        _prime_user(blueprint_app, role="user")
+    def test_user_role_satisfies_user_requirement(self, client, auth_headers, rbac_app):
+        _prime_user(rbac_app, role="user")
         try:
             r = client.get("/__rbac_test/role-user", headers=auth_headers("user"))
             assert r.status_code == 200
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
-    def test_no_role_in_user_dict_defaults_to_user(self, client, auth_headers, blueprint_app):
+    def test_no_role_in_user_dict_defaults_to_user(self, client, auth_headers, rbac_app):
         """Missing 'role' key in JWT cache => decorator falls back to 'user'.
         For an admin-only endpoint, this means 403."""
-        with blueprint_app.app_context():
+        with rbac_app.app_context():
             cache.set(
                 "jwt_user:test-user-id",
                 {  # explicitly no 'role' key
@@ -275,18 +311,18 @@ class TestRequireRoleEdgeCases:
             # role defaulted to 'user' in the decorator
             assert body["user_role"] == "user"
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
-    def test_malformed_role_string_rejected(self, client, auth_headers, blueprint_app):
+    def test_malformed_role_string_rejected(self, client, auth_headers, rbac_app):
         """Garbage role => unknown level (999) => 403 against any required role."""
-        _prime_user(blueprint_app, role="root_admin_typo")
+        _prime_user(rbac_app, role="root_admin_typo")
         try:
             r = client.get("/__rbac_test/admin", headers=auth_headers("admin"))
             assert r.status_code == 403
             body = r.get_json()
             assert body["user_role"] == "root_admin_typo"
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
 
 # =============================================================================
@@ -296,9 +332,9 @@ class TestRequireRoleEdgeCases:
 class TestRequireSelfOrAdmin:
     """``@require_self_or_admin('user_id')`` allows self OR admin."""
 
-    def test_self_access_allowed_for_user_role(self, client, auth_headers, blueprint_app):
+    def test_self_access_allowed_for_user_role(self, client, auth_headers, rbac_app):
         """Regular user fetching their OWN user_id is allowed."""
-        _prime_user(blueprint_app, role="user", user_id="self-uuid-1")
+        _prime_user(rbac_app, role="user", user_id="self-uuid-1")
         try:
             r = client.get(
                 "/__rbac_test/users/self-uuid-1",
@@ -307,12 +343,12 @@ class TestRequireSelfOrAdmin:
             assert r.status_code == 200
             assert r.get_json()["user_id"] == "self-uuid-1"
         finally:
-            _clear_user(blueprint_app, user_id="self-uuid-1")
-            _prime_user(blueprint_app, role="admin")
+            _clear_user(rbac_app, user_id="self-uuid-1")
+            _prime_user(rbac_app, role="admin")
 
-    def test_admin_can_access_other_user(self, client, auth_headers, blueprint_app):
+    def test_admin_can_access_other_user(self, client, auth_headers, rbac_app):
         """Admin can fetch any user_id, even one that's not theirs."""
-        _prime_user(blueprint_app, role="admin", user_id="admin-uuid")
+        _prime_user(rbac_app, role="admin", user_id="admin-uuid")
         try:
             r = client.get(
                 "/__rbac_test/users/some-other-user",
@@ -320,12 +356,12 @@ class TestRequireSelfOrAdmin:
             )
             assert r.status_code == 200
         finally:
-            _clear_user(blueprint_app, user_id="admin-uuid")
-            _prime_user(blueprint_app, role="admin")
+            _clear_user(rbac_app, user_id="admin-uuid")
+            _prime_user(rbac_app, role="admin")
 
-    def test_super_admin_can_access_other_user(self, client, auth_headers, blueprint_app):
+    def test_super_admin_can_access_other_user(self, client, auth_headers, rbac_app):
         """super_admin satisfies has_required_role('admin') => allowed."""
-        _prime_user(blueprint_app, role="super_admin", user_id="superadmin-uuid")
+        _prime_user(rbac_app, role="super_admin", user_id="superadmin-uuid")
         try:
             r = client.get(
                 "/__rbac_test/users/different-uuid",
@@ -333,14 +369,14 @@ class TestRequireSelfOrAdmin:
             )
             assert r.status_code == 200
         finally:
-            _clear_user(blueprint_app, user_id="superadmin-uuid")
-            _prime_user(blueprint_app, role="admin")
+            _clear_user(rbac_app, user_id="superadmin-uuid")
+            _prime_user(rbac_app, role="admin")
 
     def test_user_accessing_other_user_rejected_with_403(
-        self, client, auth_headers, blueprint_app
+        self, client, auth_headers, rbac_app
     ):
         """Regular user trying to read someone else's record => 403."""
-        _prime_user(blueprint_app, role="user", user_id="user-uuid-A")
+        _prime_user(rbac_app, role="user", user_id="user-uuid-A")
         try:
             r = client.get(
                 "/__rbac_test/users/user-uuid-B",
@@ -351,12 +387,12 @@ class TestRequireSelfOrAdmin:
             assert body["error"] == "insufficient_permissions"
             assert "your own resources" in body["message"].lower()
         finally:
-            _clear_user(blueprint_app, user_id="user-uuid-A")
-            _prime_user(blueprint_app, role="admin")
+            _clear_user(rbac_app, user_id="user-uuid-A")
+            _prime_user(rbac_app, role="admin")
 
-    def test_inactive_user_rejected_with_403(self, client, auth_headers, blueprint_app):
+    def test_inactive_user_rejected_with_403(self, client, auth_headers, rbac_app):
         """Inactive accounts are blocked even when accessing own resource."""
-        _prime_user(blueprint_app, role="user", user_id="inactive-uuid",
+        _prime_user(rbac_app, role="user", user_id="inactive-uuid",
                     is_active=False)
         try:
             r = client.get(
@@ -366,8 +402,8 @@ class TestRequireSelfOrAdmin:
             assert r.status_code == 403
             assert r.get_json()["error"] == "account_disabled"
         finally:
-            _clear_user(blueprint_app, user_id="inactive-uuid")
-            _prime_user(blueprint_app, role="admin")
+            _clear_user(rbac_app, user_id="inactive-uuid")
+            _prime_user(rbac_app, role="admin")
 
 
 # =============================================================================
@@ -382,9 +418,9 @@ class TestNoCurrentUser:
     """
 
     @pytest.fixture(autouse=True)
-    def _app_ctx(self, blueprint_app):
+    def _app_ctx(self, rbac_app):
         """Decorators call request.path, which needs an active request context."""
-        with blueprint_app.test_request_context("/__rbac_test/admin"):
+        with rbac_app.test_request_context("/__rbac_test/admin"):
             yield
 
     def test_require_admin_returns_401_when_no_user(self):
@@ -425,16 +461,16 @@ class TestNoCurrentUser:
 class TestRequireRoles:
     """``@require_roles(['admin', 'super_admin'])`` checks exact membership."""
 
-    def test_admin_in_allowed_list(self, client, auth_headers, blueprint_app):
-        _prime_user(blueprint_app, role="admin")
+    def test_admin_in_allowed_list(self, client, auth_headers, rbac_app):
+        _prime_user(rbac_app, role="admin")
         try:
             r = client.get("/__rbac_test/exact-roles", headers=auth_headers("admin"))
             assert r.status_code == 200
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
-    def test_user_not_in_allowed_list_rejected(self, client, auth_headers, blueprint_app):
-        _prime_user(blueprint_app, role="user")
+    def test_user_not_in_allowed_list_rejected(self, client, auth_headers, rbac_app):
+        _prime_user(rbac_app, role="user")
         try:
             r = client.get("/__rbac_test/exact-roles", headers=auth_headers("user"))
             assert r.status_code == 403
@@ -443,13 +479,13 @@ class TestRequireRoles:
             assert "admin" in body["allowed_roles"]
             assert body["user_role"] == "user"
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")
 
-    def test_inactive_user_rejected(self, client, auth_headers, blueprint_app):
-        _prime_user(blueprint_app, role="admin", is_active=False)
+    def test_inactive_user_rejected(self, client, auth_headers, rbac_app):
+        _prime_user(rbac_app, role="admin", is_active=False)
         try:
             r = client.get("/__rbac_test/exact-roles", headers=auth_headers("admin"))
             assert r.status_code == 403
             assert r.get_json()["error"] == "account_disabled"
         finally:
-            _prime_user(blueprint_app, role="admin")
+            _prime_user(rbac_app, role="admin")

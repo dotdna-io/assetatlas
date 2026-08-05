@@ -7,15 +7,15 @@ Open source, self-hosted, agentless. Bring your own LLM.
 We're DOTDNA, a cybersecurity company in Bucharest. AssetAtlas started inside
 our own SOC, where we do incident response for enterprise customers: no
 organisation we worked with had an inventory we could rely on. The raw material
-was always there, scattered across a dozen tools that each knew a different part
-of the answer, so we built something to put it together. The matching algorithm
-came first; history, rules, alerts, reporting and the LLM integration followed,
-driven by our own investigations and by what our customers needed. Today it runs
-in production against inventories of thousands of assets.
+was always there, scattered across a dozen tools, each holding a piece of the
+answer. So we built something to put the pieces together. The matching
+algorithm came first; history, rules, alerts, reporting and the LLM integration
+followed, driven by our own use cases and by what our customers needed. Today
+it runs in production against inventories of thousands of assets.
 
 We're releasing it under AGPL-3.0 because we think others can benefit from what
-we built for it. This repository is the whole product: every feature, no asset
-limits, no paid tier.
+we built. This repository is the whole product: every feature, no asset limits,
+no paid tier.
 
 ![AssetAtlas — posture overview, chat with your inventory, and latest alerts](.github/images/assetatlas-hero.png)
 
@@ -37,12 +37,12 @@ device management, vulnerability scanners, CMDBs, network monitoring and cloud
 platforms, plus a generic REST connector and CSV upload for anything else.
 
 **Or read it out of the SIEM or data lake, where it already landed.** Doing
-incident response, we spend our days inside our customers' SIEMs and data lakes,
-and we kept noticing the same thing: sources full of usable asset data had
-already been onboarded and indexed — firewall traffic, authentication events,
-endpoint telemetry — and nothing was reading any of it for inventory. The
-organisation had already paid to collect the data and was getting no inventory
-out of it.
+incident response, we spend our days inside our customers' SIEMs and data
+lakes, and we saw the same pattern everywhere. Firewall traffic,
+authentication events, endpoint telemetry: sources full of usable asset data,
+already onboarded and indexed — and nothing was reading any of it for
+inventory. The organisation had already paid to collect the data and was
+getting no inventory out of it.
 
 So AssetAtlas can take it from there. Point it at **Splunk**, **Microsoft
 Sentinel**, **SentinelOne Singularity Data Lake** or **Databricks**, map what
@@ -68,7 +68,7 @@ automatically, score them against your security and compliance expectations, and
 raise alerts when something drifts — including machine-learning rules that flag
 unusual patterns rather than fixed thresholds.
 
-**Runs where security teams work.** Single sign-on, MFA, role-based access and a
+**Meets enterprise security requirements.** Single sign-on, MFA, role-based access and a
 full audit trail.
 
 ---
@@ -80,7 +80,7 @@ AssetAtlas runs on **Ubuntu** 22.04/24.04, **Debian** 12+ and **RHEL** 9+
 installer brings everything it needs:
 
 ```bash
-curl -fsSL https://get.assetatlas.com | bash
+curl -fsSL https://get.assetatlas.com | sudo bash
 ```
 
 ---

@@ -8,7 +8,12 @@ from src.modules.asset_generation.domain.asset_scorer import AssetScorer
 
 
 class TestScoringStageCustomScores:
-    """Test that ScoringStage reads scores from settings_manager."""
+    """Test that ScoringStage reads scores from settings_manager.
+
+    s14 reaches settings through a lazy ``flask.current_app`` import guarded
+    by ``has_app_context()`` (same pattern as s20/s22), so the seam to patch
+    is on the ``flask`` module, not a stage-module attribute.
+    """
 
     def test_custom_scores_applied_to_scorer(self):
         """When settings has custom scores, scorer uses them."""
@@ -21,7 +26,8 @@ class TestScoringStageCustomScores:
         mock_app = MagicMock()
         mock_app.settings_manager.get.return_value = custom_scores
 
-        with patch('src.modules.asset_generation.pipeline.stages.s14_scoring.current_app', mock_app):
+        with patch('flask.has_app_context', return_value=True), \
+                patch('flask.current_app', mock_app):
             stage._load_custom_scores()
 
         assert mock_service.scorer.source_reliability_scores['endpoint security'] == 0.80
@@ -37,7 +43,8 @@ class TestScoringStageCustomScores:
         mock_app = MagicMock()
         mock_app.settings_manager.get.return_value = None
 
-        with patch('src.modules.asset_generation.pipeline.stages.s14_scoring.current_app', mock_app):
+        with patch('flask.has_app_context', return_value=True), \
+                patch('flask.current_app', mock_app):
             stage._load_custom_scores()
 
         assert mock_service.scorer.source_reliability_scores == default_scores
@@ -51,7 +58,8 @@ class TestScoringStageCustomScores:
         mock_app = MagicMock()
         mock_app.settings_manager.get.side_effect = Exception("DB down")
 
-        with patch('src.modules.asset_generation.pipeline.stages.s14_scoring.current_app', mock_app):
+        with patch('flask.has_app_context', return_value=True), \
+                patch('flask.current_app', mock_app):
             stage._load_custom_scores()
 
         assert mock_service.scorer.source_reliability_scores == AssetScorer.DEFAULT_SOURCE_SCORES

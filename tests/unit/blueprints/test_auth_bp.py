@@ -462,6 +462,31 @@ class TestSessionConfig:
 # Refresh token (POST /api/auth/refresh)
 # =============================================================================
 
+def _stub_refresh_session_lookup(refresh_tok):
+    """Satisfy the factory JWT loader's refresh-token revocation check.
+
+    factory.py's check_if_token_revoked resolves refresh tokens through the
+    REAL SessionRepository captured at app init — the auth.py-module patch
+    from auth_mocks never reaches it. For refresh tokens it calls
+    get_session() (the suite-wide stub only covers the access-token path,
+    get_session_by_access_jti) and compares the bearer token against the
+    session's stored refresh_token_hash (reuse detection, c94c3d83). Stub
+    get_session() at the class level with an active session carrying the
+    real SHA-256 of the token under test.
+    """
+    from src.auth.services.token_service import TokenService
+
+    return patch(
+        "src.auth.repositories.session_repository.SessionRepository.get_session",
+        return_value={
+            "id": "session-1",
+            "is_active": True,
+            "expires_at": None,
+            "refresh_token_hash": TokenService.hash_refresh_token(refresh_tok),
+        },
+    )
+
+
 class TestRefreshToken:
     """POST /api/auth/refresh -- requires a valid refresh JWT."""
 
@@ -489,10 +514,11 @@ class TestRefreshToken:
             "is_active": True,
         }
 
-        resp = client.post(
-            "/api/auth/refresh",
-            headers={"Authorization": f"Bearer {refresh_tok}"},
-        )
+        with _stub_refresh_session_lookup(refresh_tok):
+            resp = client.post(
+                "/api/auth/refresh",
+                headers={"Authorization": f"Bearer {refresh_tok}"},
+            )
 
         assert resp.status_code == 200
         body = resp.get_json()
@@ -514,10 +540,11 @@ class TestRefreshToken:
             id=TEST_USER_UUID, is_active=False
         )
 
-        resp = client.post(
-            "/api/auth/refresh",
-            headers={"Authorization": f"Bearer {refresh_tok}"},
-        )
+        with _stub_refresh_session_lookup(refresh_tok):
+            resp = client.post(
+                "/api/auth/refresh",
+                headers={"Authorization": f"Bearer {refresh_tok}"},
+            )
 
         assert resp.status_code == 401
         assert resp.get_json()["error"] == "account_disabled"
@@ -2215,10 +2242,11 @@ class TestJwtAuthMethodClaim:
             'id': 'session-1', 'is_active': True,
         }
 
-        r = client.post(
-            '/api/auth/refresh',
-            headers={'Authorization': f'Bearer {refresh_tok}'},
-        )
+        with _stub_refresh_session_lookup(refresh_tok):
+            r = client.post(
+                '/api/auth/refresh',
+                headers={'Authorization': f'Bearer {refresh_tok}'},
+            )
 
         assert r.status_code == 200
         claims = self._decode_access_token(blueprint_app, r.json['access_token'])

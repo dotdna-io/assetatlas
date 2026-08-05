@@ -12,7 +12,7 @@ def test_chat_config_defaults():
     assert c.CHAT_MAX_TOOL_ITERATIONS == 10
     assert c.CHAT_TURN_TIMEOUT_SECONDS == 60
     assert c.CHAT_MAX_INPUT_TOKENS == 100000
-    assert c.CHAT_MAX_OUTPUT_TOKENS == 2000
+    assert c.CHAT_MAX_OUTPUT_TOKENS == 8192  # raised 2000->8192 for reasoning models (#898)
     assert c.CHAT_RETENTION_DAYS == 90
     # Provider config (provider/model/api_key/base_url/prompt_cache/
     # thinking_enabled) lives in the chat_providers table per issue #636.

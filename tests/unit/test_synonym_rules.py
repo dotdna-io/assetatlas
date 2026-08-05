@@ -15,14 +15,20 @@ from src.services.embedding.synonym_rules import (
 
 
 class TestCoreFieldSynonyms:
-    """Core field synonyms should cover all 20 static fields comprehensively."""
+    """Core field synonyms should cover all static fields comprehensively."""
 
-    def test_all_20_static_fields_have_synonyms(self):
+    def test_all_static_fields_have_synonyms(self):
+        # The static-field set grew 20 -> 29 when the geo/ip-classification/
+        # eol/user fields were registered 'static' (f0d07fc6, 2b4f95bb,
+        # 9ff02a36, each dual-written with its field-registry seed).
         expected = {
             "hostname", "ip", "mac", "sn", "fqdn", "category", "subcategory",
             "os_normalized", "manufacturer", "model", "location", "owner",
             "data_source", "data_source_category", "first_seen", "last_seen",
             "confidence", "os_eol_status", "ipam_location", "mac_vendor_enriched",
+            "os_eol_date", "os_is_lts", "user_field",
+            "ip_private", "ip_public", "ip_type",
+            "geo_countries", "geo_cities", "geo_regions",
         }
         assert set(CORE_FIELD_SYNONYMS.keys()) == expected
 

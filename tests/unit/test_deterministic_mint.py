@@ -11,12 +11,31 @@ the component set makes the re-discovered group resolve to the SAME id every run
 
 import logging
 
+import pytest
+
 from src.modules.asset_generation.domain.asset_identifier import (
     AssetIdentifier,
     _UUID_PATTERN,
 )
 
-logging.disable(logging.WARNING)
+
+@pytest.fixture(autouse=True)
+def _quiet_pipeline_logs():
+    """Silence the minting chatter for this module's tests only.
+
+    This used to be a module-level ``logging.disable(logging.WARNING)`` — a
+    process-wide switch with no off switch, flipped at *import* time. pytest
+    imports every collected module before any test runs, so the disable leaked
+    into tests collected after this one: tests/unit/api/middleware/
+    test_request_id_logging.py drives requests whose INFO lines were then never
+    even created, failing 15 tests that pass standalone. Disable-and-restore
+    around each test keeps the quiet without poisoning the session.
+    """
+    logging.disable(logging.WARNING)
+    try:
+        yield
+    finally:
+        logging.disable(logging.NOTSET)
 
 # 18 country-domain FQDNs (> MAX_HOSTNAMES_PER_GROUP) — like a large real-world
 # footprint record that reforms an oversized group every run.

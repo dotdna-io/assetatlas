@@ -466,7 +466,7 @@ def _render_status(integration_service, dashboard_service, integ) -> str:
 
     if integ.last_sync_status:
         lines.append(f"  last sync status: {integ.last_sync_status}")
-        if (integ.last_sync_status or "").lower() == "failed" and integ.last_error:
+        if (integ.last_sync_status or "").lower() in ("failed", "partial") and integ.last_error:
             lines.append(f"  last error: {truncate(str(integ.last_error), 200)}")
 
     if integ.last_connection_test_status:

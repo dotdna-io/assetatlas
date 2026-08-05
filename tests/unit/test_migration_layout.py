@@ -32,7 +32,11 @@ FILENAME_PATTERN = re.compile(r"^(?P<num>\d{3})(?P<sfx>[a-z]?)_[a-z0-9_]+\.sql$"
 # project's life. Frozen so the next contributor can't add to the list:
 # renaming them would change the schema_migrations PK on every existing
 # installation and silently re-apply the migration.
-ALLOWED_DUPLICATES = {"003", "007", "014", "052", "053", "064", "095", "099"}
+# "103" joined in 2026-05: three PRs (#646/#647/#648) raced the same number
+# within 13 hours and all shipped in v2026.19.19/v2026.19.20, so the trio
+# (103_add_custom_subcategories, 103_add_oidc_post_logout_redirect_uri,
+# 103_add_asset_label_overrides) is keyed by filename in the wild.
+ALLOWED_DUPLICATES = {"003", "007", "014", "052", "053", "064", "095", "099", "103"}
 
 
 def _migration_files():

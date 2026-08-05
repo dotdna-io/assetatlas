@@ -270,7 +270,13 @@ def get_integration_health(integration_id: UUID):
 
     # Determine health status based on integration state
     status = 'healthy'
-    if integration.status.value == 'error' or integration.last_error:
+    if integration.status.value == 'error':
+        status = 'error'
+    elif (integration.last_sync_status or '').lower() == 'partial':
+        # A partially-collected run stores a last_error summary but DID
+        # collect and store records — a warning, not a hard error (#1334).
+        status = 'warning'
+    elif integration.last_error:
         status = 'error'
     # Note: Don't mark as warning if never synced - that's normal for new integrations
 

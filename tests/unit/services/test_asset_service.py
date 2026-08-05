@@ -138,7 +138,9 @@ class TestAssetServiceListAssets:
         repo.list_assets.return_value = ([], 0)
         svc.list_assets(page=2, limit=25, category='Server', search='web')
 
-        repo.list_assets.assert_called_once_with(2, 25, 'Server', 'web', None)
+        # alert_id kwarg added by the alert drill-down feature (#1010); the
+        # service always forwards it, defaulting to None.
+        repo.list_assets.assert_called_once_with(2, 25, 'Server', 'web', None, alert_id=None)
 
     def test_ip_as_postgres_array_string(self, service):
         """PostgreSQL arrays may arrive as '{val1,val2}' strings."""

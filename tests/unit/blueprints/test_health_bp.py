@@ -58,6 +58,26 @@ class TestHealthLiveness:
 class TestHealthCheck:
     """GET /api/health -- comprehensive check, needs db_adapter mock."""
 
+    @pytest.fixture(autouse=True)
+    def _chromadb_stats(self, client, blueprint_app):
+        """Model the ChromaDB check that 0f71656f added to the /health payload.
+
+        check_chromadb() reads embedding_integration_service.chromadb_store
+        .get_collection_stats(); a bare MagicMock there yields MagicMock
+        counts, which jsonify cannot serialize — the whole response 500s
+        regardless of what the database check did. Real stats dicts are
+        ints, so give the mock the real shape.
+
+        Depends on `client` so the return value is set AFTER that fixture's
+        per-test reset_mock(return_value=True) cascade, which would
+        otherwise wipe it back to a bare MagicMock.
+        """
+        store = blueprint_app.embedding_integration_service.chromadb_store
+        store.get_collection_stats.return_value = {
+            "fields_count": 49,
+            "values_count": 120,
+        }
+
     @staticmethod
     def _setup_db_healthy(blueprint_app):
         """Configure mocks so database health check passes."""
@@ -490,6 +510,31 @@ class TestUpdateCheck:
                    return_value="2026.28.1"):
             resp = client.get("/api/health/update-check", headers=auth_headers())
         assert resp.get_json()["update_available"] is False
+
+    def test_fetch_uses_version_in_path_url(
+            self, client, blueprint_app, auth_headers, monkeypatch):
+        # The installed version rides in the URL path so the distribution
+        # census (which sees request paths only) can count the version mix.
+        self._set_enabled(blueprint_app, True)
+        monkeypatch.setitem(blueprint_app.config, "APP_VERSION", "2026.27.5")
+        with patch("src.api.blueprints.health.fetch_latest_version",
+                   return_value="2026.27.5") as fetch:
+            resp = client.get("/api/health/update-check", headers=auth_headers())
+        assert resp.status_code == 200
+        fetch.assert_called_once_with(
+            "https://get.assetatlas.com/check/2026.27.5")
+
+    def test_fetch_falls_back_to_plain_manifest_for_dev_version(
+            self, client, blueprint_app, auth_headers, monkeypatch):
+        # '0.0.0-dev' is not a version the Worker 302s — the URL must fall back
+        # to plain /latest.json or this install's check would 404 forever.
+        self._set_enabled(blueprint_app, True)
+        monkeypatch.setitem(blueprint_app.config, "APP_VERSION", "0.0.0-dev")
+        with patch("src.api.blueprints.health.fetch_latest_version",
+                   return_value=None) as fetch:
+            resp = client.get("/api/health/update-check", headers=auth_headers())
+        assert resp.status_code == 200
+        fetch.assert_called_once_with("https://get.assetatlas.com/latest.json")
 
     def test_enabled_fetch_failure_is_silent_200(
             self, client, blueprint_app, auth_headers):

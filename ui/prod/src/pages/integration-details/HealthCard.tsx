@@ -16,6 +16,7 @@ export function HealthCard({ integration, refetchInterval }: HealthCardProps) {
   const status = health?.status ?? 'unknown';
   const dotClass =
     status === 'healthy' ? styles.healthy :
+    status === 'warning' ? styles.warning :
     status === 'unhealthy' ? styles.unhealthy :
     styles.unknown;
 

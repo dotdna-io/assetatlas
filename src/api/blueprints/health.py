@@ -30,7 +30,7 @@ from src.auth.middleware.rbac import require_admin
 from src.api.utils.caching import cache
 from src.api.modules.settings.settings_schema import monitoring_dashboards_enabled
 from src.modules.alerts.update_check import (
-    fetch_latest_version, is_newer, _CACHE_TTL_SECONDS,
+    fetch_latest_version, is_newer, manifest_url_for, _CACHE_TTL_SECONDS,
 )
 
 logger = logging.getLogger(__name__)
@@ -1005,7 +1005,9 @@ def _update_check_state(force=False):
         latest = cached.get('latest_version')
         checked_at = cached.get('checked_at')
     else:
-        latest = fetch_latest_version()
+        # The installed version rides in the URL path (distribution census);
+        # a non-release version ('0.0.0-dev') falls back to plain /latest.json.
+        latest = fetch_latest_version(manifest_url_for(current))
         checked_at = datetime.utcnow().isoformat() + 'Z'
         # Cache the attempt (success OR failure) so a poll storm — or an
         # enabled-but-unreachable box — makes at most one fetch per TTL.

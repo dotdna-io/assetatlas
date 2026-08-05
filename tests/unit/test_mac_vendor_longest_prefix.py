@@ -106,8 +106,9 @@ def test_blank_vendor_rows_are_not_indexed():
         ("11:22:33", ""),  # blank OUI -> no-match, must not enrich to ''
     ]
     # In the blank /28 block -> fall back to the real OUI vendor (not '').
-    # Under the blank OUI -> None (not '').
-    assert _enrich(rows, ["AA:BB:CC:D5:00:00", "11:22:33:44:55:66"]) == [
-        "Real OUI Vendor",
-        None,
-    ]
+    # Under the blank OUI -> no-match (not ''). pandas 3 represents the
+    # no-match sentinel as NaN in the enriched column (the sibling tests
+    # above assert with pd.isna); the contract is "missing, never ''".
+    out = _enrich(rows, ["AA:BB:CC:D5:00:00", "11:22:33:44:55:66"])
+    assert out[0] == "Real OUI Vendor"
+    assert pd.isna(out[1]) and out[1] != ""

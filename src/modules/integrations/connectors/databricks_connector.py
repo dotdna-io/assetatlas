@@ -104,16 +104,22 @@ class DatabricksConnector(BaseConnector):
                     "must return pre-normalized asset rows (hostname, ip, mac, "
                     "sn, os, ...; see docs/features/integrations/via-siem.md)"
                 )
-        # Per-endpoint page caps handed to CursorPaginator. Named here rather
-        # than inlined at the call sites so the truncation path can be driven
-        # in a test without mocking hundreds of HTTP pages.
+        # Per-endpoint page caps handed to CursorPaginator. One configured cap
+        # (max_pagination_pages, default 1000) applies to every resource
+        # listing — clusters, jobs, warehouses, and each Unity Catalog
+        # catalog/schema/table listing. At the default page_size of 100 that
+        # is 100,000 records per listing (jobs and UC tables honour
+        # page_size, so up to 1M at the 1000 max). The dict stays named
+        # rather than inlined at the call sites so the truncation path can be
+        # driven in a test without mocking hundreds of HTTP pages.
+        max_pagination_pages = int(config.get("max_pagination_pages", 1000))
         self._max_pages = {
-            "clusters": 100,
-            "jobs": 500,
-            "warehouses": 100,
-            "catalogs": 100,
-            "schemas": 100,
-            "tables": 500,
+            "clusters": max_pagination_pages,
+            "jobs": max_pagination_pages,
+            "warehouses": max_pagination_pages,
+            "catalogs": max_pagination_pages,
+            "schemas": max_pagination_pages,
+            "tables": max_pagination_pages,
         }
         super().__init__(config)
 
@@ -239,6 +245,20 @@ class DatabricksConnector(BaseConnector):
                 min_val=10,
                 max_val=1000,
                 description="Number of records per API request",
+            )
+            .add_number(
+                "max_pagination_pages",
+                "Max Pagination Pages",
+                default=1000,
+                min_val=1,
+                max_val=10000,
+                description=(
+                    "Safety cap on API pages fetched per resource listing (clusters, "
+                    "jobs, SQL warehouses, and each Unity Catalog catalog/schema/table "
+                    "listing) — it stops a pagination loop that never terminates. At "
+                    "the default page size of 100, the default cap of 1,000 pages "
+                    "collects up to 100,000 records per resource."
+                ),
             )
             .build()
         )
@@ -971,35 +991,23 @@ class DatabricksConnector(BaseConnector):
         """Yield raw records from a cursor-paginated endpoint, warning when
         the page cap — rather than the end of the data — is what stopped us.
 
-        ``CursorPaginator`` (base/pagination.py) simply stops at ``max_pages``
-        and emits no signal, so "collected everything" and "collected the
-        first N pages" are indistinguishable to the caller. Track what the
-        last page handed back and say so; otherwise a large estate silently
-        reports a partial inventory as a complete one.
+        Relies on ``CursorPaginator.truncated`` (base/pagination.py): the
+        paginator itself now flags when its ``max_pages`` cap, not the data,
+        ended the loop. ``warn_if_truncated`` relays that into a per-run
+        collection warning; otherwise a large estate silently reports a
+        partial inventory as a complete one.
         """
         paginator = CursorPaginator(max_pages=max_pages)
-        state = {"pages": 0, "more": False}
 
         def fetch(cursor):
-            records, next_token = self._fetch_page(
+            return self._fetch_page(
                 url, result_key, cursor, extra_params, use_has_more,
             )
-            state["pages"] += 1
-            # Mirrors the paginator's own continue condition: a page with
-            # records AND a new, non-repeating cursor. A final page that fills
-            # the cap but hands back no cursor is end-of-data, not truncation.
-            state["more"] = bool(records) and bool(next_token) and next_token != cursor
-            return records, next_token
 
         for page in paginator.pages(fetch):
             yield from page
 
-        if state["pages"] >= max_pages and state["more"]:
-            self.logger.warning(
-                f"Databricks {label} truncated at the {max_pages}-page cap — "
-                f"more pages were available and the remaining records were "
-                f"not collected."
-            )
+        self.warn_if_truncated(paginator, f"Databricks {label}")
 
     def _collect_resource(self, label, max_pages, url, result_key,
                           normalize, extra_params=None, use_has_more=False):

@@ -263,6 +263,60 @@ class TestQualysConnector(ConnectorTestCase):
         assert PAGE2_URL in calls[1].request.url
 
     # -------------------------------------------------------------------------
+    # Connector-specific: paginator cap-hit → collection warning
+    # (the cap is the max_pagination_pages config key — unrelated to the
+    # truncation_limit config key, which is Qualys' per-request page size)
+    # -------------------------------------------------------------------------
+
+    @responses.activate
+    def test_cap_hit_records_one_collection_warning(self):
+        """A run stopped by the configured page cap records exactly one warning."""
+        # Both pages carry a WARNING with a follow-up URL — only the cap ends
+        # the loop.
+        responses.add(
+            responses.GET, HOST_LIST_URL,
+            body=_xml("hosts_page1.xml"), status=200, content_type="text/xml",
+        )
+        responses.add(
+            responses.GET, PAGE2_URL,
+            body=_xml("hosts_page1.xml"), status=200, content_type="text/xml",
+        )
+
+        connector = QualysConnector({**self.mock_config, "max_pagination_pages": 2})
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 4  # 2 hosts per page × 2 pages
+        warnings = connector.collection_warnings
+        assert len(warnings) == 1
+        assert "Qualys hosts" in warnings[0]
+        assert "2-page cap" in warnings[0]
+
+    @responses.activate
+    def test_end_of_data_at_cap_boundary_records_no_warning(self):
+        """A final page that fills the cap but has no WARNING is end-of-data."""
+        responses.add(
+            responses.GET, HOST_LIST_URL,
+            body=_xml("hosts_page1.xml"), status=200, content_type="text/xml",
+        )
+        responses.add(
+            responses.GET, PAGE2_URL,
+            body=_xml("hosts_page2.xml"), status=200, content_type="text/xml",
+        )
+
+        connector = QualysConnector({**self.mock_config, "max_pagination_pages": 2})
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 3
+        assert connector.collection_warnings == []
+
+    def test_config_schema_declares_max_pagination_pages(self):
+        """The cap is operator-settable: declared with the connector's default."""
+        field = QualysConnector.get_config_schema()["max_pagination_pages"]
+        assert field["type"] == "number"
+        assert field["required"] is False
+        assert field["default"] == 100
+
+    # -------------------------------------------------------------------------
     # Connector-specific: test_connection
     # -------------------------------------------------------------------------
 

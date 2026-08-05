@@ -53,7 +53,6 @@ describe('ConversationList', () => {
     sessions: [] as ChatSession[],
     currentSessionId: null as string | null,
     onSelect: vi.fn(),
-    onNew: vi.fn(),
     onRename: vi.fn(),
     onDelete: vi.fn(),
   };
@@ -63,11 +62,13 @@ describe('ConversationList', () => {
     expect(screen.getByText(/no conversations yet/i)).toBeInTheDocument();
   });
 
-  it('fires onNew when + is clicked', () => {
-    const onNew = vi.fn();
-    render(<ConversationList {...base} onNew={onNew} />);
-    fireEvent.click(screen.getByLabelText('New conversation'));
-    expect(onNew).toHaveBeenCalled();
+  it('has no "+" button of its own — new conversations start from the chat header', () => {
+    // The sidebar's "+" was deliberately removed as redundant with the
+    // ChatHeader's "New conversation" button (91b110a1), which is covered
+    // by the ChatHeader test in components.test.tsx. Pin the absence so a
+    // duplicate trigger doesn't creep back in.
+    render(<ConversationList {...base} />);
+    expect(screen.queryByLabelText('New conversation')).not.toBeInTheDocument();
   });
 
   it('renders grouped sessions and calls onSelect on click', () => {

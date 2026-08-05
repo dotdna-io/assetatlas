@@ -36,6 +36,28 @@ _LOCK_ID_RANGE = 2_000_000_000
 
 WIZARD_TEMP_PREFIX = '__test_'
 
+# Bounds for the partial-run summary persisted to integrations.last_error —
+# the column is rendered verbatim in the UI, and a per-catalog/per-schema
+# paginator can record thousands of warnings on a large estate (#1334).
+_PARTIAL_ERROR_MAX_WARNINGS = 5
+_PARTIAL_ERROR_MAX_LENGTH = 2000
+
+
+def _summarize_collection_warnings(warnings: List[str]) -> str:
+    """Compose the bounded last_error text for a partially-collected run.
+
+    Keeps the first few distinct warnings (insertion order), notes the
+    remainder as "(+N more)", and caps the total length.
+    """
+    distinct = list(dict.fromkeys(str(w) for w in warnings))
+    shown = distinct[:_PARTIAL_ERROR_MAX_WARNINGS]
+    summary = "; ".join(shown)
+    remaining = len(distinct) - len(shown)
+    if remaining:
+        summary += f" (+{remaining} more)"
+    if len(summary) > _PARTIAL_ERROR_MAX_LENGTH:
+        summary = summary[:_PARTIAL_ERROR_MAX_LENGTH - 3] + "..."
+    return summary
 
 
 
@@ -373,7 +395,10 @@ class IntegrationService:
             integration_id: Integration UUID
 
         Returns:
-            Dictionary with success status and batch_id
+            Dictionary with success status and batch_id. When the connector
+            recorded collection warnings (#1334), also carries partial=True
+            and the warnings list, and last_sync_status persists as
+            'partial' rather than 'success'.
         """
         # Get integration with decrypted credentials
         integration = self.repository.get_by_id(integration_id, decrypt=True)
@@ -477,13 +502,32 @@ class IntegrationService:
             # Complete batch
             self.batch_repository.complete_batch(batch_id, record_count)
 
+            # A connector that hit a pagination cap records per-run collection
+            # warnings (#1334): the batch still completes normally, but the run
+            # is persisted as 'partial' so a truncated collection is visible to
+            # the operator instead of reading as a clean sync (and, after the
+            # pipeline's TRUNCATE-rebuild, as deleted assets).
+            warnings = getattr(connector, "collection_warnings", None)
+            if not isinstance(warnings, (list, tuple)):
+                # A connector without the warnings channel (older connector,
+                # or a bare mock in tests) is treated as a clean run.
+                warnings = []
+
             # Update sync status
-            self.repository.update_sync_status(
-                integration_id,
-                status='success',
-                error=None
-            )
-            run_status = 'success'
+            if warnings:
+                self.repository.update_sync_status(
+                    integration_id,
+                    status='partial',
+                    error=_summarize_collection_warnings(warnings)
+                )
+                run_status = 'partial'
+            else:
+                self.repository.update_sync_status(
+                    integration_id,
+                    status='success',
+                    error=None
+                )
+                run_status = 'success'
 
             logger.info(f"Integration run completed: {record_count} records fetched and stored")
 
@@ -501,9 +545,19 @@ class IntegrationService:
                         'error': str(e)
                     }
 
+            if warnings:
+                message = (
+                    f'Fetched {record_count} records, but the collection was '
+                    f'incomplete ({len(warnings)} warning(s) recorded)'
+                )
+            else:
+                message = f'Successfully fetched {record_count} records'
+
             return {
                 'success': True,
-                'message': f'Successfully fetched {record_count} records',
+                'message': message,
+                'partial': bool(warnings),
+                'warnings': list(warnings),
                 'batch_id': str(batch_id),
                 'record_count': record_count,
                 'mapping': mapping_result

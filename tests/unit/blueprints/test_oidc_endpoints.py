@@ -425,11 +425,13 @@ class TestSsoProviders:
             svc = MagicMock()
             svc.is_enabled.return_value = True
             svc.provider_name.return_value = 'Entra ID'
+            svc.provider_kind.return_value = 'entra'
             OidcCls.return_value = svc
             r = client.get('/api/auth/sso-providers')
         assert r.status_code == 200
         assert r.json['oidc']['enabled'] is True
         assert r.json['oidc']['provider_name'] == 'Entra ID'
+        assert r.json['oidc']['provider_kind'] == 'entra'
 
     def test_returns_enabled_false_when_oidc_disabled(self, blueprint_app):
         """oidc.enabled=False when OidcService.is_enabled() returns False."""
@@ -438,6 +440,7 @@ class TestSsoProviders:
             svc = MagicMock()
             svc.is_enabled.return_value = False
             svc.provider_name.return_value = 'Single sign-on'
+            svc.provider_kind.return_value = 'generic'
             OidcCls.return_value = svc
             r = client.get('/api/auth/sso-providers')
         assert r.status_code == 200

@@ -30,7 +30,9 @@ TOKEN_URL = "https://api.lansweeper.com/api/integrations/oauth/token"
 
 # Pagination limits
 MAX_PAGE_SIZE = 500
-MAX_PAGINATION_PAGES = 200  # Safety cap: 200 * 500 = 100K records per site
+# Default safety cap, overridable per integration via the max_pagination_pages
+# config key: 1000 * 500 = 500K records per site
+MAX_PAGINATION_PAGES = 1000
 
 # Default fields to request (30 max per API limit)
 DEFAULT_FIELDS = [
@@ -90,6 +92,7 @@ class LansweeperConnector(BaseConnector):
         # Collection settings
         self.site_id = config.get("site_id")  # None = all sites
         self.page_size = min(int(config.get("page_size", MAX_PAGE_SIZE)), MAX_PAGE_SIZE)
+        self.max_pagination_pages = int(config.get("max_pagination_pages", MAX_PAGINATION_PAGES))
         self.fields = config.get("fields", DEFAULT_FIELDS[:])
 
         super().__init__(config)
@@ -167,6 +170,18 @@ class LansweeperConnector(BaseConnector):
                 max_val=500,
                 description='Number of asset records per API request (max 500)',
             )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                default=MAX_PAGINATION_PAGES,
+                min_val=1,
+                max_val=10000,
+                description=(
+                    'Safety cap on API pages fetched per site per collection run — it '
+                    'stops a pagination loop that never terminates. At the default page '
+                    'size of 500, the default cap of 1,000 pages collects up to '
+                    '500,000 assets per site.'
+                ),
+            )
             .build()
         )
 
@@ -218,12 +233,14 @@ class LansweeperConnector(BaseConnector):
         for site_id in site_ids:
             site_record_count = 0
 
-            paginator = CursorPaginator(max_pages=MAX_PAGINATION_PAGES)
+            paginator = CursorPaginator(max_pages=self.max_pagination_pages)
 
             for page in paginator.pages(lambda cursor, sid=site_id: self._fetch_site_page(sid, cursor)):
                 for raw_record in page:
                     site_record_count += 1
                     yield self._flatten_asset_record(raw_record)
+
+            self.warn_if_truncated(paginator, f"Lansweeper site {site_id} assets")
 
             self.logger.info(
                 f"Site {site_id}: fetched {site_record_count:,} assets"

@@ -628,10 +628,19 @@ def get_integration_status_impl(
     failing = [i for i in integrations
                if (i.get("status") or "").lower() != "enabled"
                or (i.get("last_sync_status") or "").lower() == "failed"]
-    healthy = [i for i in integrations if i not in failing]
+    # A truncated collection (#1334) is not a failure — records were stored —
+    # but it must still be called out, or "are my integrations healthy?" gets
+    # a misleading all-clear.
+    partial = [i for i in integrations
+               if i not in failing
+               and (i.get("last_sync_status") or "").lower() == "partial"]
+    healthy = [i for i in integrations if i not in failing and i not in partial]
 
     header = f"Integrations ({len(integrations)} total: "
-    header += f"{len(healthy)} healthy, {len(failing)} failing/disabled)"
+    header += f"{len(healthy)} healthy, {len(failing)} failing/disabled"
+    if partial:
+        header += f", {len(partial)} partial"
+    header += ")"
     lines = [header, ""]
 
     def _bucket(i: Dict[str, Any]) -> str:
@@ -641,6 +650,8 @@ def get_integration_status_impl(
             return "DISABLED"
         if st == "error" or sync_st == "failed":
             return "FAILING"
+        if sync_st == "partial":
+            return "PARTIAL"
         if st == "enabled" and sync_st in ("", "success"):
             return "HEALTHY"
         return st.upper() or "UNKNOWN"
@@ -666,7 +677,7 @@ def get_integration_status_impl(
 
         if i.get("last_sync_status"):
             lines.append(f"     Last Sync Status: {i['last_sync_status']}")
-            if (i.get("last_sync_status") or "").lower() == "failed" and i.get("last_error"):
+            if (i.get("last_sync_status") or "").lower() in ("failed", "partial") and i.get("last_error"):
                 lines.append(f"     Last Error: {str(i['last_error'])[:200]}")
 
         if i.get("last_connection_test_status"):

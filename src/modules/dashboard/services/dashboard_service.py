@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 import logging
 import colorsys
-from src.api.modules.settings.settings_schema import get_confidence_thresholds
+from src.modules.shared.confidence_thresholds import get_confidence_thresholds
 
 logger = logging.getLogger(__name__)
 

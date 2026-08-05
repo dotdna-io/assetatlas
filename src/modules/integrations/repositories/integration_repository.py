@@ -785,7 +785,7 @@ class IntegrationRepository:
             Dict with high, medium, low counts (zero for any missing bucket).
         """
         if medium is None or high is None:
-            from src.api.modules.settings.settings_schema import DEFAULT_CONFIDENCE_THRESHOLDS
+            from src.modules.shared.confidence_thresholds import DEFAULT_CONFIDENCE_THRESHOLDS
             medium, high = DEFAULT_CONFIDENCE_THRESHOLDS
         with self._get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:

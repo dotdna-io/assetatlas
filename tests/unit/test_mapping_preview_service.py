@@ -62,8 +62,9 @@ class TestMappingPreview:
         assert len(result['records']) == 1
 
         rec = result['records'][0]
-        assert rec['mapped']['hostname'] == 'WKS-001'
-        assert rec['mapped']['ip'] == '10.1.1.5'
+        # Identifier fields are always arrays since multi-source mapping (#353).
+        assert rec['mapped']['hostname'] == ['WKS-001']
+        assert rec['mapped']['ip'] == ['10.1.1.5']
         assert rec['dropped'] is False
         assert rec['drop_reasons'] == []
 

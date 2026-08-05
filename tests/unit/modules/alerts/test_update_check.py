@@ -226,3 +226,69 @@ def test_module_is_newer_zero_pads_and_compares():
     assert uc.is_newer('2026.27', '2026.27.0') is False     # zero-pad, not newer
     assert uc.is_newer('2026.27.0', '2026.27') is False     # reverse: elided patch must NOT read as newer
     assert uc.is_newer(None, '2026.27.5') is False          # unparseable → False
+
+
+class TestManifestUrlFor:
+    """manifest_url_for: the census URL must always be one the Worker 302s.
+
+    A version that fullmatches the Worker's pattern goes in the /check/ path;
+    anything else falls back to plain /latest.json — a version the Worker would
+    404 would leave that install silently seeing "no update found" forever.
+    """
+
+    FALLBACK = 'https://get.assetatlas.com/latest.json'
+
+    def test_default_manifest_url_is_the_get_front_door_fallback(self):
+        assert uc.DEFAULT_MANIFEST_URL == self.FALLBACK
+
+    def test_valid_version_lands_in_the_check_path(self):
+        assert uc.manifest_url_for('2026.30.7') == (
+            'https://get.assetatlas.com/check/2026.30.7')
+
+    def test_single_digit_week_matches_the_worker_pattern(self):
+        assert uc.manifest_url_for('2026.5.1') == (
+            'https://get.assetatlas.com/check/2026.5.1')
+
+    def test_v_prefix_is_stripped_before_the_path_is_built(self):
+        assert uc.manifest_url_for('v2026.30.7') == (
+            'https://get.assetatlas.com/check/2026.30.7')
+
+    def test_monitor_probe_version_is_a_valid_path_version(self):
+        assert uc.manifest_url_for('9999.1.0') == (
+            'https://get.assetatlas.com/check/9999.1.0')
+
+    def test_non_release_versions_fall_back(self):
+        for bad in (None, '', '0.0.0-dev', 'dev', '2026.30', '2026.30.7-rc1',
+                    '2026.123.4', '2026.30.7.sh', '../2026.30.7'):
+            assert uc.manifest_url_for(bad) == self.FALLBACK, bad
+
+    def test_bare_fetch_latest_version_hits_the_fallback(self, monkeypatch):
+        # The raw.githubusercontent URL is gone from the client: a bare
+        # fetch_latest_version() must request the get.assetatlas.com fallback.
+        calls = []
+
+        def _get(url, **kwargs):
+            calls.append(url)
+            return _Resp({'version': '2026.28.1'})
+
+        monkeypatch.setattr('requests.get', _get)
+        assert uc.fetch_latest_version() == '2026.28.1'
+        assert calls == [self.FALLBACK]
+
+
+class TestServiceUrlDerivation:
+    """With no explicit url=, the service builds its URL from current_version
+    (the scheduler constructs it that way); an explicit url keeps winning."""
+
+    def test_derives_check_url_from_current_version(self):
+        svc = UpdateCheckService(MagicMock(), MagicMock(), '2026.30.7')
+        assert svc.url == 'https://get.assetatlas.com/check/2026.30.7'
+
+    def test_dev_version_derives_the_fallback_url(self):
+        svc = UpdateCheckService(MagicMock(), MagicMock(), '0.0.0-dev')
+        assert svc.url == 'https://get.assetatlas.com/latest.json'
+
+    def test_explicit_url_wins_over_derivation(self):
+        svc = UpdateCheckService(MagicMock(), MagicMock(), '2026.30.7',
+                                 url='http://manifest.test/latest.json')
+        assert svc.url == 'http://manifest.test/latest.json'

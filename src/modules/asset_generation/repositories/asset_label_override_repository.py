@@ -57,6 +57,11 @@ class AssetLabelOverrideRepository:
             return df
 
         mapped = df["id"].astype(str).map(overrides)
+        # pandas 3: map() over the str dtype yields a str-dtype Series in
+        # which .where(..., None) cannot store a real None (missing stays
+        # NaN). Cast to object first so the documented None-for-no-override
+        # contract holds, matching the empty-overrides branch above.
+        mapped = mapped.astype(object)
         df["asset_label_override"] = mapped.where(mapped.notna(), None)
         applied = df["asset_label_override"].notna().sum()
         logger.info(f"Applied {applied} asset_label overrides")

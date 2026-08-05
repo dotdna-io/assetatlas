@@ -86,6 +86,61 @@ class TestAzureADConnector(ConnectorTestCase):
         assert len(records) == 1
 
     # -------------------------------------------------------------------------
+    # Connector-specific: paginator cap-hit → collection warning
+    # -------------------------------------------------------------------------
+
+    @responses.activate
+    def test_cap_hit_records_one_collection_warning(self):
+        """A run stopped by the configured page cap records exactly one warning."""
+        import json
+
+        with open(FIXTURES_DIR / "azure_ad" / "devices_page1.json") as f:
+            page1 = json.load(f)
+
+        responses.add(responses.POST, TOKEN_URL,
+                      json={"access_token": "tok", "expires_in": 3600}, status=200)
+        # Both pages hand back a @odata.nextLink — only the cap ends the loop.
+        responses.add(responses.GET, DEVICES_URL, json=page1, status=200)
+        responses.add(responses.GET, DEVICES_PAGE2_URL, json=page1, status=200)
+
+        connector = AzureADConnector({**self.mock_config, "max_pagination_pages": 2})
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 4  # 2 devices per page × 2 pages
+        warnings = connector.collection_warnings
+        assert len(warnings) == 1
+        assert "Entra ID devices" in warnings[0]
+        assert "2-page cap" in warnings[0]
+
+    @responses.activate
+    def test_end_of_data_at_cap_boundary_records_no_warning(self):
+        """A final page that fills the cap but has no nextLink is end-of-data."""
+        import json
+
+        with open(FIXTURES_DIR / "azure_ad" / "devices_page1.json") as f:
+            page1 = json.load(f)
+        with open(FIXTURES_DIR / "azure_ad" / "devices_page2.json") as f:
+            page2 = json.load(f)
+
+        responses.add(responses.POST, TOKEN_URL,
+                      json={"access_token": "tok", "expires_in": 3600}, status=200)
+        responses.add(responses.GET, DEVICES_URL, json=page1, status=200)
+        responses.add(responses.GET, DEVICES_PAGE2_URL, json=page2, status=200)
+
+        connector = AzureADConnector({**self.mock_config, "max_pagination_pages": 2})
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 3
+        assert connector.collection_warnings == []
+
+    def test_config_schema_declares_max_pagination_pages(self):
+        """The cap is operator-settable: declared with the connector's default."""
+        field = AzureADConnector.get_config_schema()["max_pagination_pages"]
+        assert field["type"] == "number"
+        assert field["required"] is False
+        assert field["default"] == 500
+
+    # -------------------------------------------------------------------------
     # Connector-specific: field mode
     # -------------------------------------------------------------------------
 

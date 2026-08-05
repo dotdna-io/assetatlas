@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { AssistantMarkdown } from '../AssistantMarkdown';
+import { getCategoryColor } from '@/components/ui/CategoryIcon';
 
 
 describe('AssistantMarkdown · markdown rendering', () => {
@@ -52,13 +53,23 @@ describe('AssistantMarkdown · security', () => {
   });
 });
 
-/** Walk up from `el` checking whether any ancestor carries a Badge-style
- *  background-color matching the server hex (`#3b82f6` → rgb 59,130,246
- *  under jsdom normalization). */
+/** jsdom serializes inline styles with hex colors normalized to
+ *  `rgb(r, g, b)`, so convert the palette hex before comparing. */
+function asRgb(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+}
+
+/** Walk up from `el` checking whether any ancestor is styled with the
+ *  shared palette color for `server` — i.e. the value was rendered as a
+ *  CategoryTag. The expected color is derived from the palette (not a
+ *  hardcoded literal) so a design-token change doesn't break the test. */
 function hasServerBadgeAncestor(el: HTMLElement | null): boolean {
+  const token = getCategoryColor('server');
+  const rgb = asRgb(token);
   while (el) {
     const style = el.getAttribute('style') ?? '';
-    if (style.includes('59, 130, 246') || style.includes('#3b82f6')) {
+    if (style.includes(token) || style.includes(rgb)) {
       return true;
     }
     el = el.parentElement;
@@ -71,7 +82,8 @@ describe('AssistantMarkdown · category badges', () => {
     render(<AssistantMarkdown content={
       '| Host | Subcategory |\n|------|-------------|\n| h1 | server |'
     } />);
-    expect(hasServerBadgeAncestor(screen.getByText('server'))).toBe(true);
+    // CategoryTag renders the canonical display label ("server" → "Server").
+    expect(hasServerBadgeAncestor(screen.getByText('Server'))).toBe(true);
   });
 
   it('does NOT badge category words that appear inside other text', () => {

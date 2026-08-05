@@ -387,3 +387,97 @@ class TestServiceNowConnector(ConnectorTestCase):
         field_names = {f["name"] for f in schema["fields"]}
         assert "location_enriched.city" not in field_names
         assert schema["enrichment_available"] is False
+
+
+# ---------------------------------------------------------------------------
+# Issue #1334 — paginator cap-hit surfaces as a collection warning
+# ---------------------------------------------------------------------------
+
+
+def _ci_page(*sys_ids):
+    return {"result": [{"sys_id": sid, "name": sid} for sid in sys_ids]}
+
+
+class TestServiceNowTruncation:
+    """Both OffsetPaginator sites relay a cap-hit: the CMDB CI collection
+    (a shortfall reads as deleted assets) and the per-table enrichment
+    lookups (a shortfall under-enriches assets but loses none)."""
+
+    mock_config = {
+        "instance": "dev12345",
+        "username": "test-user",
+        "password": "test-pass",
+        "page_size": 100,
+        "enable_enrichment": False,
+        "max_pagination_pages": 2,
+    }
+
+    @responses.activate
+    def test_capped_ci_run_records_one_warning(self):
+        # Two non-empty pages and no X-Total-Count header: the cap, not the
+        # data, ends the loop. (Without a total, OffsetPaginator deliberately
+        # reports truncated whenever the last records land on the cap-th
+        # fetch — over-reporting beats under-reporting.)
+        responses.add(responses.GET, CI_URL, json=_ci_page("ci-1"), status=200)
+        responses.add(responses.GET, CI_URL, json=_ci_page("ci-2"), status=200)
+
+        connector = ServiceNowConnector(self.mock_config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 2
+        warnings = connector.collection_warnings
+        assert len(warnings) == 1, warnings
+        assert "ServiceNow CMDB CIs truncated at the 2-page cap" in warnings[0]
+
+    @responses.activate
+    def test_end_of_data_records_no_warning(self):
+        # An empty second page is a genuine end-of-data signal.
+        responses.add(responses.GET, CI_URL, json=_ci_page("ci-1"), status=200)
+        responses.add(responses.GET, CI_URL, json={"result": []}, status=200)
+
+        connector = ServiceNowConnector(self.mock_config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 1
+        assert connector.collection_warnings == []
+
+    @responses.activate
+    def test_truncated_lookup_table_warns_without_losing_assets(self):
+        """A capped lookup table under-enriches assets but loses none — the
+        warning must name the table so the operator knows which enrichment
+        is partial."""
+        config = {
+            **self.mock_config,
+            "enable_enrichment": True,
+            "max_pagination_pages": 1,
+        }
+        with open(FIXTURES_DIR / "servicenow" / "lookup_cmdb_model.json") as f:
+            models = json.load(f)
+        # cmdb_model: one non-empty page with no total header — the cap of 1
+        # is hit. The other lookup tables are empty: end of data on the
+        # first fetch, no warning.
+        responses.add(responses.GET, MODEL_URL, json=models, status=200)
+        responses.add(responses.GET, LOCATION_URL, json={"result": []}, status=200)
+        responses.add(responses.GET, COMPANY_URL, json={"result": []}, status=200)
+        # The CI page reports its total, so the CI paginator stops on data,
+        # not on the cap.
+        responses.add(
+            responses.GET, CI_URL, json=_ci_page("ci-1"),
+            headers={"X-Total-Count": "1"}, status=200,
+        )
+
+        connector = ServiceNowConnector(config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 1
+        warnings = connector.collection_warnings
+        assert len(warnings) == 1, warnings
+        assert "ServiceNow enrichment lookup table cmdb_model" in warnings[0]
+        assert "1-page cap" in warnings[0]
+
+    def test_config_schema_declares_max_pagination_pages(self):
+        """The cap is operator-settable: declared with the connector's default."""
+        field = ServiceNowConnector.get_config_schema()["max_pagination_pages"]
+        assert field["type"] == "number"
+        assert field["required"] is False
+        assert field["default"] == 500

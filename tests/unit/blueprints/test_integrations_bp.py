@@ -15,6 +15,7 @@ Endpoints tested:
 - POST   /api/integrations/<id>/run             — manual run
 - PATCH  /api/integrations/<id>/enable          — enable integration
 - PATCH  /api/integrations/<id>/disable         — disable integration
+- GET    /api/integrations/<id>/health          — health status (asset_generation bp)
 - GET    /api/integrations/stats                — get statistics
 - GET    /api/integrations/logo-map             — get logo map (any auth)
 """
@@ -73,6 +74,7 @@ class TestIntegrationsAuth:
         ("POST",   f"/api/integrations/{INTEGRATION_ID}/run"),
         ("PATCH",  f"/api/integrations/{INTEGRATION_ID}/enable"),
         ("PATCH",  f"/api/integrations/{INTEGRATION_ID}/disable"),
+        ("GET",    f"/api/integrations/{INTEGRATION_ID}/health"),
         ("GET",    "/api/integrations/stats"),
         ("GET",    "/api/integrations/logos"),
         ("POST",   "/api/integrations/logos/upload"),
@@ -103,6 +105,7 @@ class TestIntegrationsAuth:
         ("GET",    f"/api/integrations/{INTEGRATION_ID}"),
         ("PUT",    f"/api/integrations/{INTEGRATION_ID}"),
         ("DELETE", f"/api/integrations/{INTEGRATION_ID}"),
+        ("GET",    f"/api/integrations/{INTEGRATION_ID}/health"),
         ("GET",    "/api/integrations/stats"),
     ])
     def test_non_admin_returns_403(self, client, auth_headers, _prime_regular_user, method, path):
@@ -1045,4 +1048,100 @@ class TestLogoFileServe:
         sha = "e" * 64
         (tmp_path / f"{sha}.jpg").write_bytes(b"x")
         resp = client.get(f"/api/integrations/logos/file/{sha}.jpg")
+        assert resp.status_code == 404
+
+
+# =============================================================================
+# Integration health (GET /api/integrations/<id>/health)
+# =============================================================================
+
+def _make_health_integration(**overrides):
+    """Integration mock shaped for the health endpoint: ``status.value`` must
+    be a real attribute, and ``last_sync_status`` drives the partial case."""
+    integration = MagicMock()
+    integration.id = overrides.get("id", INTEGRATION_ID)
+    integration.status = MagicMock(value=overrides.get("status_value", "enabled"))
+    integration.last_sync_status = overrides.get("last_sync_status")
+    integration.last_error = overrides.get("last_error")
+    integration.last_sync_at = overrides.get("last_sync_at")
+    integration.is_running = overrides.get("is_running", False)
+    return integration
+
+
+class TestIntegrationHealth:
+    """GET /api/integrations/<id>/health — a truncated collection surfaces as
+    'warning', never as a hard error (#1334)."""
+
+    def test_partial_last_sync_returns_warning(self, client, auth_headers, blueprint_app):
+        blueprint_app.integration_service.get_integration.return_value = (
+            _make_health_integration(
+                last_sync_status="partial",
+                last_error="Devices truncated at the 500-page cap — more pages were available.",
+            )
+        )
+
+        resp = client.get(
+            f"/api/integrations/{INTEGRATION_ID}/health",
+            headers=auth_headers("admin"),
+        )
+
+        assert resp.status_code == 200
+        body = resp.get_json()
+        assert body["status"] == "warning"
+        # The summary stays visible so the operator can read what was skipped.
+        assert "truncated" in body["last_error"]
+
+    def test_failed_last_sync_returns_error(self, client, auth_headers, blueprint_app):
+        blueprint_app.integration_service.get_integration.return_value = (
+            _make_health_integration(
+                last_sync_status="failed",
+                last_error="401 Unauthorized",
+            )
+        )
+
+        resp = client.get(
+            f"/api/integrations/{INTEGRATION_ID}/health",
+            headers=auth_headers("admin"),
+        )
+
+        assert resp.get_json()["status"] == "error"
+
+    def test_integration_error_state_beats_partial(self, client, auth_headers, blueprint_app):
+        """status.value == 'error' stays a hard error even when the last sync
+        was only partial."""
+        blueprint_app.integration_service.get_integration.return_value = (
+            _make_health_integration(
+                status_value="error",
+                last_sync_status="partial",
+                last_error="connector config rejected",
+            )
+        )
+
+        resp = client.get(
+            f"/api/integrations/{INTEGRATION_ID}/health",
+            headers=auth_headers("admin"),
+        )
+
+        assert resp.get_json()["status"] == "error"
+
+    def test_clean_sync_returns_healthy(self, client, auth_headers, blueprint_app):
+        blueprint_app.integration_service.get_integration.return_value = (
+            _make_health_integration(last_sync_status="success", last_error=None)
+        )
+
+        resp = client.get(
+            f"/api/integrations/{INTEGRATION_ID}/health",
+            headers=auth_headers("admin"),
+        )
+
+        assert resp.get_json()["status"] == "healthy"
+
+    def test_unknown_integration_returns_404(self, client, auth_headers, blueprint_app):
+        blueprint_app.integration_service.get_integration.return_value = None
+
+        resp = client.get(
+            f"/api/integrations/{INTEGRATION_ID}/health",
+            headers=auth_headers("admin"),
+        )
+
         assert resp.status_code == 404

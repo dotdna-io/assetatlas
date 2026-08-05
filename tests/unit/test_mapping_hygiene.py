@@ -107,6 +107,24 @@ class TestGroupSizeSafetyValve:
             mappings[f'00:50:56:92:44:{i:02d}'] = asset_id
         self.identifier.load_existing_mappings(mappings)
         components = self._all_components()
+        # Group survives: MACs did not count toward the 15-hostname nuke limit
+        # (19 components would exceed it if they did).
+        assert 'server00aa' in components
+        # But with 14 hostnames the group also trips the >2-hostname
+        # MAC-stripping rule (#409, docking-station over-merge fix), so the
+        # MAC components themselves are removed.
+        assert '00:50:56:92:44:00' not in components
+
+    def test_mac_components_kept_in_small_hostname_group(self):
+        """MAC components survive when the group stays under the MAC-stripping threshold."""
+        asset_id = 'aaaa0000-bbbb-cccc-dddd-eeeeeeeeeeee'
+        mappings = {
+            'server00aa': asset_id,
+            'server01aa': asset_id,
+            '00:50:56:92:44:00': asset_id,
+        }
+        self.identifier.load_existing_mappings(mappings)
+        components = self._all_components()
         assert 'server00aa' in components
         assert '00:50:56:92:44:00' in components
 

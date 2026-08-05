@@ -126,6 +126,9 @@ class TestResendInvite:
             "username": "alice",
             "email": "alice@example.com",
             "is_active": True,
+            # Resend is gated on a pending invite (#629); the real
+            # get_user_by_id projects this flag, the mock must too.
+            "onboarding_pending": True,
         }
         onboard_mocks["invite_cls"].create_invite_token.return_value = {
             "token": "rawtoken",
@@ -150,6 +153,9 @@ class TestResendInvite:
             "username": "alice",
             "email": "alice@example.com",
             "is_active": False,
+            # Past the resend gate (#629) so the test exercises the
+            # create_invite_token ValueError branch it is named for.
+            "onboarding_pending": True,
         }
         onboard_mocks["invite_cls"].create_invite_token.side_effect = ValueError(
             "Cannot send invite to inactive account"

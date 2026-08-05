@@ -139,15 +139,21 @@ jobs:
         # lives in tests/unit/test_app_image_contents.py and runs in the
         # pipeline-domain hard gate below. Put bridge invariants there, not
         # under tests/unit/teams_bridge/ where they would never run.
-        # continue-on-error surfaces the ~750 pre-existing test-isolation
-        # failures (audit #596 H7) as CI signal without blocking merges
-        # while the blueprint test suites are stabilised in a separate PR.
-        # Scope is deliberately tests/unit ONLY. continue-on-error applies to
-        # the whole command, so the deterministic module suites that used to
-        # ride along here inherited a job that could not fail — a real
-        # regression sat behind a green check for four months (#992). They are
-        # hard-gated in `pipeline-domain` below; do not re-add them here (#997).
-        continue-on-error: true
+        # ENFORCING (no continue-on-error): the suite is green on main —
+        # 8330 passed, 69 skipped, 0 failed at 5a99a881; the ~750
+        # test-isolation failures from audit #596 H7 that once forced this
+        # step into warning-only are fixed. A failure here now fails the
+        # job and the workflow run. Note `pytest (unit)` is not (yet) one
+        # of the four required check contexts in ruleset 19096513, so a red
+        # run does not block the merge button until that settings change
+        # lands — the `vitest + tsc` gate below required no such change.
+        # Scope is deliberately tests/unit ONLY. The deterministic module
+        # suites that used to ride along here are hard-gated in
+        # `pipeline-domain` below; do not re-add them here (#997). The
+        # reason is historical but binding: while this step carried
+        # continue-on-error, everything in its command inherited a job that
+        # could not fail, and a real regression sat behind a green check
+        # for four months (#992).
         run: pytest tests/unit --ignore=tests/unit/teams_bridge -q
       - name: Drop the workspace venv
         # The fleet's workspaces are PERSISTENT: nothing removes .venv when the
@@ -201,8 +207,9 @@ jobs:
         # HARD gate (no continue-on-error), same rationale as `chat-parity`:
         # these 1086 tests are deterministic, DB-free, network-free and green in
         # random order, so they block merges WITHOUT dragging in the ~750
-        # pre-existing isolation failures that force `pytest (unit)` to stay
-        # advisory (#596 H7). ~6s of runtime buys back the blind spot that hid
+        # isolation failures that forced `pytest (unit)` to stay advisory at
+        # the time (#596 H7 — since fixed; that job is enforcing now too).
+        # ~6s of runtime buys back the blind spot that hid
         # a broken test_multi_run_persistence.py for four months (#992, #997).
         # tag_rules (103) and assets (23) joined in #1001: they sit in
         # pyproject's `testpaths`, but every job here passes explicit paths,
@@ -218,8 +225,9 @@ jobs:
         # test_app_image_contents.py joins on the same rule (#1099): it guards
         # that the app image actually ships the files the running code reads.
         # Both bugs it covers (#1092, #1093) were silent in production for
-        # months, so leaving its regression tests in the advisory `pytest (unit)`
-        # job would reproduce exactly the blind spot they exist to close.
+        # months, so leaving its regression tests in the then-advisory
+        # `pytest (unit)` job would have reproduced exactly the blind spot
+        # they exist to close.
         #
         # test_settings_schema.py (#1228) and test_mcp/test_context.py (#1235)
         # join for the reason the blind spot itself produced: both sat RED on
@@ -235,9 +243,10 @@ jobs:
         #
         # test_workflow_expressions.py (#1268) joins on the same rule: it guards
         # that no workflow reintroduces the `A && '' || B` idiom that kept the
-        # fleet's pip cache silently enabled, and a guard left in the advisory
-        # `pytest (unit)` job could rot there unnoticed. It is a text scan of
-        # .github/workflows — DB-free, network-free, milliseconds.
+        # fleet's pip cache silently enabled, and a guard left in the
+        # then-advisory `pytest (unit)` job could have rotted there unnoticed.
+        # It is a text scan of .github/workflows — DB-free, network-free,
+        # milliseconds.
         run: pytest src/modules/asset_generation/tests src/modules/alert_delivery/tests src/modules/tag_rules/tests src/modules/assets/tests tests/unit/test_schema_full_migration_stamp.py tests/unit/test_app_image_contents.py tests/unit/settings/test_settings_schema.py tests/unit/test_mcp/test_context.py tests/unit/test_workflow_expressions.py -q
       - name: Drop the workspace venv
         # Persistent fleet workspaces — see `python-unit`.
@@ -279,8 +288,9 @@ jobs:
       - name: Run parity contract (pure DB-free lane)
         # HARD gate (no continue-on-error): the pure lane is deterministic and
         # already green, so it blocks merges WITHOUT dragging in the ~750
-        # pre-existing test-isolation failures that force `pytest (unit)` to stay
-        # advisory (#596). A new `/api` GET read endpoint mapped in neither
+        # test-isolation failures that forced `pytest (unit)` to stay advisory
+        # at the time (#596 — since fixed; that job is enforcing now too).
+        # A new `/api` GET read endpoint mapped in neither
         # ENDPOINT_TO_TOOL nor EXCLUDED_ENDPOINTS — or a removed/renamed tool —
         # turns this job RED. `-m "not integration"` is explicit so the gate
         # stays on the pure lane even if the pyproject default marker set changes.
@@ -291,6 +301,13 @@ jobs:
         run: rm -rf .venv
 
   lint:
+    # DO NOT RENAME: this `name:` is a required check context in the repo's
+    # branch ruleset — renaming it red-gates every PR until the ruleset is
+    # edited by hand. It still mentions black although the black step was
+    # dropped: `black --check` reported ~466/570 files would be reformatted
+    # for as long as anyone remembers (a pure-churn reformat CLAUDE.md tells
+    # contributors never to run), so the step could only ever be a permanent
+    # red herring on the public mirror. flake8 below is the real gate.
     name: flake8 + black --check
     runs-on: ${{ vars.CI_RUNNER == 'fleet' && fromJSON('["self-hosted","dotdna-ci"]') || 'ubuntu-latest' }}
     timeout-minutes: 10
@@ -302,21 +319,16 @@ jobs:
           # Off on the fleet, on for hosted — see RUNNER ESCAPE HATCH above.
           cache: ${{ vars.CI_RUNNER != 'fleet' && 'pip' || '' }}
       - name: Install lint tooling
-        run: pip install flake8 black
+        run: pip install flake8
       - name: flake8 (real-bug indicators only)
         # F811 redefined, F821 undefined, F601 always-true comparison,
         # W605 invalid escape, E9 syntax/runtime errors. F401 (unused
         # imports, ~165) and F841 (unused locals, ~44) are intentionally
         # excluded — they're the legacy backlog the audit flagged as
-        # too noisy to block CI on, tracked for a separate cleanup PR
-        # alongside the H1 black reformat.
+        # too noisy to block CI on, to be cleaned up in a separate PR.
+        # (The audit paired that cleanup with the "H1 black reformat";
+        # that pairing is moot — the black step was removed in #1362.)
         run: flake8 --select=F811,F821,F601,W605,E9 src/
-      - name: black --check (warning-only — H1 backlog)
-        # Full repo reformat is tracked under #596 H1 (637 unformatted
-        # files). Run continues regardless so the warning surfaces in
-        # the job summary without blocking the merge.
-        continue-on-error: true
-        run: black --check src/
 
   public-mirror-gate:
     name: public mirror scrub gate
@@ -369,12 +381,30 @@ jobs:
           cache: npm
           cache-dependency-path: ui/prod/package-lock.json
       - run: npm ci
+      - name: Install the linux platform binaries npm ci skips
+        # npm/cli#4828: ui/prod/package-lock.json was last written on
+        # darwin-arm64 and carries package entries ONLY for that platform's
+        # optional binaries, so `npm ci` — which installs strictly from the
+        # lock — silently skips @rollup/rollup-linux-x64-gnu and
+        # @esbuild/linux-x64 on linux runners. Vitest therefore died at
+        # startup on EVERY linux CI run, masked until now by the vitest
+        # step's continue-on-error (plain `npm install` does not repair it —
+        # npm trusts the lock and re-resolves nothing). Install the exact
+        # versions the lock's rollup/esbuild entries pin for the runner's
+        # platform, --no-save so neither the lock nor package.json changes.
+        # The real fix is regenerating the lock on linux — a ui/ change,
+        # deliberately not in this PR; this step then degrades to a no-op.
+        run: |
+          ROLLUP_NATIVE=$(node -p "require('./package-lock.json').packages['node_modules/rollup'].optionalDependencies['@rollup/rollup-linux-x64-gnu']")
+          ESBUILD_NATIVE=$(node -p "require('./package-lock.json').packages['node_modules/esbuild'].optionalDependencies['@esbuild/linux-x64']")
+          npm install --no-save --no-audit --no-fund "@rollup/rollup-linux-x64-gnu@$ROLLUP_NATIVE" "@esbuild/linux-x64@$ESBUILD_NATIVE"
       - name: TypeScript compile check
         run: npx tsc --noEmit
-      - name: Vitest (warning-only — H4 backlog)
-        # 3 known-flaky tests are tracked under #596 H4. continue-on-error
-        # surfaces the failure without blocking the merge; the previous
-        # `|| echo` form broke YAML parsing because the parenthesised
-        # warning text confused bash quoting.
-        continue-on-error: true
+      - name: Vitest
+        # ENFORCING (no continue-on-error): the suite is green on main —
+        # 181 files, 1716 passed, 0 failed at 5a99a881; the 3 known-flaky
+        # tests tracked under #596 H4 that once forced this step into
+        # warning-only are fixed. A failure here fails the `vitest + tsc`
+        # job, which IS one of the four required check contexts in ruleset
+        # 19096513, so this gate blocks merges from the moment it lands.
         run: npx vitest run

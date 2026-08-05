@@ -1,0 +1,4 @@
+hostname,ip_address,serial_number,os,status
+DESKTOP-WIN001,10.0.1.10,SN-001,Windows 11,active
+SERVER-LIN001,10.0.2.20,SN-002,Ubuntu 22.04,active
+LAPTOP-MAC001,10.0.3.30,SN-003,macOS 14,inactive

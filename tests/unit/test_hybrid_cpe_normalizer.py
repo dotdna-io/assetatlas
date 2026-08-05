@@ -28,7 +28,10 @@ class TestDarwinKernelVersions:
     ])
     def test_known_darwin_maps_to_macos(self, normalizer, darwin_ver, expected_macos):
         result = normalizer.normalize(darwin_ver)
-        assert result.os_normalized == f"mac os x {expected_macos}"
+        # _PRODUCT_DISPLAY_NAMES canonicalises mac_os_x -> 'macos' (#329); the
+        # #275 contract is the Darwin->macOS version mapping, not the old
+        # 'mac os x' spelling.
+        assert result.os_normalized == f"macos {expected_macos}"
 
     @pytest.mark.parametrize("darwin_ver", [
         "Darwin 26.0.1",

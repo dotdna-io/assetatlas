@@ -235,6 +235,11 @@ class AzureResourceGraphConnector(BaseConnector):
         else:
             self.page_size = max(1, min(int(raw_page_size), MAX_PAGE_SIZE))
 
+        # Pagination safety cap
+        self.max_pagination_pages = int(
+            config.get('max_pagination_pages', MAX_PAGINATION_PAGES)
+        )
+
         super().__init__(config)
 
     # ------------------------------------------------------------------
@@ -323,6 +328,13 @@ class AzureResourceGraphConnector(BaseConnector):
                 max_val=MAX_PAGE_SIZE,
                 description='Results per API request (max 1000)',
             )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                default=MAX_PAGINATION_PAGES,
+                min_val=1,
+                max_val=10000,
+                description='Safety cap on pages fetched per query (cap × page size records max)',
+            )
             .build()
         )
 
@@ -355,7 +367,7 @@ class AzureResourceGraphConnector(BaseConnector):
         skip_token: Optional[str] = None
         record_count = 0
 
-        for _ in range(MAX_PAGINATION_PAGES):
+        for _ in range(self.max_pagination_pages):
             if skip_token:
                 body['options']['$skipToken'] = skip_token
 
@@ -379,6 +391,13 @@ class AzureResourceGraphConnector(BaseConnector):
             skip_token = result.get('$skipToken')
             if not skip_token:
                 break
+        else:
+            # The cap, not the data, ended the loop — more pages may exist.
+            if self.query_preset != 'custom':
+                label = f'Azure Resource Graph {self.query_preset} resources'
+            else:
+                label = 'Azure Resource Graph resources (custom query)'
+            self.record_truncation_warning(label, self.max_pagination_pages)
 
         self.logger.info('Fetch complete: %d resources', record_count)
 

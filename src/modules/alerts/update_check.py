@@ -15,6 +15,7 @@ for the `assetatlas-update-available` rule (one-active-alert-per-rule dedup,
 matching the watchdog); when the versions match it resolves that alert.
 """
 import logging
+import re
 import time
 
 from src.modules.alerts.service import AlertsService
@@ -22,16 +23,29 @@ from src.modules.alerts.service import AlertsService
 logger = logging.getLogger(__name__)
 
 UPDATE_RULE_SLUG = 'assetatlas-update-available'
-# Public version manifest for the "newer version" comparison, published on each
-# release by .github/workflows/release.yml. It lives in the PUBLIC
-# assetatlas-reference-bundles repo precisely so an anonymous read works — the
-# source repo is private, so its GitHub releases API 404s unauthenticated. A
-# missing/unreachable manifest simply 404s/times out here, which is swallowed →
-# the check stays silent (air-gap-safe).
-DEFAULT_MANIFEST_URL = (
-    'https://raw.githubusercontent.com/dotdna-io/'
-    'assetatlas-reference-bundles/main/latest.json'
-)
+# Public version manifest for the "newer version" comparison, fetched through
+# get.assetatlas.com — the Cloudflare Worker (deploy/cloudflare/get-worker.js)
+# fronting the public assetatlas-reference-bundles repo. The Worker 302s to the
+# raw latest.json that .github/workflows/release.yml publishes on each release,
+# and requests follows the redirect, so the manifest bytes are unchanged.
+#
+# Online installs fetch via /check/<installed-version> (see manifest_url_for):
+# the version rides in the URL PATH because that is the only thing free-tier
+# Cloudflare analytics can see — letting DOTDNA's distribution census count
+# alive online installs and their version mix. That is one request per day per
+# online install carrying only the version string: no install ID, no other
+# data. Installs whose version is not a release version (dev builds,
+# '0.0.0-dev') use this plain /latest.json fallback instead, and air-gapped
+# installs make no call at all (the setting stays off; see the module
+# docstring). A missing/unreachable manifest still collapses to None here —
+# swallowed → the check stays silent.
+DEFAULT_MANIFEST_URL = 'https://get.assetatlas.com/latest.json'
+# Anchored fullmatch of the exact version pattern the Worker's /check/ route
+# accepts (\d{4}\.\d{1,2}\.\d+ — keep in sync with VER in get-worker.js).
+# Anything the client puts in the path MUST be a version the Worker 302s;
+# otherwise that install's check 404s and it silently sees "no update found"
+# forever.
+_VERSION_RE = re.compile(r'\d{4}\.\d{1,2}\.\d+')
 # Must stay strictly BELOW the daily job interval: the job fires every 24h and
 # stamps _last_ok_check a few seconds after each fire, so a 24h TTL would make
 # the very next daily fire land inside the window and skip — running only every
@@ -47,6 +61,20 @@ def _norm(version):
     """Strip a leading v/V from a version/tag string."""
     v = (version or '').strip()
     return v[1:] if v[:1] in ('v', 'V') else v
+
+
+def manifest_url_for(version):
+    """Manifest URL for an installed version.
+
+    A valid release version goes in the /check/ path (the distribution census
+    counts request paths); anything else — dev builds, '0.0.0-dev', empty —
+    falls back to the plain /latest.json URL so the path the Worker sees is
+    always one it 302s.
+    """
+    v = _norm(version)
+    if _VERSION_RE.fullmatch(v):
+        return f'https://get.assetatlas.com/check/{v}'
+    return DEFAULT_MANIFEST_URL
 
 
 def _parse_version(version):
@@ -98,12 +126,15 @@ class UpdateCheckService:
 
     def __init__(self, alert_repo, settings_manager, current_version,
                  delivery_service=None,  # AlertDeliveryService; None = no channels
-                 *, url=DEFAULT_MANIFEST_URL, clock=time.time):
+                 *, url=None, clock=time.time):
         self.alert_repo = alert_repo
         self.settings = settings_manager
         self.current_version = _norm(current_version)
         self.delivery = delivery_service
-        self.url = url
+        # No explicit url → derive the census URL from the installed version
+        # (the scheduler passes only current_version). An explicit url always
+        # wins — tests inject a local manifest that way.
+        self.url = url if url is not None else manifest_url_for(current_version)
         self._clock = clock
         self._last_ok_check = None  # timestamp of the last successful fetch
 

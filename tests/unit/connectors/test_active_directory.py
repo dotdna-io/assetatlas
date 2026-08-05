@@ -10,6 +10,7 @@ ldap3 may not be installed in the test environment. All tests mock the ldap3
 Connection so they run without a real LDAP server or ldap3 import.
 """
 
+import logging
 import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
 
@@ -23,6 +24,7 @@ try:
         ActiveDirectoryConnector,
         COMPUTER_ATTRIBUTES,
         COMPUTER_ATTRIBUTES_CORE,
+        MAX_PAGINATION_PAGES,
         PAGED_RESULTS_OID,
     )
 except ImportError as _import_err:
@@ -431,3 +433,98 @@ class TestActiveDirectoryConnector(ConnectorTestCase):
         schema = ActiveDirectoryConnector.get_config_schema()
         assert schema['bind_password']['type'] == 'password'
         assert schema['bind_password'].get('sensitive') is True
+
+
+# ---------------------------------------------------------------------------
+# Pagination cap-hit warnings (#1334)
+# ---------------------------------------------------------------------------
+
+class TestActiveDirectoryTruncation:
+    """The LDAP paged-search cap must reach the recorded collection
+    warnings, not just the log — otherwise a search base larger than
+    cap × page_size silently under-reports, and the pipeline rebuild reads
+    the shortfall as deleted computers."""
+
+    def test_cap_hit_records_one_warning_naming_the_search_base(self, caplog):
+        entry = _make_entry({'cn': 'PC-001', 'distinguishedName': 'CN=PC-001,DC=corp,DC=com'})
+        # The cookie never clears — the directory always has another page.
+        conn = _make_conn(entries=[entry], cookie=b'page-cookie')
+
+        config = {**BASE_CONFIG, 'max_pagination_pages': 1}
+        with patch.object(ActiveDirectoryConnector, '_create_connection', return_value=conn):
+            connector = ActiveDirectoryConnector(config)
+            with caplog.at_level(logging.WARNING):
+                records = list(connector.fetch_data('test-batch'))
+
+        assert len(records) == 1
+        assert len(connector.collection_warnings) == 1
+        message = connector.collection_warnings[0]
+        assert 'DC=corp,DC=com' in message
+        assert '1-page cap' in message
+        assert 'truncat' in message.lower()
+        assert message in caplog.text
+        # The old unrecorded log line is gone.
+        assert 'Reached maximum page count' not in caplog.text
+
+    def test_cap_hit_after_following_cookies(self, caplog):
+        """The loop paginates genuinely, then caps: two full pages fetched,
+        cookie still set on the second."""
+        entry1 = _make_entry({'cn': 'PC-001', 'distinguishedName': 'CN=PC-001,DC=corp,DC=com'})
+        entry2 = _make_entry({'cn': 'PC-002', 'distinguishedName': 'CN=PC-002,DC=corp,DC=com'})
+
+        conn = MagicMock()
+        call_count = [0]
+
+        def search_side_effect(**kwargs):
+            call_count[0] += 1
+            conn.entries = [entry1] if call_count[0] == 1 else [entry2]
+            conn.result = {
+                'controls': {
+                    PAGED_RESULTS_OID: {'value': {'cookie': b'always-more'}}
+                }
+            }
+
+        conn.search.side_effect = search_side_effect
+
+        config = {**BASE_CONFIG, 'max_pagination_pages': 2}
+        with patch.object(ActiveDirectoryConnector, '_create_connection', return_value=conn):
+            connector = ActiveDirectoryConnector(config)
+            with caplog.at_level(logging.WARNING):
+                records = list(connector.fetch_data('test-batch'))
+
+        assert len(records) == 2
+        assert conn.search.call_count == 2
+        assert len(connector.collection_warnings) == 1
+        message = connector.collection_warnings[0]
+        assert 'DC=corp,DC=com' in message
+        assert '2-page cap' in message
+
+    def test_end_of_data_records_no_warning(self, caplog):
+        """The off-by-one: the page that fills the cap returns no cookie —
+        the data, not the cap, ended the search."""
+        entry = _make_entry({'cn': 'PC-001', 'distinguishedName': 'CN=PC-001,DC=corp,DC=com'})
+        conn = _make_conn(entries=[entry], cookie=None)
+
+        config = {**BASE_CONFIG, 'max_pagination_pages': 1}
+        with patch.object(ActiveDirectoryConnector, '_create_connection', return_value=conn):
+            connector = ActiveDirectoryConnector(config)
+            with caplog.at_level(logging.WARNING):
+                records = list(connector.fetch_data('test-batch'))
+
+        assert len(records) == 1
+        assert connector.collection_warnings == []
+
+    def test_max_pagination_pages_configurable(self):
+        with patch.object(ActiveDirectoryConnector, '_create_connection', return_value=_make_conn()):
+            connector = ActiveDirectoryConnector(BASE_CONFIG)
+            assert connector.max_pagination_pages == MAX_PAGINATION_PAGES
+            connector = ActiveDirectoryConnector(
+                {**BASE_CONFIG, 'max_pagination_pages': 50}
+            )
+            assert connector.max_pagination_pages == 50
+
+    def test_config_schema_exposes_max_pagination_pages(self):
+        schema = ActiveDirectoryConnector.get_config_schema()
+        field = schema['max_pagination_pages']
+        assert field['type'] == 'number'
+        assert field['default'] == MAX_PAGINATION_PAGES

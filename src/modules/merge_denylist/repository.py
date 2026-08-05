@@ -5,7 +5,7 @@ from typing import List, Optional
 
 import psycopg2
 
-from src.api.middleware.error_handler import ConflictError
+from src.modules.shared.exceptions import ConflictError
 from src.database.postgres_adapter import PostgreSQLAdapter
 from src.modules.merge_denylist.matcher import DenylistMatcher
 from src.modules.merge_denylist.models import DenylistRow

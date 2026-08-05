@@ -38,7 +38,8 @@ PLATFORM_URLS = {
 # Pagination indicators in the <WARNING><TEXT> element
 PAGINATION_INDICATORS = ['truncated', 'limit exceeded', 'use url to get next batch']
 
-# Max pages before stopping (safety cap: 100 * 10000 = 1M records)
+# Default max pages before stopping (safety cap: 100 * 10000 = 1M records).
+# Overridable per integration via the max_pagination_pages config key.
 MAX_PAGINATION_PAGES = 100
 
 # Rate limit threshold — sleep proactively when remaining <= this value
@@ -69,6 +70,7 @@ class QualysConnector(BaseConnector):
 
     def __init__(self, config: Dict[str, Any]):
         self.truncation_limit = int(config.get('truncation_limit', 10000))
+        self.max_pagination_pages = int(config.get('max_pagination_pages', MAX_PAGINATION_PAGES))
         self.include_cloud_metadata = config.get('include_cloud_metadata', True)
         self.include_tags = config.get('include_tags', True)
 
@@ -166,6 +168,18 @@ class QualysConnector(BaseConnector):
                 max_val=100000,
                 description='Number of host records per API request (max 10000 recommended)',
             )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                required=False,
+                default=MAX_PAGINATION_PAGES,
+                min_val=1,
+                max_val=10000,
+                description=(
+                    'Safety cap on API pages fetched per collection run — it stops a '
+                    'pagination loop that never terminates. At the default page size '
+                    'of 10,000, the default cap of 100 pages collects up to 1,000,000 hosts.'
+                ),
+            )
             .add_boolean(
                 'include_cloud_metadata', 'Include Cloud Metadata',
                 default=True,
@@ -260,11 +274,12 @@ class QualysConnector(BaseConnector):
     def _collect_records(self, batch_id: str) -> Iterator[Dict[str, Any]]:
         self.logger.info(f"Starting Qualys asset fetch (batch: {batch_id})")
 
-        paginator = LinkPaginator(max_pages=MAX_PAGINATION_PAGES)
+        paginator = LinkPaginator(max_pages=self.max_pagination_pages)
 
         for page_records in paginator.pages(self._fetch_page):
             yield from page_records
 
+        self.warn_if_truncated(paginator, "Qualys hosts")
         self.logger.info("Completed Qualys asset fetch")
 
     # ------------------------------------------------------------------

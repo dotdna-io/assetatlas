@@ -230,6 +230,33 @@ def test_get_integration_status_impl_surfaces_uuid():
     assert "id: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" in out
 
 
+def test_get_integration_status_impl_surfaces_partial_sync():
+    """A truncated collection (#1334) is not a failure, but "are my
+    integrations healthy?" must not answer with a misleading all-clear:
+    the partial run gets its own count, bucket, and last_error line."""
+    from unittest.mock import MagicMock
+    db = MagicMock()
+    db.execute_query.return_value = [{
+        "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        "name": "Databricks",
+        "integration_type": "databricks",
+        "status": "enabled",
+        "last_sync_status": "partial",
+        "last_error": "Tables truncated at the 500-page cap",
+        "last_sync_at": None,
+        "last_connection_test_status": "success",
+        "last_connection_test_message": None,
+        "group_name": None,
+        "asset_count": 10,
+        "hours_since_sync": 1.0,
+    }]
+    out = get_integration_status_impl(db)
+    assert "1 partial" in out                      # header count, not "healthy"
+    assert "[PARTIAL] Databricks" in out           # per-integration bucket
+    assert "Last Sync Status: partial" in out
+    assert "Tables truncated at the 500-page cap" in out
+
+
 def test_list_tag_rules_impl_returns_list():
     db = _kitchen_sink_db()
     out = list_tag_rules_impl(db, enabled_only=False)

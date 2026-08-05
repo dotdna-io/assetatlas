@@ -29,7 +29,8 @@ from src.modules.integrations.base import LDAPAuth, ConfigSchema
 # Default LDAP connection timeout (seconds)
 DEFAULT_CONNECT_TIMEOUT = 30
 
-# Maximum pages before stopping (safety cap)
+# Maximum pages before stopping (default safety cap; overridable via
+# max_pagination_pages config)
 MAX_PAGINATION_PAGES = 2000
 
 # LDAP paged results control OID
@@ -82,6 +83,9 @@ class ActiveDirectoryConnector(BaseConnector):
         self.verify_cert = config.get('verify_cert', True)
         self.auth_method = config.get('auth_method', 'SIMPLE')
         self.page_size = int(config.get('page_size', 500))
+        self.max_pagination_pages = int(
+            config.get('max_pagination_pages', MAX_PAGINATION_PAGES)
+        )
         self.search_filter = config.get('search_filter', '(objectClass=computer)')
         self.connect_timeout = int(config.get('connect_timeout', DEFAULT_CONNECT_TIMEOUT))
         self.use_global_catalog = config.get('use_global_catalog', False)
@@ -225,6 +229,17 @@ class ActiveDirectoryConnector(BaseConnector):
                 description=(
                     'Number of records per LDAP page (AD max is 1000). '
                     'Default 500.'
+                ),
+            )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                required=False,
+                default=MAX_PAGINATION_PAGES,
+                min_val=1,
+                max_val=100000,
+                description=(
+                    'Safety cap on LDAP pages fetched per search base '
+                    '(cap × page size records max).'
                 ),
             )
             # -- Feature toggles --
@@ -459,9 +474,11 @@ class ActiveDirectoryConnector(BaseConnector):
         cookie = self._get_paged_cookie(conn)
 
         while cookie:
-            if page_count >= MAX_PAGINATION_PAGES:
-                self.logger.warning(
-                    "Reached maximum page count, stopping pagination"
+            if page_count >= self.max_pagination_pages:
+                base_desc = search_base if search_base else '(forest-wide)'
+                self.record_truncation_warning(
+                    f'Active Directory computers in {base_desc}',
+                    self.max_pagination_pages,
                 )
                 break
 

@@ -24,9 +24,12 @@ _ROOT = Path(__file__).resolve().parents[4]
 MIGRATION = _ROOT / 'src' / 'database' / 'migrations' / '120_add_auth_audit_rules.sql'
 # auth-privileged-account-created is seeded by migration 125 (#883); auth-admin-role-granted's
 # authoritative query was re-authored by migration 133 (subject_id/subject_label projection),
-# which supersedes its earlier migration-123 rewrite (#882).
+# which supersedes its earlier migration-123 rewrite (#882), and re-authored again by
+# migration 145 (#1302), which repointed the rule at audit_trail after auth_audit_log
+# was archived and dropped (#1305).
 MIGRATION_125 = _ROOT / 'src' / 'database' / 'migrations' / '125_add_privileged_account_created_rule.sql'
 MIGRATION_133 = _ROOT / 'src' / 'database' / 'migrations' / '133_add_alert_subject_type.sql'
+MIGRATION_145 = _ROOT / 'src' / 'database' / 'migrations' / '145_repoint_auth_role_granted_rule.sql'
 SCHEMA_FULL = _ROOT / 'src' / 'database' / 'schema-full.sql'
 
 
@@ -45,23 +48,27 @@ def _seed_queries(migration=MIGRATION):
 _PRIVILEGED_QUERIES = _seed_queries(MIGRATION_125)
 
 
-def _reauthored_query_133(slug):
-    text = MIGRATION_133.read_text()
+def _reauthored_query(migration, slug):
+    text = migration.read_text()
     # (?:(?!\$q\$).)* rather than a bare .*?: migration 133 has three $q$...$q$
     # UPDATEs, and a lazy .*? isn't scoped to one block — re.search anchors on the
     # first 'SET query = $q$' in the file and happily crosses an intervening
     # $q$...$q$ pair when the near closing tag's slug doesn't match, bleeding
     # earlier UPDATEs' bodies into the capture for the 2nd/3rd slug. Refusing to
     # cross a literal $q$ keeps each match scoped to its own dollar-quoted block.
-    m = re.search(r"SET query = \$q\$((?:(?!\$q\$).)*)\$q\$\s*\n\s*WHERE slug = '" + re.escape(slug) + "'",
+    # The lazy tempered tail after the closing tag spans any extra SET clauses
+    # (migration 145 sets updated_at between the query and the WHERE).
+    m = re.search(r"SET query = \$q\$((?:(?!\$q\$).)*)\$q\$(?:(?!\$q\$).)*?WHERE slug = '" + re.escape(slug) + "'",
                   text, re.DOTALL)
     return m.group(1) if m else None
 
 
 def _authoritative_query(slug, seed_query):
-    """The query schema-full is expected to carry: migration 133's re-authoring if
-    one exists for this slug, else migration 120's seed query."""
-    return _reauthored_query_133(slug) or seed_query
+    """The query schema-full is expected to carry: the latest re-authoring for
+    this slug (migration 145, else migration 133), else migration 120's seed."""
+    return (_reauthored_query(MIGRATION_145, slug)
+            or _reauthored_query(MIGRATION_133, slug)
+            or seed_query)
 
 
 @pytest.fixture
@@ -253,10 +260,11 @@ REMOVED_BY_132 = {
 }
 
 # Queries expected byte-identical in the schema-full COPY: migration 120's survivors
-# — with auth-admin-role-granted sourced from migration 133's subject_id/subject_label
-# re-authoring (which supersedes its earlier migration-123 rewrite, #882), which is
-# what schema-full now carries — plus the migration-125 privileged-account rule
-# (#883). Skips the rows migrations 122 and 132 removed, or the COPY lookup KeyErrors.
+# — with auth-admin-role-granted sourced from its latest re-authoring (migration
+# 145's audit_trail repoint, #1302, superseding migration 133's subject projection
+# and the earlier migration-123 rewrite, #882), which is what schema-full now
+# carries — plus the migration-125 privileged-account rule (#883). Skips the rows
+# migrations 122 and 132 removed, or the COPY lookup KeyErrors.
 _SEED_QUERIES_IN_SCHEMA_FULL = [
     (s, _authoritative_query(s, q))
     for s, q in _seed_queries() if s not in REMOVED_BY_122 and s not in REMOVED_BY_132

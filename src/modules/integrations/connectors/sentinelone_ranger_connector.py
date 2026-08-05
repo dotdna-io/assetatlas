@@ -36,6 +36,7 @@ class SentinelOneRangerConnector(BaseConnector):
         self.base_url = config.get('url', '').rstrip('/')
         self.api_token = config.get('api_token')
         self.page_size = 1000
+        self.max_pagination_pages = int(config.get('max_pagination_pages', 500))
 
         if not self.base_url:
             raise ValueError("SentinelOne Ranger URL is required")
@@ -81,6 +82,18 @@ class SentinelOneRangerConnector(BaseConnector):
                 required=False,
                 placeholder='e.g., 123456789, 987654321',
                 description='Comma-separated site IDs to scope data collection (optional)',
+            )
+            .add_number(
+                'max_pagination_pages', 'Max Pagination Pages',
+                default=500,
+                min_val=1,
+                max_val=10000,
+                description=(
+                    'Safety cap on API pages fetched per scope per collection run — it '
+                    'stops a pagination loop that never terminates. At the fixed page '
+                    'size of 1,000, the default cap of 500 pages collects up to '
+                    '500,000 devices per scope.'
+                ),
             )
             .build()
         )
@@ -250,10 +263,19 @@ class SentinelOneRangerConnector(BaseConnector):
         Yields:
             Individual device records
         """
-        paginator = CursorPaginator(max_pages=500)
+        paginator = CursorPaginator(max_pages=self.max_pagination_pages)
         for page in paginator.pages(self._make_fetch_devices_page(scope)):
             for device in page:
                 yield device
+        scope_parts = []
+        if scope.get('accountIds'):
+            scope_parts.append(f"account {scope['accountIds']}")
+        if scope.get('siteIds'):
+            scope_parts.append(f"site {scope['siteIds']}")
+        self.warn_if_truncated(
+            paginator,
+            f"SentinelOne Ranger devices ({', '.join(scope_parts)})",
+        )
 
     def _collect_records(self, batch_id: str) -> Iterator[Dict[str, Any]]:
         """

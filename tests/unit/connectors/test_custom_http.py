@@ -48,6 +48,15 @@ def test_config_schema_returns_minimal_stub():
     assert schema["url"]["type"] == "url"
 
 
+def test_config_schema_declares_max_pages():
+    # The cap key predates the schema declaration — customer configs already
+    # persist `max_pages`, so the field is declared under that exact name.
+    field = CustomHttpConnector.get_config_schema()["max_pages"]
+    assert field["type"] == "number"
+    assert field["required"] is False
+    assert field["default"] == 5000
+
+
 # ------------------------------ validate_config -------------------------------
 
 
@@ -610,6 +619,60 @@ def test_collect_records_offset_pagination_walks_pages():
     ))
     ids = [r["id"] for r in c._collect_records("batch-2")]
     assert ids == [1, 2, 3]
+
+
+# ---------------------------- cap-hit collection warnings ---------------------
+
+
+@responses.activate
+def test_cap_hit_records_one_collection_warning():
+    # Both pages report total=5 — data remains after page 2, so only the
+    # max_pages cap ends the loop.
+    responses.add(responses.GET, "https://api.example.com/v1/items",
+                  json={"items": [{"id": 1}, {"id": 2}], "total": 5}, status=200)
+    responses.add(responses.GET, "https://api.example.com/v1/items",
+                  json={"items": [{"id": 3}, {"id": 4}], "total": 5}, status=200)
+
+    c = CustomHttpConnector(_base_config(
+        pagination_type="offset",
+        page_size=2, offset_param="offset", limit_param="limit",
+        max_pages=2,
+        records_root="$.items",
+        total_path="$.total",
+        field_bindings=[{"source_path": "$.id", "source_name": "id"}],
+    ))
+    ids = [r["id"] for r in c.fetch_data("test-batch")]
+    assert ids == [1, 2, 3, 4]
+
+    warnings = c.collection_warnings
+    assert len(warnings) == 1
+    assert "Custom HTTP collection" in warnings[0]
+    assert "2-page cap" in warnings[0]
+    # The label is static: the configured URL (which can carry an API key in
+    # its query string) must not leak into the persisted warning.
+    assert "example.com" not in warnings[0]
+
+
+@responses.activate
+def test_end_of_data_at_cap_boundary_records_no_warning():
+    # The second page fills the cap exactly, but total=3 says the data is
+    # genuinely exhausted — no cap-hit.
+    responses.add(responses.GET, "https://api.example.com/v1/items",
+                  json={"items": [{"id": 1}, {"id": 2}], "total": 3}, status=200)
+    responses.add(responses.GET, "https://api.example.com/v1/items",
+                  json={"items": [{"id": 3}], "total": 3}, status=200)
+
+    c = CustomHttpConnector(_base_config(
+        pagination_type="offset",
+        page_size=2, offset_param="offset", limit_param="limit",
+        max_pages=2,
+        records_root="$.items",
+        total_path="$.total",
+        field_bindings=[{"source_path": "$.id", "source_name": "id"}],
+    ))
+    ids = [r["id"] for r in c.fetch_data("test-batch")]
+    assert ids == [1, 2, 3]
+    assert c.collection_warnings == []
 
 
 # ---------------------------- test_connection --------------------------------

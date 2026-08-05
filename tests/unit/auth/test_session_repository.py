@@ -9,6 +9,20 @@ import pytest
 from src.auth.repositories.session_repository import SessionRepository
 
 
+@pytest.fixture(autouse=True)
+def _stub_jwt_session_lookup():
+    """Opt this module out of the suite-wide JWT session-lookup stub.
+
+    The autouse fixture in ``tests/unit/conftest.py`` patches
+    ``SessionRepository.get_session_by_access_jti`` on the class — which is
+    exactly the method under test here (TestGetSessionByAccessJti asserts
+    its SQL, params, and error propagation).  Overriding the fixture name
+    with this no-op disables the stub for this module so the real method
+    runs against the mock cursor.
+    """
+    yield
+
+
 class TestCreateSession:
     """create_session inserts a placeholder row and returns its UUID."""
 

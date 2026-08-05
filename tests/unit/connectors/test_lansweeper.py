@@ -212,3 +212,91 @@ class TestLansweeperConnector(ConnectorTestCase):
         connector = LansweeperConnector(config)
         with pytest.raises(RuntimeError, match="GraphQL errors"):
             list(connector.fetch_data("batch-gql-err"))
+
+
+# ---------------------------------------------------------------------------
+# Issue #1334 — paginator cap-hit surfaces as a collection warning
+# ---------------------------------------------------------------------------
+
+
+def _assets_page(asset_key, next_cursor):
+    return {
+        "data": {
+            "site": {
+                "assetResources": {
+                    "total": 1,
+                    "items": [
+                        {"key": asset_key, "siteId": "site-x", "assetBasicInfo": {"name": asset_key}}
+                    ],
+                    "pagination": {"next": next_cursor} if next_cursor else {},
+                }
+            }
+        }
+    }
+
+
+class TestLansweeperTruncation:
+    """The paginator is constructed per site inside the site loop, so the
+    relay must live there too and name the site — a cap-hit in one site
+    must not be masked by a clean run in the next."""
+
+    # Shrink the 1000-page cap via config so a cap-hit takes two mocked pages.
+    mock_config = {**PAT_CONFIG, "site_id": "site-001", "max_pagination_pages": 2}
+
+    @responses.activate
+    def test_capped_run_records_one_warning_naming_site(self):
+        # Two full pages, each handing back a fresh cursor: more data waiting.
+        responses.add(responses.POST, API_URL, json=_assets_page("asset-1", "cursor-2"), status=200)
+        responses.add(responses.POST, API_URL, json=_assets_page("asset-2", "cursor-3"), status=200)
+
+        connector = LansweeperConnector(self.mock_config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 2
+        warnings = connector.collection_warnings
+        assert len(warnings) == 1, warnings
+        assert "Lansweeper site site-001 assets truncated at the 2-page cap" in warnings[0]
+
+    @responses.activate
+    def test_end_of_data_records_no_warning(self):
+        """The off-by-one: a final page that fills the cap but hands back no
+        cursor is end-of-data, not truncation."""
+        responses.add(responses.POST, API_URL, json=_assets_page("asset-1", "cursor-2"), status=200)
+        responses.add(responses.POST, API_URL, json=_assets_page("asset-2", None), status=200)
+
+        connector = LansweeperConnector(self.mock_config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 2
+        assert connector.collection_warnings == []
+
+    def test_config_schema_declares_max_pagination_pages(self):
+        """The cap is operator-settable: declared with the connector's default."""
+        field = LansweeperConnector.get_config_schema()["max_pagination_pages"]
+        assert field["type"] == "number"
+        assert field["required"] is False
+        assert field["default"] == 1000
+
+    @responses.activate
+    def test_only_the_truncated_site_warns(self):
+        """Two sites, one truncated: exactly one warning, naming the right
+        site. Catches a paginator instance hoisted out of the site loop or
+        a relay placed after it — both read only the last site's flag."""
+        with open(FIXTURES_DIR / "lansweeper" / "sites.json") as f:
+            sites_body = json.load(f)
+        responses.add(responses.POST, API_URL, json=sites_body, status=200)
+        # site-001 truncates: two full pages with fresh cursors.
+        responses.add(responses.POST, API_URL, json=_assets_page("asset-1", "cursor-2"), status=200)
+        responses.add(responses.POST, API_URL, json=_assets_page("asset-2", "cursor-3"), status=200)
+        # site-002 reaches end of data in one page.
+        responses.add(responses.POST, API_URL, json=_assets_page("asset-3", None), status=200)
+
+        config = {**PAT_CONFIG, "max_pagination_pages": 2}  # no site_id → discovery
+        connector = LansweeperConnector(config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 3
+        warnings = connector.collection_warnings
+        assert len(warnings) == 1, warnings
+        assert "site site-001" in warnings[0]
+        assert "site-002" not in warnings[0]

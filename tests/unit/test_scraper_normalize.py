@@ -526,11 +526,13 @@ class TestParseOuiCsv:
 _SYSOBJECT_LINES = [
     "# FusionInventory sysobject.ids",
     "",
-    ".1.3.6.1.4.1.9.1.1|Cisco|Networking|Cisco Catalyst 2950",
-    ".1.3.6.1.4.1.2636.1.1.1.2.34|Juniper|Router|MX80",
-    ".1.3.6.1.4.1.11.2.3.9.1|HP|Printer|LaserJet 4050",
-    ".1.3.6.1.4.1.232.2.2.4.2|Compaq|Server|ProLiant DL380",
-    ".1.3.6.1.4.1.999.1.1|Unknown|widget|",  # unmappable type
+    # Real sysobject.ids is TAB-separated (e9a2cbfe fixed the parser from an
+    # initial pipe assumption); keep the fixture in the real format.
+    ".1.3.6.1.4.1.9.1.1\tCisco\tNetworking\tCisco Catalyst 2950",
+    ".1.3.6.1.4.1.2636.1.1.1.2.34\tJuniper\tRouter\tMX80",
+    ".1.3.6.1.4.1.11.2.3.9.1\tHP\tPrinter\tLaserJet 4050",
+    ".1.3.6.1.4.1.232.2.2.4.2\tCompaq\tServer\tProLiant DL380",
+    ".1.3.6.1.4.1.999.1.1\tUnknown\twidget\t",  # unmappable type
 ]
 
 

@@ -4,6 +4,9 @@ Shared test fixtures for AssetAtlas.
 
 Provides:
 - blueprint_app: Session-scoped Flask app with mocked services (TestConfig)
+- build_mock_app: Builder for a NEW mocked app when a test file needs a
+  private instance (e.g. to register its own blueprint — Flask forbids
+  register_blueprint() on the shared app once it has served a request)
 - client: Function-scoped test client with mock resets
 - auth_headers: JWT token generator for protected endpoints
 - db_connection: Real DB connection for integration tests (requires DATABASE_URL)
@@ -148,6 +151,60 @@ def _fake_init_database(app, should_log=True):
         mock_cm.end_scope(error=exception)
 
 
+def _wire_mock_app(app):
+    """Post-creation wiring shared by every mocked test app: replace all
+    services with MagicMocks and restore the bits the bulk override clobbers.
+    """
+    # Ensure JWT_SECRET_KEY is present for token creation
+    app.config.setdefault("JWT_SECRET_KEY", "test-jwt-secret")
+
+    # Inject mocked services (overwrite whatever _fake_init_database set)
+    for attr in _SERVICE_ATTRS:
+        setattr(app, attr, MagicMock(name=attr))
+
+    # Re-set connection_manager convenience methods after the bulk override
+    app.connection_manager.begin_scope = MagicMock()
+    app.connection_manager.end_scope = MagicMock()
+    # The bulk override replaced app.connection_manager wholesale, so the
+    # get_cursor wiring from _fake_init_database does not carry over —
+    # re-apply it here (and again per test in client(), whose bulk
+    # reset_mock(return_value=True) wipes it).
+    _wire_get_cursor(app.connection_manager)
+
+    # settings_manager.get() is called by request_id middleware during
+    # every request.  Make it return the caller-supplied default (3rd arg)
+    # so middleware code like `value.upper()` doesn't fail on a MagicMock.
+    def _settings_get(_category, _key, default=None):
+        return default
+
+    app.settings_manager.get = _settings_get
+    return app
+
+
+def build_mock_app():
+    """Create a NEW Flask test app with all services replaced by MagicMocks.
+
+    Same construction as the session-scoped ``blueprint_app`` fixture, but as
+    a plain builder for test files that need a private app instance — e.g. to
+    register extra test blueprints, which Flask forbids once the shared app
+    has served its first request.
+
+    Anything else the factory must skip for a second app belongs to the call
+    site: a second app in one process must suppress the factory's
+    ``init_metrics``, whose default-registry registration collides with the
+    first app's (#596 H7)::
+
+        with patch("src.api.factory.init_metrics"):
+            app = build_mock_app()
+    """
+    with patch("src.api.factory._init_database", side_effect=_fake_init_database), \
+         patch("src.api.factory._init_services"):
+
+        from src.api.factory import create_app
+
+        return _wire_mock_app(create_app("test"))
+
+
 @pytest.fixture(scope="session")
 def blueprint_app():
     """Session-scoped Flask test app with all services replaced by MagicMocks.
@@ -163,38 +220,12 @@ def blueprint_app():
 
         from src.api.factory import create_app
 
-        app = create_app("test")
-
-        # Ensure JWT_SECRET_KEY is present for token creation
-        app.config.setdefault("JWT_SECRET_KEY", "test-jwt-secret")
-
-        # Inject mocked services (overwrite whatever _fake_init_database set)
-        for attr in _SERVICE_ATTRS:
-            setattr(app, attr, MagicMock(name=attr))
-
-        # Re-set connection_manager convenience methods after the bulk override
-        app.connection_manager.begin_scope = MagicMock()
-        app.connection_manager.end_scope = MagicMock()
-        # The bulk override replaced app.connection_manager wholesale, so the
-        # get_cursor wiring from _fake_init_database does not carry over —
-        # re-apply it here (and again per test in client(), whose bulk
-        # reset_mock(return_value=True) wipes it).
-        _wire_get_cursor(app.connection_manager)
-
         # Chat blueprint is registered unconditionally by the factory
         # since the chat-config chicken-and-egg fix; no manual registration
         # needed here. Tests that need chat_service to be None override
         # app.chat_service directly (see TestChatServiceGuard).
 
-        # settings_manager.get() is called by request_id middleware during
-        # every request.  Make it return the caller-supplied default (3rd arg)
-        # so middleware code like `value.upper()` doesn't fail on a MagicMock.
-        def _settings_get(_category, _key, default=None):
-            return default
-
-        app.settings_manager.get = _settings_get
-
-        yield app
+        yield _wire_mock_app(create_app("test"))
 
 
 @pytest.fixture(scope="function")

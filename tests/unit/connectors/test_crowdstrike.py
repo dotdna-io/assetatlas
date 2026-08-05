@@ -272,3 +272,74 @@ class TestCrowdStrikeConnector(ConnectorTestCase):
         config = {**self.mock_config, "base_url": "INVALID-REGION"}
         with pytest.raises(ValueError, match="Unknown CrowdStrike cloud"):
             CrowdStrikeConnector(config)
+
+
+# ---------------------------------------------------------------------------
+# Issue #1334 — paginator cap-hit surfaces as a collection warning
+# ---------------------------------------------------------------------------
+
+
+def _devices_page(device_id, next_offset):
+    pagination = {"total": 100}
+    if next_offset is not None:
+        pagination["offset"] = next_offset
+    return {
+        "meta": {"pagination": pagination},
+        "resources": [{"device_id": device_id, "hostname": device_id}],
+        "errors": [],
+    }
+
+
+class TestCrowdStrikeTruncation:
+    """A collection stopped by the page cap must record exactly one warning
+    naming the resource and the cap — the pipeline reads a silent shortfall
+    as deleted assets. The production default cap is 100 pages, the lowest
+    in the tree; the tests shrink it via config rather than mock 100 pages."""
+
+    mock_config = {
+        "base_url": "US-1",
+        "client_id": "test-client-id",
+        "client_secret": "test-client-secret",
+        "page_size": 100,
+        "max_pagination_pages": 2,
+    }
+
+    @responses.activate
+    def test_capped_run_records_one_warning(self):
+        responses.add(responses.POST, TOKEN_URL,
+                      json={"access_token": "tok", "expires_in": 3600}, status=200)
+        # Two full pages, each handing back a fresh scroll offset: more data
+        # waiting. String offsets skip the int/>=total end-of-data
+        # normalization in _fetch_device_page.
+        responses.add(responses.GET, DEVICES_URL, json=_devices_page("dev-1", "scroll-2"), status=200)
+        responses.add(responses.GET, DEVICES_URL, json=_devices_page("dev-2", "scroll-3"), status=200)
+
+        connector = CrowdStrikeConnector(self.mock_config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 2
+        warnings = connector.collection_warnings
+        assert len(warnings) == 1, warnings
+        assert "CrowdStrike devices truncated at the 2-page cap" in warnings[0]
+
+    @responses.activate
+    def test_end_of_data_records_no_warning(self):
+        """The off-by-one: a final page that fills the cap but hands back no
+        offset is end-of-data, not truncation."""
+        responses.add(responses.POST, TOKEN_URL,
+                      json={"access_token": "tok", "expires_in": 3600}, status=200)
+        responses.add(responses.GET, DEVICES_URL, json=_devices_page("dev-1", "scroll-2"), status=200)
+        responses.add(responses.GET, DEVICES_URL, json=_devices_page("dev-2", None), status=200)
+
+        connector = CrowdStrikeConnector(self.mock_config)
+        records = list(connector.fetch_data("test-batch"))
+
+        assert len(records) == 2
+        assert connector.collection_warnings == []
+
+    def test_config_schema_declares_max_pagination_pages(self):
+        """The cap is operator-settable: declared with the connector's default."""
+        field = CrowdStrikeConnector.get_config_schema()["max_pagination_pages"]
+        assert field["type"] == "number"
+        assert field["required"] is False
+        assert field["default"] == 100
