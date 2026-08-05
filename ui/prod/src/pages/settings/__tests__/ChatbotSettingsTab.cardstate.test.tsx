@@ -82,7 +82,7 @@ afterEach(() => vi.clearAllMocks());
 
 describe('#910a — per-provider busy + edit isolation', () => {
   it('saving one card leaves other cards interactive and preserves their edits', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     // Hold the save pending so we can observe the in-flight state.
     let resolveSave: (v: unknown) => void = () => {};
@@ -125,7 +125,7 @@ describe('#910a — per-provider busy + edit isolation', () => {
 
 describe('#910b — radio/select-only change is detected and sent', () => {
   it('Bedrock auth_mode change alone (null-saved row) is dirty and PATCHed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotSettingsTab />);
     await screen.findByText('AWS Bedrock');
     const bedrock = await cardFor('AWS Bedrock');
@@ -146,7 +146,7 @@ describe('#910b — radio/select-only change is detected and sent', () => {
   });
 
   it('Foundry protocol change alone (null-saved row) is dirty and PATCHed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotSettingsTab />);
     await screen.findByText('Microsoft Foundry');
     const foundry = await cardFor('Microsoft Foundry');
@@ -167,7 +167,7 @@ describe('#910b — radio/select-only change is detected and sent', () => {
 
 describe('#911 — Test disabled until required fields filled', () => {
   it('enables Test only once required fields are present (OpenAI-compatible)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotSettingsTab />);
     await screen.findByText('OpenAI-compatible');
     const compat = await cardFor('OpenAI-compatible');
@@ -197,7 +197,7 @@ describe('#911 — Test disabled until required fields filled', () => {
 
 describe('#912 enable-gate + disable-all, #909 test modal, #3 no toast', () => {
   it('enables an inactive provider only after a successful Test, then persists (no toast)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(chatApi.testAdminChatConfig).mockResolvedValue({
       ok: true, detail: 'ok', sample_text: 'Hi there',
       provider: 'openai', model: 'gpt-4o-mini',
@@ -231,7 +231,7 @@ describe('#912 enable-gate + disable-all, #909 test modal, #3 no toast', () => {
   });
 
   it('toggling the active provider off disables chat and shows the banner (#912)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(chatApi.updateAdminChatConfig).mockResolvedValueOnce({
       ...makeConfig(), active_provider: null,
     });
@@ -249,7 +249,7 @@ describe('#912 enable-gate + disable-all, #909 test modal, #3 no toast', () => {
   });
 
   it('a passing test turns the clicked Test button green ("Success"), then reverts on its own', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(chatApi.testAdminChatConfig).mockResolvedValue({
       ok: true, detail: 'ok', sample_text: 'hi',
       provider: 'anthropic', model: 'x',
@@ -268,7 +268,7 @@ describe('#912 enable-gate + disable-all, #909 test modal, #3 no toast', () => {
   });
 
   it('shows a save failure in a modal (raw message), not a top banner', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(chatApi.updateAdminChatConfig).mockRejectedValueOnce(
       new Error('boom-save'),
     );
@@ -285,7 +285,7 @@ describe('#912 enable-gate + disable-all, #909 test modal, #3 no toast', () => {
   });
 
   it('shows the failure modal when a Test fails (#909)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(chatApi.testAdminChatConfig).mockResolvedValue({
       ok: false, detail: 'invalid api key', sample_text: '',
       provider: 'anthropic', model: 'x',

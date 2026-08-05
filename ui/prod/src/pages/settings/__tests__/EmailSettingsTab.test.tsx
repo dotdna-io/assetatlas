@@ -70,7 +70,7 @@ describe('EmailSettingsTab — save', () => {
   });
 
   it('fires PUT only for fields the user changed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
     await screen.findByDisplayValue('smtp.example.com');
 
@@ -92,7 +92,7 @@ describe('EmailSettingsTab — save', () => {
   });
 
   it('does NOT PUT smtp_password when the field was not touched', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
     await screen.findByDisplayValue('smtp.example.com');
 
@@ -106,7 +106,7 @@ describe('EmailSettingsTab — save', () => {
   });
 
   it('PUTs smtp_password when the user types a new value', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
     await screen.findByDisplayValue('smtp.example.com');
     await user.type(screen.getByLabelText(/password/i), 'newpass');
@@ -121,7 +121,7 @@ describe('EmailSettingsTab — save', () => {
   });
 
   it('PUTs empty smtp_password when user clears a previously-saved password', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
     await screen.findByDisplayValue('smtp.example.com');
     // Type something then clear: mode transitions new -> clear.
@@ -156,7 +156,7 @@ describe('EmailSettingsTab — test email', () => {
   });
 
   it('opens a modal with a recipient input when Send Test is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
     await screen.findByDisplayValue('smtp.example.com');
     await user.click(screen.getByRole('button', { name: /send test/i }));
@@ -166,13 +166,18 @@ describe('EmailSettingsTab — test email', () => {
 
   it('sends and shows success', async () => {
     (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
     await screen.findByDisplayValue('smtp.example.com');
     await user.click(screen.getByRole('button', { name: /send test/i }));
     const input = await screen.findByLabelText(/recipient/i);
     await user.clear(input);
     await user.type(input, 'admin@example.com');
+    // Modal focuses itself on open via rAF; with userEvent's default real-timer
+    // delay that grab can interleave mid-typing and swallow keystrokes, and
+    // handleSendTest then reads a partial recipient. delay:null makes typing
+    // atomic; this check proves the value landed before the click reads it.
+    expect(input).toHaveValue('admin@example.com');
     await user.click(screen.getByRole('button', { name: /^send$/i }));
 
     await waitFor(() => {
@@ -188,11 +193,13 @@ describe('EmailSettingsTab — test email', () => {
     (apiClient.post as ReturnType<typeof vi.fn>).mockRejectedValue(
       new FakeApiError('400', 400, { success: false, error: '550 relay rejected' }),
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
     await screen.findByDisplayValue('smtp.example.com');
     await user.click(screen.getByRole('button', { name: /send test/i }));
-    await user.type(await screen.findByLabelText(/recipient/i), 'admin@example.com');
+    const input = await screen.findByLabelText(/recipient/i);
+    await user.type(input, 'admin@example.com');
+    expect(input).toHaveValue('admin@example.com');
     await user.click(screen.getByRole('button', { name: /^send$/i }));
     expect(await screen.findByText(/550 relay rejected/i)).toBeInTheDocument();
   });

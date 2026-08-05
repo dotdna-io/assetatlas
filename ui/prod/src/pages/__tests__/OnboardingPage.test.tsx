@@ -99,7 +99,7 @@ describe('OnboardingPage', () => {
     });
     renderWith('?token=valid');
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await user.type(screen.getByLabelText(/^new password/i), 'StrongPassword1!');
     await user.type(screen.getByLabelText(/confirm password/i), 'Different1!');
     // Adjustment: button text is "Activate Account".
@@ -124,7 +124,7 @@ describe('OnboardingPage', () => {
     });
     renderWith('?token=valid');
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await user.type(screen.getByLabelText(/^new password/i), 'StrongPassword1!');
     await user.type(screen.getByLabelText(/confirm password/i), 'StrongPassword1!');
     await user.click(screen.getByRole('button', { name: /activate account/i }));
@@ -150,7 +150,7 @@ describe('OnboardingPage', () => {
     );
     renderWith('?token=valid');
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await user.type(screen.getByLabelText(/^new password/i), 'StrongPassword1!');
     await user.type(screen.getByLabelText(/confirm password/i), 'StrongPassword1!');
     await user.click(screen.getByRole('button', { name: /activate account/i }));
@@ -177,7 +177,7 @@ describe('OnboardingPage', () => {
     );
     renderWith('?token=valid');
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await user.type(screen.getByLabelText(/^new password/i), 'StrongPassword1!');
     await user.type(screen.getByLabelText(/confirm password/i), 'StrongPassword1!');
     await user.click(screen.getByRole('button', { name: /activate account/i }));

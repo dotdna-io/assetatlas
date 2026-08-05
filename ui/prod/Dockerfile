@@ -3,7 +3,7 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci && npm i @rollup/rollup-linux-x64-musl 2>/dev/null || true
+RUN npm ci
 COPY tsconfig.json vite.config.ts index.html ./
 COPY src/ ./src/
 # Vite copies publicDir (default: public/) into dist/ at build time.

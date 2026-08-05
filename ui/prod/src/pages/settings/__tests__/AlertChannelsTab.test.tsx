@@ -96,7 +96,7 @@ describe('AlertChannelsTab', () => {
       response_code: 200,
       error: null,
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByText('Ops Webhook');
@@ -116,16 +116,16 @@ describe('AlertChannelsTab', () => {
       enabled: true,
       config: { url: '', timeout: 30 },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByText('Ops Webhook');
     await user.click(screen.getByRole('button', { name: /add channel/i }));
 
     const nameInput = await screen.findByLabelText(/^name$/i);
-    // Modal steals focus to itself on open (accessibility focus trap); click
-    // the field first like a real user would before typing, otherwise the
-    // in-flight focus-on-mount effect can race the first keystroke.
+    // The modal focuses itself on open (rAF in Modal.tsx); userEvent's
+    // delay:null keeps that grab from interleaving mid-typing and swallowing
+    // keystrokes. The click is just what a real user would do first.
     await user.click(nameInput);
     await user.type(nameInput, 'New Channel');
     await user.click(screen.getByRole('button', { name: /^save$/i }));
@@ -147,7 +147,7 @@ describe('AlertChannelsTab', () => {
       enabled: true,
       config: { recipients: [] },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByText('Ops Webhook');
@@ -178,7 +178,7 @@ describe('AlertChannelsTab', () => {
       id: 'c4', type: 'syslog', name: 'SIEM', enabled: true,
       config: { host: '', port: 514, protocol: 'udp', facility: 'local0' },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByText('Ops Webhook');
@@ -210,7 +210,7 @@ describe('AlertChannelsTab', () => {
       response_code: null,
       error: null,
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByText('Ops Webhook');
@@ -226,7 +226,7 @@ describe('AlertChannelsTab', () => {
   it('deletes a channel via in-page confirm (never window.confirm)', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm');
     (apiClient.del as ReturnType<typeof vi.fn>).mockResolvedValue({});
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByText('Ops Webhook');

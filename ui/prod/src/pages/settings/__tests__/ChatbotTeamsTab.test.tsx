@@ -63,7 +63,7 @@ function setupApi(opts: {
 // Renders the tab fully configured and waits for Test connection to enable.
 async function renderConfigured() {
   setupApi({ settings: CONFIGURED_SETTINGS });
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
   render(<ChatbotTeamsTab />);
   const testBtn = await screen.findByRole('button', {
     name: /test connection/i,
@@ -138,7 +138,7 @@ describe('ChatbotTeamsTab', () => {
   });
 
   it('toggling enabled fires PUT /settings/teams/enabled', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotTeamsTab />);
     const toggle = await screen.findByLabelText(/Enable Microsoft Teams/i);
     await user.click(toggle);
@@ -150,7 +150,7 @@ describe('ChatbotTeamsTab', () => {
   });
 
   it('puts the switch back when the PUT is rejected', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     (apiClient.put as ReturnType<typeof vi.fn>).mockRejectedValue(
       new Error('boom'),
     );
@@ -167,7 +167,7 @@ describe('ChatbotTeamsTab', () => {
 
   it('saves the messaging endpoint override on blur', async () => {
     setupApi({ settings: CONFIGURED_SETTINGS });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotTeamsTab />);
     const input = (await screen.findByLabelText(
       /Messaging endpoint URL/i,
@@ -187,7 +187,7 @@ describe('ChatbotTeamsTab', () => {
 
   it('rejects a non-HTTPS messaging endpoint without firing PUT', async () => {
     setupApi({ settings: CONFIGURED_SETTINGS });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotTeamsTab />);
     const input = (await screen.findByLabelText(
       /Messaging endpoint URL/i,
@@ -223,7 +223,7 @@ describe('ChatbotTeamsTab', () => {
       value: revokeObjectURL,
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotTeamsTab />);
     const btn = await screen.findByRole('button', {
       name: /download teams app/i,
@@ -438,7 +438,7 @@ describe('ChatbotTeamsTab', () => {
   });
 
   it('updates the note as soon as the switch is flipped, with no Save', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotTeamsTab />);
     await user.click(await screen.findByLabelText(/Enable Microsoft Teams/i));
     // The switch commits on click, so the note describes the stored state and

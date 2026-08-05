@@ -99,7 +99,7 @@ describe('ChatbotSettingsTab AWS Bedrock card', () => {
   });
 
   it('swaps to role-ARN field when "Assume role" is selected', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotSettingsTab />);
     await screen.findByText('AWS Bedrock');
 
@@ -143,7 +143,7 @@ describe('ChatbotSettingsTab AWS Bedrock card', () => {
   });
 
   it('sends auth_mode + access_key_id + secret_access_key on first save', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotSettingsTab />);
     await screen.findByText('AWS Bedrock');
 
@@ -195,7 +195,7 @@ describe('ChatbotSettingsTab active-provider toggle', () => {
   it('toggling the active provider off disables every provider (#912)', async () => {
     // BASE_CONFIG has anthropic active. Clicking its toggle turns chat off
     // entirely — a PATCH with active_provider: null.
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(chatApi.updateAdminChatConfig).mockResolvedValueOnce({
       ...BASE_CONFIG, active_provider: null,
     });
@@ -222,7 +222,7 @@ describe('ChatbotSettingsTab active-provider toggle', () => {
   });
 
   it('rolls the toggle back when the deactivation save fails', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(chatApi.updateAdminChatConfig).mockRejectedValueOnce(
       new Error('backend blew up'),
     );

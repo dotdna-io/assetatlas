@@ -101,7 +101,7 @@ describe('MonitoringSettingsTab', () => {
 
   it('shows conditional auth fields per auth type', async () => {
     mockGet(CONFIG_DISABLED);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
     const authSelect = await screen.findByLabelText(/authentication/i);
 
@@ -124,7 +124,7 @@ describe('MonitoringSettingsTab', () => {
   it('keeps the stored secret on save when the token field is untouched (omits auth_secret)', async () => {
     mockGet(CONFIG_BEARER);
     putMock().mockResolvedValue(saveResult());
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     const endpoint = await screen.findByDisplayValue('https://prom.example.com/api/v1/write');
@@ -144,7 +144,7 @@ describe('MonitoringSettingsTab', () => {
   it('sends auth_secret only when the admin types a new token', async () => {
     mockGet(CONFIG_BEARER);
     putMock().mockResolvedValue(saveResult());
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     const token = (await screen.findByLabelText(/bearer token/i)) as HTMLInputElement;
@@ -158,7 +158,7 @@ describe('MonitoringSettingsTab', () => {
   it('a clean save shows no confirmation banner — the form quietly reflects the saved state', async () => {
     mockGet(CONFIG_BEARER);
     putMock().mockResolvedValue(saveResult());
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByDisplayValue('https://prom.example.com/api/v1/write');
@@ -179,7 +179,7 @@ describe('MonitoringSettingsTab', () => {
         },
       }),
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByDisplayValue('https://prom.example.com/api/v1/write');
@@ -196,7 +196,7 @@ describe('MonitoringSettingsTab', () => {
         apply: { enabled: false, config_removed: true, reload: { attempted: false, detail: 'forwarding disabled' } },
       }),
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     const enable = (await screen.findByLabelText(/enable metrics forwarding/i)) as HTMLInputElement;
@@ -210,7 +210,7 @@ describe('MonitoringSettingsTab', () => {
   it('runs a connection test against the saved endpoint', async () => {
     mockGet(CONFIG_BEARER);
     postMock().mockResolvedValue({ reachable: true, status_code: 204, detail: 'ok' });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByDisplayValue('https://prom.example.com/api/v1/write');
@@ -225,7 +225,7 @@ describe('MonitoringSettingsTab', () => {
   it('shows a failure when the endpoint is not reachable', async () => {
     mockGet(CONFIG_BEARER);
     postMock().mockResolvedValue({ reachable: false, detail: 'could not reach the endpoint' });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByDisplayValue('https://prom.example.com/api/v1/write');
@@ -235,7 +235,7 @@ describe('MonitoringSettingsTab', () => {
 
   it('requires an endpoint URL before enabling (no PUT fired)', async () => {
     mockGet(CONFIG_DISABLED);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     const enable = await screen.findByLabelText(/enable metrics forwarding/i);
@@ -251,7 +251,7 @@ describe('MonitoringSettingsTab', () => {
     putMock().mockResolvedValue(
       saveResult({ enabled: false, external_labels: { env: 'staging' }, apply: { enabled: false, config_removed: true } }),
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByLabelText(/authentication/i);
@@ -268,7 +268,7 @@ describe('MonitoringSettingsTab', () => {
 
   it('removes an external label row', async () => {
     mockGet(CONFIG_BEARER); // one row: cluster=prod
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab();
 
     await screen.findByDisplayValue('cluster');

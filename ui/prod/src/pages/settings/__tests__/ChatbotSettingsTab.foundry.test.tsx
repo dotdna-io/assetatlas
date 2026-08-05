@@ -106,7 +106,7 @@ describe('ChatbotSettingsTab — Microsoft Foundry card', () => {
   });
 
   it('Save sends foundry_protocol + base_url in the patch body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotSettingsTab />);
     await screen.findByText('Microsoft Foundry');
 
@@ -142,7 +142,7 @@ describe('ChatbotSettingsTab — Microsoft Foundry card', () => {
     // (Anthropic Messages) but fills URL + API key. The PATCH body must
     // include foundry_protocol so the backend persists it; without that,
     // toggling foundry active later fails with "protocol is not set".
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotSettingsTab />);
     await screen.findByText('Microsoft Foundry');
 
@@ -174,7 +174,7 @@ describe('ChatbotSettingsTab — Microsoft Foundry card', () => {
   });
 
   it('Test sends foundry_protocol in the request body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChatbotSettingsTab />);
     await screen.findByText('Microsoft Foundry');
 

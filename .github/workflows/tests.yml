@@ -381,23 +381,6 @@ jobs:
           cache: npm
           cache-dependency-path: ui/prod/package-lock.json
       - run: npm ci
-      - name: Install the linux platform binaries npm ci skips
-        # npm/cli#4828: ui/prod/package-lock.json was last written on
-        # darwin-arm64 and carries package entries ONLY for that platform's
-        # optional binaries, so `npm ci` — which installs strictly from the
-        # lock — silently skips @rollup/rollup-linux-x64-gnu and
-        # @esbuild/linux-x64 on linux runners. Vitest therefore died at
-        # startup on EVERY linux CI run, masked until now by the vitest
-        # step's continue-on-error (plain `npm install` does not repair it —
-        # npm trusts the lock and re-resolves nothing). Install the exact
-        # versions the lock's rollup/esbuild entries pin for the runner's
-        # platform, --no-save so neither the lock nor package.json changes.
-        # The real fix is regenerating the lock on linux — a ui/ change,
-        # deliberately not in this PR; this step then degrades to a no-op.
-        run: |
-          ROLLUP_NATIVE=$(node -p "require('./package-lock.json').packages['node_modules/rollup'].optionalDependencies['@rollup/rollup-linux-x64-gnu']")
-          ESBUILD_NATIVE=$(node -p "require('./package-lock.json').packages['node_modules/esbuild'].optionalDependencies['@esbuild/linux-x64']")
-          npm install --no-save --no-audit --no-fund "@rollup/rollup-linux-x64-gnu@$ROLLUP_NATIVE" "@esbuild/linux-x64@$ESBUILD_NATIVE"
       - name: TypeScript compile check
         run: npx tsc --noEmit
       - name: Vitest
