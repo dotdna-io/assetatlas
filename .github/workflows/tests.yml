@@ -10,10 +10,28 @@ permissions:
 
 # A new push to a PR makes the in-flight run's verdict irrelevant, and on a
 # shared self-hosted runner that obsolete run still competes for the same
-# capacity as the run we actually care about. Main pushes are deliberately exempt so every
-# commit that lands keeps its own green check.
+# capacity as the run we actually care about — so PR runs supersede each other.
+#
+# Main pushes must NOT, so that every commit which lands keeps its own check.
+# Grouping on github.ref did not deliver that, despite the comment here that used
+# to claim it: every main push shares `refs/heads/main`, and when a run is queued
+# into a busy group GitHub cancels the one already PENDING there, regardless of
+# cancel-in-progress — that flag only protects a run which has already STARTED.
+# Merging three PRs in a row therefore dropped the middle commit's run entirely
+# (2026-08-07, commit 02d071cc: `tests` cancelled 8s after creation, 0 jobs), so
+# `git bisect` across a merge batch hits commits with no verdict at all.
+# Keying pushes on github.sha gives each commit its own group: nothing queues
+# behind anything, so nothing can be cancelled while pending. This only ever
+# REFINES the grouping — PR runs still group per PR and still supersede — so it
+# cannot cancel anything that survives today; the cost is runner contention when
+# merges land back to back.
+#
+# `a || b`, never `cond && a || b`: GHA collapses that ternary to `b` whenever `a`
+# is falsy, which is already the cause of a long-lived bug in this repo (the CI
+# pip cache). pull_request.number is null on a push, so the fallback needs no
+# condition — and PR numbers start at 1, so it is never falsily zero.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # ── RUNNER ESCAPE HATCH ───────────────────────────────────────────────────────

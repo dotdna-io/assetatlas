@@ -11,7 +11,7 @@ Endpoints tested:
 import os
 from datetime import datetime
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -62,17 +62,19 @@ class TestHealthCheck:
     def _chromadb_stats(self, client, blueprint_app):
         """Model the ChromaDB check that 0f71656f added to the /health payload.
 
-        check_chromadb() reads embedding_integration_service.chromadb_store
-        .get_collection_stats(); a bare MagicMock there yields MagicMock
-        counts, which jsonify cannot serialize — the whole response 500s
-        regardless of what the database check did. Real stats dicts are
-        ints, so give the mock the real shape.
+        check_chromadb() reads embedding_integration_service
+        .chromadb_store_if_initialized.get_collection_stats() (the read-only
+        accessor — the health probe must not trigger the lazy build, #1390);
+        a bare MagicMock there yields MagicMock counts, which jsonify cannot
+        serialize — the whole response 500s regardless of what the database
+        check did. Real stats dicts are ints, so give the mock the real shape.
 
         Depends on `client` so the return value is set AFTER that fixture's
         per-test reset_mock(return_value=True) cascade, which would
         otherwise wipe it back to a bare MagicMock.
         """
-        store = blueprint_app.embedding_integration_service.chromadb_store
+        store = blueprint_app.embedding_integration_service \
+            .chromadb_store_if_initialized
         store.get_collection_stats.return_value = {
             "fields_count": 49,
             "values_count": 120,
@@ -406,6 +408,140 @@ class TestHealthCheckEmbeddingComponents:
             response = client.get('/api/health')
             data = response.get_json()
             assert 'chromadb' in data['checks']
+
+
+class TestChromadbCheckObservesOnly:
+    """check_chromadb() must OBSERVE the embedding stack, never construct it.
+
+    Regression suite for #1390: the first GET /api/health against a cold
+    gunicorn worker evaluated ``EmbeddingIntegrationService.chromadb_store``
+    — a property whose getter calls ``_ensure_heavy_components()``,
+    synchronously building a SynonymGenerator, a ChromaDBStore and two
+    EmbeddingService instances (BAAI/bge-base-en-v1.5 via ONNX, under an
+    exclusive cross-process ChromaDB file lock) inside the worker serving
+    the probe. The installer's post-update version check probed /api/health
+    with a 15s budget ~30-40s after ``compose up -d``, got no answer, and
+    aborted an otherwise-successful update.
+
+    These tests attach a REAL EmbeddingIntegrationService (built with mocked
+    collaborators, so construction itself is cheap and loads no model): a
+    regression back to the constructing property then runs against the real
+    lazy-build machinery rather than a look-alike fake. The cold-worker test
+    additionally stubs ``_ensure_heavy_components`` so a regression is a fast
+    assertion failure instead of a real ONNX model load.
+    """
+
+    @staticmethod
+    def _setup_db_healthy(blueprint_app):
+        blueprint_app.db_adapter.execute_query.side_effect = None
+        blueprint_app.db_adapter.execute_query.return_value = [{"test": 1}]
+        blueprint_app.connection_manager.get_pool_stats.return_value = {
+            "min_connections": 2,
+            "max_connections": 10,
+            "total_connections_estimate": 3,
+        }
+
+    @staticmethod
+    def _attach_real_service(blueprint_app, monkeypatch):
+        from src.modules.asset_generation.services.embedding_integration import (
+            EmbeddingIntegrationService,
+        )
+        service = EmbeddingIntegrationService(
+            MagicMock(name="db_adapter"),
+            field_registry=MagicMock(name="field_registry"),
+            description_generator=MagicMock(name="description_generator"),
+        )
+        monkeypatch.setattr(blueprint_app, "embedding_integration_service", service)
+        return service
+
+    def test_cold_worker_reports_initializing_and_builds_nothing(
+            self, client, blueprint_app, monkeypatch):
+        """The regression: a probe of an unbuilt worker must not build it."""
+        self._setup_db_healthy(blueprint_app)
+        service = self._attach_real_service(blueprint_app, monkeypatch)
+        with patch.object(service, '_ensure_heavy_components') as ensure:
+            resp = client.get("/api/health")
+
+        # ChromaDB is non-critical: 'initializing' must not flip the aggregate
+        # (the handler keys the HTTP code off the database check alone).
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["status"] == "healthy"
+        chromadb = data["checks"]["chromadb"]
+        assert chromadb["status"] == "initializing"
+        assert "message" in chromadb
+        ensure.assert_not_called()
+        assert service._heavy_loaded is False
+
+    def test_built_store_reports_available_with_unchanged_body(
+            self, client, blueprint_app, monkeypatch):
+        """Behaviour with the stack built is byte-identical to before #1390."""
+        self._setup_db_healthy(blueprint_app)
+        service = self._attach_real_service(blueprint_app, monkeypatch)
+        service._heavy_loaded = True
+        service._chromadb_store = MagicMock(name="chromadb_store")
+        service._chromadb_store.get_collection_stats.return_value = {
+            "fields_count": 49,
+            "values_count": 120,
+        }
+        resp = client.get("/api/health")
+        assert resp.status_code == 200
+        assert resp.get_json()["checks"]["chromadb"] == {
+            "status": "available",
+            "fields_count": 49,
+            "values_count": 120,
+        }
+
+    def test_attempted_but_failed_build_reports_unavailable(
+            self, client, blueprint_app, monkeypatch):
+        """_heavy_loaded=True with a None store means the build FAILED — a
+        fault, not a cold start, so it must not read as 'initializing'."""
+        self._setup_db_healthy(blueprint_app)
+        service = self._attach_real_service(blueprint_app, monkeypatch)
+        service._heavy_loaded = True
+        resp = client.get("/api/health")
+        assert resp.status_code == 200
+        assert resp.get_json()["checks"]["chromadb"] == {
+            "status": "unavailable",
+            "message": "ChromaDB not configured",
+        }
+
+    def test_live_store_error_still_degrades_to_unavailable(
+            self, client, blueprint_app, monkeypatch):
+        """The try/except stays: a stats failure on a built store is a fault."""
+        self._setup_db_healthy(blueprint_app)
+        service = self._attach_real_service(blueprint_app, monkeypatch)
+        service._heavy_loaded = True
+        service._chromadb_store = MagicMock(name="chromadb_store")
+        service._chromadb_store.get_collection_stats.side_effect = RuntimeError(
+            "locked index")
+        resp = client.get("/api/health")
+        assert resp.status_code == 200
+        chromadb = resp.get_json()["checks"]["chromadb"]
+        assert chromadb["status"] == "unavailable"
+        assert "locked index" in chromadb["message"]
+
+    def test_missing_service_reports_unavailable(
+            self, client, blueprint_app, monkeypatch):
+        """The factory attaches None when service construction failed."""
+        self._setup_db_healthy(blueprint_app)
+        monkeypatch.setattr(blueprint_app, "embedding_integration_service", None)
+        resp = client.get("/api/health")
+        assert resp.status_code == 200
+        assert resp.get_json()["checks"]["chromadb"]["status"] == "unavailable"
+
+    def test_read_only_accessors_never_trigger_the_lazy_build(
+            self, blueprint_app, monkeypatch):
+        """Pin the invariant on the service itself: asking must not build."""
+        from src.modules.asset_generation.services.embedding_integration import (
+            EmbeddingIntegrationService,
+        )
+        service = self._attach_real_service(blueprint_app, monkeypatch)
+        with patch.object(
+                EmbeddingIntegrationService, '_ensure_heavy_components') as ensure:
+            assert service.is_heavy_loaded is False
+            assert service.chromadb_store_if_initialized is None
+        ensure.assert_not_called()
 
 
 class TestHealthInFlight:

@@ -79,7 +79,7 @@ set_opt_in() {
     $PSQL_CMD -c "UPDATE system_info SET $field = $value WHERE id = 1;" >/dev/null
 }
 
-# set_app_image_pins <version> [env_file]
+# set_app_image_pins <version> [env_file] [--create-missing]
 # Rewrite the tag of the app-image pins in the .env to :<version>, so an online
 # update deploys exactly the bundle's version instead of whatever the operator
 # last hand-edited. Only the five images that track the app version are touched;
@@ -90,18 +90,79 @@ set_opt_in() {
 # regex won't match it, so we never turn a digest into an invalid :tag.
 # Idempotent. Root cause of #812: the deployed images (.env pins) and the
 # recorded version drifted independently.
+#
+# A pin line that is simply ABSENT used to be skipped silently: sed with zero
+# matches exits 0, so an .env with no *_IMAGE lines at all — every pre-#1391
+# online install, whose write_env_file emits none — "pinned" nothing, returned
+# 0 under update.sh's `|| die` guard, and the host kept running :latest. Two
+# guards against that shape now:
+#   - if NONE of the five lines exists and none was created, the run fails
+#     loudly instead of reporting success for having changed nothing;
+#   - --create-missing appends the absent lines as the compose-default
+#     ghcr.io/dotdna-io refs at <version>, so an already-deployed online host
+#     self-heals on its next update. Each created line is logged.
+# --create-missing is an OPT-IN, not the default, on purpose: it is the only
+# path that writes a ghcr.io ref, and an air-gapped install pins localhost/*
+# and cannot reach a registry. The sole production caller that passes it is
+# update.sh's online branch (IMAGE_SOURCE=online); an offline .env always
+# carries all five localhost/* lines (install.sh's offline branch writes
+# them), so the create path is unreachable there regardless. A PARTIAL .env
+# (some lines present) without the flag rewrites what exists and warns —
+# pre-#1391 installs never had a subset, and update.sh always passes the flag.
 set_app_image_pins() {
     local version=$1
     local env_file="${2:-$INSTALL_DIR/.env}"
+    local create_missing=${3:-}
     [ -n "$version" ] || { log_error "set_app_image_pins: version required"; return 1; }
     [ -f "$env_file" ] || { log_error "set_app_image_pins: env file not found: $env_file"; return 1; }
+    case "$create_missing" in
+        ""|--create-missing) ;;
+        *) log_error "set_app_image_pins: unknown argument: $create_missing"; return 1 ;;
+    esac
+    local vars=(API_IMAGE SCHEDULER_IMAGE MCP_IMAGE UI_IMAGE TEAMS_BRIDGE_IMAGE)
     local var args=()
-    for var in API_IMAGE SCHEDULER_IMAGE MCP_IMAGE UI_IMAGE TEAMS_BRIDGE_IMAGE; do
+    for var in "${vars[@]}"; do
         args+=(-e "s|^(${var}=[^@[:space:]]*):[^:[:space:]]+\$|\1:${version}|")
     done
     local tmp
     tmp="$(mktemp)"
-    sed -E "${args[@]}" "$env_file" > "$tmp" && mv "$tmp" "$env_file"
+    sed -E "${args[@]}" "$env_file" > "$tmp" && mv "$tmp" "$env_file" || {
+        rm -f "$tmp"
+        log_error "set_app_image_pins: failed to rewrite $env_file"
+        return 1
+    }
+
+    # Presence, not rewrite count: a digest-pinned line is deliberately left
+    # unrewritten but still counts as pinned. grep reads the FILE here — the
+    # pipefail/EPIPE trap (#1199) is `writer | grep -q`, not this shape.
+    local missing=()
+    for var in "${vars[@]}"; do
+        grep -qE "^${var}=" "$env_file" || missing+=("$var")
+    done
+    [ "${#missing[@]}" -eq 0 ] && return 0
+
+    if [ "$create_missing" = "--create-missing" ]; then
+        # Repo paths mirror the ${VAR:-default}s in deploy/compose/docker-compose.yml.
+        local repo
+        for var in "${missing[@]}"; do
+            case "$var" in
+                API_IMAGE)           repo=ghcr.io/dotdna-io/assetatlas-api ;;
+                SCHEDULER_IMAGE)     repo=ghcr.io/dotdna-io/assetatlas-scheduler ;;
+                MCP_IMAGE)           repo=ghcr.io/dotdna-io/assetatlas-mcp ;;
+                UI_IMAGE)            repo=ghcr.io/dotdna-io/assetatlas-ui ;;
+                TEAMS_BRIDGE_IMAGE)  repo=ghcr.io/dotdna-io/assetatlas-teams-bridge ;;
+            esac
+            printf '%s=%s:%s\n' "$var" "$repo" "$version" >> "$env_file"
+            log_info "  created missing pin $var=$repo:$version"
+        done
+        return 0
+    fi
+
+    if [ "${#missing[@]}" -eq "${#vars[@]}" ]; then
+        log_error "set_app_image_pins: $env_file has none of the five app-image pins — nothing was pinned. On an ONLINE install, re-run with --create-missing to write the ghcr.io/dotdna-io refs (update.sh's online branch does). Never create them on an offline install: it pins localhost/* and cannot reach a registry."
+        return 1
+    fi
+    log_warn "set_app_image_pins: no pin line for ${missing[*]} in $env_file — rewrote the pins that exist, created nothing (no --create-missing)."
 }
 
 # set_app_image_owner [old-owner] [new-owner] [env_file]
@@ -137,37 +198,74 @@ set_app_image_owner() {
     sed -E "${args[@]}" "$env_file" > "$tmp" && mv "$tmp" "$env_file"
 }
 
-# verify_deployed_version <version> <health_url>
+# verify_deployed_version <version> <health_url> [<timeout_seconds=60>]
 # Confirm the RUNNING app reports <version> before we record it in system_info.
-# Probes the app's own /api/health, whose application.version is the image-baked
-# APP_VERSION (release.yml build-arg) — so this verifies the actually-deployed
-# CODE, not just the .env tag we wrote (which would be tautological). Fails
-# CLOSED: an unreachable app OR a version that doesn't match returns non-zero,
-# so a pull/recreate that didn't take effect can never leave system_info ahead
-# of the deployed code (#812). Online mode only — offline images aren't
+# Polls the app's own liveness endpoint (/api/health/live), whose
+# application.version is the image-baked APP_VERSION (release.yml build-arg) —
+# so this verifies the actually-deployed CODE, not just the .env tag we wrote
+# (which would be tautological). Online mode only — offline images aren't
 # APP_VERSION-stamped. Requires curl.
+#
+# It POLLS like every other probe in the update (wait_for_health runs the same
+# 60s at 2s cadence): this fires against a freshly recreated api container, and
+# the old single 15s shot read one slow first answer as a failed deployment
+# (#1389). The window is a parameter with a default so a test does not have to
+# sit through the real cadence.
+#
+# Deliberately no curl -f: the classification reads the BODY, never the HTTP
+# status. The health window already established liveness, so this check's only
+# question is which code is deployed — and a degraded-but-answering app that
+# reports the right version still counts as confirmed (/api/health's 503 on a
+# slow dependency check is what made the old probe lie about a healthy update).
+#
+# THREE outcomes, one exit status each, so the caller can act differently:
+#   0 confirmed        — a body carried "version": "<version>".
+#   1 wrong version    — a body carried a recognisable version field whose value
+#                        is NOT <version>: the genuine deployment failure (#812,
+#                        a pull/recreate that did not take effect). Stays FATAL
+#                        at the call site.
+#   2 could not verify — no answer at all within the window, or every answer
+#                        carried no recognisable version field (an nginx 404/502
+#                        HTML page must land HERE, not in "wrong version" —
+#                        misreading it would FATAL a healthy deployment, which
+#                        is exactly #1389). NOT fatal at the call site, but
+#                        system_info is still never written: only 0 may lead to
+#                        update_system_info (#812's fail-closed invariant).
 verify_deployed_version() {
     local version=$1 url=$2
+    local timeout=${3:-60}
     [ -n "$version" ] || { log_error "verify_deployed_version: version required"; return 1; }
     [ -n "$url" ]     || { log_error "verify_deployed_version: health url required"; return 1; }
-    local body
-    body=$(curl -fsSk --max-time 15 "$url" 2>/dev/null) || {
-        log_error "  could not reach $url to verify the deployed version"
-        return 1
-    }
     # Escape dots so the version matches literally (2026.27.1 must not match
     # 2026x27x1); the closing quote anchors it so 2026.27.1 != 2026.27.11.
     local vpat=${version//./\\.}
-    # Herestring, not a pipe: grep -q exits on its match, so a piped writer takes
-    # EPIPE and pipefail turns a MATCH into a failed pipeline (#1199). Here that
-    # inverts a fail-closed check — update.sh:338 dies on a false negative,
-    # blaming .env image pins that are correct, after the health window has
-    # already closed. A health body is small enough that the old pipeline
-    # normally won that race — but whether this check answers correctly must not
-    # depend on scheduling.
-    if grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"${vpat}\"" <<<"$body"; then
-        return 0
-    fi
-    log_error "  running app did not report version $version at $url"
-    return 1
+    # Any "version": "<value>" field, for the wrong-version branch's message.
+    # Unquoted-variable regex on purpose: bash 3.2 mis-parses quoted sub-regexes.
+    local re='"version"[[:space:]]*:[[:space:]]*"([^"]+)"'
+    local start now body
+    start=$(date +%s)
+    while true; do
+        body=$(curl -sSk --max-time 5 "$url" 2>/dev/null) || body=""
+        if [ -n "$body" ]; then
+            # Herestring, not a pipe: grep -q exits on its match, so a piped
+            # writer takes EPIPE and pipefail turns a MATCH into a failed
+            # pipeline (#1199) — which would invert this fail-closed check into
+            # a false "not the target version". Whether this check answers
+            # correctly must not depend on scheduling.
+            if grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"${vpat}\"" <<<"$body"; then
+                log_ok "  confirmed: the running app reports $version"
+                return 0
+            fi
+            if [[ "$body" =~ $re ]]; then
+                log_error "  running app reports version ${BASH_REMATCH[1]} — a different version than the target $version"
+                return 1
+            fi
+        fi
+        now=$(date +%s)
+        if [ "$((now - start))" -ge "$timeout" ]; then
+            log_error "  could not verify the deployed version at $url within ${timeout}s (no answer carrying a recognisable version field)"
+            return 2
+        fi
+        sleep 2
+    done
 }

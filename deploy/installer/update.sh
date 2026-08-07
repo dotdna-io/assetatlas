@@ -20,6 +20,13 @@
 #                           INSTALL_DIR (used internally by the front-end's
 #                           re-exec after extraction; can also be invoked
 #                           directly against an already-extracted tree).
+#   --confirm               with --apply-local, ask [u/d/c] before the first
+#                           destructive step. install.sh adds this when it
+#                           detects an existing install and dispatches here:
+#                           the operator asked to install, so applying
+#                           unattended would silently reinterpret that as
+#                           "back up and upgrade". A bare --apply-local (the
+#                           air-gapped entry point) does not prompt.
 #
 # Behavior (atomic body, reached via --apply-local or the self-fetch apply):
 #   - Pre-flight checks (disk, in-flight pipeline, cert)
@@ -33,6 +40,9 @@
 #   - On a failed `up -d` OR a failed health window: AUTO ROLLBACK (restore
 #     snapshot, restore DB, restart), then VERIFY the restore — containers,
 #     image tags and the recorded version — before calling it a rollback
+#   - Verify the running app reports the target version (online only): a WRONG
+#     version is FATAL; an answer that never comes is NOT recorded in
+#     system_info and the update otherwise completes (see 7b)
 #   - On success: update system_info row, prune old backups + snapshots
 #
 # Operator-invoked rollback (verified like the auto path — containers, image
@@ -113,6 +123,7 @@ UNATTENDED=0
 DRY_RUN=0
 ASSUME_YES=0
 APPLY_LOCAL=0
+CONFIRM=0
 
 # Parse args
 while [ $# -gt 0 ]; do
@@ -138,7 +149,10 @@ while [ $# -gt 0 ]; do
         --dry-run)            DRY_RUN=1 ;;
         -y|--yes)             ASSUME_YES=1 ;;
         --apply-local)        APPLY_LOCAL=1 ;;
-        -h|--help)            sed -n '2,42p' "$0"; exit 0 ;;
+        # --confirm is added by install.sh's dispatch on an existing install;
+        # the gate itself runs after the version check, before the backup.
+        --confirm)            CONFIRM=1 ;;
+        -h|--help)            sed -n '2,57p' "$0"; exit 0 ;;
         --with-monitoring|--no-monitoring|--no-systemd|--with-demo-data)
             log_info "Ignoring install-only flag on update: $1 (this setting persists from install)." ;;
         --install-mode)
@@ -479,6 +493,35 @@ if [ "$CURRENT_VERSION" != "0.0.0-pre-system-info" ] && [ "$ALLOW_VERSION_SKIP" 
     fi
 fi
 
+# 2a. The --confirm gate. install.sh adds --confirm when it dispatches on an
+# existing install (curl | sudo bash on one): the operator asked to INSTALL,
+# and without this prompt the dispatch is an unattended "back up and upgrade
+# production". Ask HERE — after the version check so the prompt can name the
+# transition (and after "already at X" has exited, so there is something to
+# confirm), and BEFORE step 3 takes the DB backup, the first destructive act.
+# A bare --apply-local — the only air-gapped entry point — carries no --confirm
+# and applies without asking, exactly as before.
+if [ "$CONFIRM" = "1" ]; then
+    # A refusal (no terminal, no --unattended/-y) already logged itself in
+    # update_decide_apply_local; exit without touching anything.
+    CONFIRM_MODE=$(update_decide_apply_local "$INSTALL_DIR" "$CURRENT_VERSION" "$TARGET_VERSION") || exit 1
+    case "$CONFIRM_MODE" in
+        apply) ;;
+        cancel)
+            log_info "Update cancelled."
+            exit 0
+            ;;
+        dry-run)
+            # --apply-local + --dry-run is refused at the flag parser, so run
+            # the report directly rather than re-exec: the bundle is already
+            # extracted into $INSTALL_DIR, which is exactly the tree its third
+            # argument reads.
+            update_dry_run_report "$CURRENT_VERSION" "$TARGET_VERSION" "$INSTALL_DIR"
+            exit 0
+            ;;
+    esac
+fi
+
 # 3. Backup + snapshot BEFORE any destructive operation
 log_info "Backing up current state for rollback..."
 backup_db "$TARGET_VERSION" >/dev/null
@@ -528,7 +571,14 @@ else
     # hand-bump .env, and the deployed images can't drift from the bundle
     # version we later record in system_info (#812). Vendor pins are untouched.
     log_info "Pinning app images to $TARGET_VERSION..."
-    set_app_image_pins "$TARGET_VERSION" || die "Failed to pin app images in .env."
+    # --create-missing: online installs from before #1391 have NO *_IMAGE lines
+    # at all, so a pure tag-rewrite pinned nothing and the host kept running
+    # :latest; the absent pins are created so those hosts self-heal on this
+    # update. Safe HERE specifically: this branch is online-only, and an
+    # offline .env always carries all five localhost/* pins, so the create
+    # path can never fire on one and write a ghcr.io ref it cannot pull.
+    set_app_image_pins "$TARGET_VERSION" "$INSTALL_DIR/.env" --create-missing \
+        || die "Failed to pin app images in .env."
     # One-time namespace migration (2026-07): the project moved from the personal
     # account andrei-dotdna to the dotdna-io org. ghcr packages do NOT follow a repo
     # transfer and there is no registry redirect, so an .env still pinned to the old
@@ -591,21 +641,52 @@ fi
 # pull/recreate that silently didn't take effect can't leave system_info ahead
 # of the deployed code (#812). Online only — offline images aren't
 # APP_VERSION-stamped.
+#
+# Probes the SAME $HEALTH_URL the health window (step 7) just proved reachable:
+# a hand-built second URL is how this ended up on /api/health, the HEAVY
+# endpoint whose 503 on a slow dependency check — read by curl -f as "could not
+# reach" — declared a successful update failed and, worse, recommended rolling
+# it back (#1389).
+#
+# verify_deployed_version has THREE outcomes (its header is the contract), and
+# only "confirmed" may lead to system_info being recorded:
+#   0 confirmed        → record the update, business as usual.
+#   1 wrong version    → FATAL: the new code genuinely did not take effect —
+#                        the one branch where the .env-pins / --rollback advice
+#                        is honest.
+#   2 could not verify → NOT fatal: the stack is healthy and running the new
+#                        images, so we do NOT record a version we could not
+#                        confirm (#812's fail-closed invariant holds) but we DO
+#                        finish the bookkeeping — the old die here skipped
+#                        steps 8-11 and left the host half-recorded, so the next
+#                        update recomputed from the stale row. Never recommend
+#                        --rollback on this branch: that would destroy a good
+#                        deployment.
+VERIFY_STATUS=0
 if [ "${IMAGE_SOURCE:-}" = "online" ]; then
     log_info "Verifying the running app reports $TARGET_VERSION..."
-    if ! verify_deployed_version "$TARGET_VERSION" "https://localhost:${HTTPS_PORT:-8443}/api/health"; then
-        die "The running app does not report $TARGET_VERSION — refusing to record the update. The app is healthy but on a different version (a pull/recreate that did not take effect). Migrations/seeds for $TARGET_VERSION are already applied (idempotent, safe) and system_info was left unchanged. Recover by fixing the .env image pins and re-running the installer, or run 'update.sh --rollback'."
+    verify_deployed_version "$TARGET_VERSION" "$HEALTH_URL" || VERIFY_STATUS=$?
+    if [ "$VERIFY_STATUS" = "1" ]; then
+        die "The running app reports a different version than $TARGET_VERSION — refusing to record the update. The new images did not take effect (a pull/recreate left the previous build serving, #812). Migrations/seeds for $TARGET_VERSION are already applied (idempotent, safe) and system_info was left unchanged. Recover by fixing the .env image pins and re-running the installer, or run 'update.sh --rollback'."
+    else
+        [ "$VERIFY_STATUS" = "0" ] || log_warn "Could not verify that the running app reports $TARGET_VERSION — NOT recording the update in system_info. The stack is healthy and running the new images, so this is NOT a failure and must NOT be rolled back; the remaining bookkeeping still runs. Re-run 'assetatlas update' to re-verify and record."
     fi
 fi
 
-# 8. Update system_info row to mark new version installed
-# Warn, do not die. The update itself has already succeeded by this point and
-# the auto-rollback window is closed, so aborting over metadata would risk
-# unwinding a healthy deployment. Keeping the previous continue-on-failure
-# behaviour — but deliberately and visibly, now that update_system_info reports
-# a failed upsert honestly instead of always returning 0.
-update_system_info "$TARGET_VERSION" "$RUNTIME" "$(state_get install_mode online)" "$INSTALL_DIR" \
-    || log_warn "Could not record $TARGET_VERSION in system_info. The update succeeded; until this is fixed the UI and the next update's version check read a stale installed version."
+# 8. Update system_info row to mark new version installed — ONLY when 7b
+# confirmed the deployed version. The could-not-verify path (VERIFY_STATUS=2)
+# deliberately skips this: never record a version we could not confirm (#812's
+# fail-closed invariant), and the closing summary below says so instead of
+# claiming an unqualified completion. Warn, do not die. The update itself has
+# already succeeded by this point and the auto-rollback window is closed, so
+# aborting over metadata would risk unwinding a healthy deployment. Keeping the
+# previous continue-on-failure behaviour — but deliberately and visibly, now
+# that update_system_info reports a failed upsert honestly instead of always
+# returning 0.
+if [ "$VERIFY_STATUS" = "0" ]; then
+    update_system_info "$TARGET_VERSION" "$RUNTIME" "$(state_get install_mode online)" "$INSTALL_DIR" \
+        || log_warn "Could not record $TARGET_VERSION in system_info. The update succeeded; until this is fixed the UI and the next update's version check read a stale installed version."
+fi
 
 # 9. Refresh reference data (MAC-vendor + OS-EOL)
 # Runs on every update so a host never sits on stale reference data, and so a
@@ -637,4 +718,13 @@ fi
 prune_pre_update_backups 3
 prune_snapshots 3
 
-log_ok "=== Update complete: $CURRENT_VERSION → $TARGET_VERSION ==="
+if [ "$VERIFY_STATUS" = "0" ]; then
+    log_ok "=== Update complete: $CURRENT_VERSION → $TARGET_VERSION ==="
+else
+    # The could-not-verify path (7b): the update DID succeed — new images,
+    # healthy stack — so this exits 0 and never mentions --rollback; but the
+    # closing line must not claim an unqualified completion, and must name the
+    # stale-row consequence and the repair, because the NEXT update recomputes
+    # from system_info.
+    log_warn "=== Update finished WITHOUT a recorded version: the stack is healthy and running the $TARGET_VERSION images, but the post-update check could not verify that the running app reports $TARGET_VERSION. system_info still reads $CURRENT_VERSION and was deliberately NOT updated — the UI and the next update's version check keep reading that stale row until a confirmed update repairs it. Repair with: assetatlas update ==="
+fi

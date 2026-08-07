@@ -456,17 +456,35 @@ def check_pipeline_in_flight() -> Dict[str, Any]:
 
 
 def check_chromadb() -> Dict[str, Any]:
-    """Check ChromaDB availability (non-critical)."""
+    """Check ChromaDB availability (non-critical).
+
+    OBSERVE ONLY — a health probe must never construct the embedding stack.
+    Reading the ``chromadb_store`` property lazily builds a SynonymGenerator,
+    a ChromaDBStore and two EmbeddingService instances (ONNX model load under
+    an exclusive cross-process file lock) inside whichever gunicorn worker
+    answers the request, so the first probe of a cold worker blocks for the
+    entire model load (#1390). A stack no code path has needed yet is
+    reported as 'initializing', not as a fault.
+    """
     try:
-        service = current_app.embedding_integration_service
-        if service and service.chromadb_store:
-            stats = service.chromadb_store.get_collection_stats()
+        service = getattr(current_app, 'embedding_integration_service', None)
+        if service is None:
+            return {'status': 'unavailable', 'message': 'ChromaDB not configured'}
+        store = service.chromadb_store_if_initialized
+        if store:
+            stats = store.get_collection_stats()
             return {
                 'status': 'available',
                 'fields_count': stats.get('fields_count', 0),
                 'values_count': stats.get('values_count', 0),
             }
-        return {'status': 'unavailable', 'message': 'ChromaDB not configured'}
+        if service.is_heavy_loaded:
+            # The build ran and failed (store is None) — that IS a fault.
+            return {'status': 'unavailable', 'message': 'ChromaDB not configured'}
+        return {
+            'status': 'initializing',
+            'message': 'Embedding stack not loaded yet in this worker',
+        }
     except Exception as e:
         return {
             'status': 'unavailable',

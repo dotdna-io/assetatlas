@@ -99,7 +99,11 @@ if [ -f "$_resolved_install_dir/.install-state" ]; then
     log_warn "Existing install detected at $_resolved_install_dir; running update.sh instead."
     # An existing install means the freshly-extracted bundle is already in place;
     # apply it locally rather than having update.sh fetch a second copy.
-    exec "$SCRIPT_DIR/update.sh" --apply-local "$@"
+    # --confirm because the operator asked to *install*: without it this
+    # dispatch is an unattended full update (backup, migrations, pull,
+    # recreate). It makes update.sh ask [u/d/c] first; --unattended / -y
+    # forwarded in "$@" still proceed without prompting.
+    exec "$SCRIPT_DIR/update.sh" --apply-local --confirm "$@"
 fi
 
 while [ $# -gt 0 ]; do
@@ -125,9 +129,24 @@ done
 
 export INSTALL_DIR UNATTENDED INSTALL_DOCKER NO_REFERENCE_DATA
 
+# The ONE version resolution for this script. The banner below, the app-image
+# pins the online branch writes at image-setup time, and the system_info
+# record at the end all describe the same thing — the bundle being installed —
+# so they share this result instead of each carrying their own fallback chain
+# (the banner and system_info used to resolve it independently, with two
+# DIFFERENT chains). $INSTALL_DIR/VERSION is a valid first choice at every
+# point below, image setup included: the self-extracting bundle untars its
+# whole tree — VERSION included — into $INSTALL_DIR before it execs this
+# script (deploy/build/self-extract-header.sh). From a repo checkout there is
+# no $INSTALL_DIR/VERSION on a fresh install, and the repo-root VERSION
+# answers instead.
+BUNDLE_VERSION=$(cat "$INSTALL_DIR/VERSION" 2>/dev/null \
+    || cat "$SCRIPT_DIR/../../VERSION" 2>/dev/null \
+    || true)
+
 # No-op when the curl|bash bootstrap already greeted the operator (it exports
 # ASSETATLAS_BANNER_SHOWN), so the one-liner path shows the logo exactly once.
-print_banner "$(cat "$SCRIPT_DIR/../VERSION" 2>/dev/null || cat "$SCRIPT_DIR/../../VERSION" 2>/dev/null || true)"
+print_banner "$BUNDLE_VERSION"
 
 log_info "=== AssetAtlas install starting ==="
 
@@ -462,6 +481,34 @@ if [ "$INSTALL_MODE" = "offline" ]; then
     fi
 else
     log_info "Online mode: pulling images..."
+    # Pin the five app images to the bundle version BEFORE the pull: without
+    # these lines the compose defaults (${VAR:-ghcr.io/...:latest}) apply, so
+    # every online install pulled — and kept running — :latest while
+    # system_info recorded the bundle version, and update.sh's
+    # set_app_image_pins had no line to rewrite on the next update (#1391).
+    # Same shape as the offline branch above; the repo paths mirror the
+    # ${VAR:-default}s in deploy/compose/docker-compose.yml.
+    [ -n "$BUNDLE_VERSION" ] \
+        || die "Cannot resolve the bundle version (neither $INSTALL_DIR/VERSION nor $SCRIPT_DIR/../../VERSION found) — refusing to install with unpinned images."
+    log_info "Pinning app images to $BUNDLE_VERSION..."
+    export API_IMAGE="ghcr.io/dotdna-io/assetatlas-api:$BUNDLE_VERSION"
+    export SCHEDULER_IMAGE="ghcr.io/dotdna-io/assetatlas-scheduler:$BUNDLE_VERSION"
+    export MCP_IMAGE="ghcr.io/dotdna-io/assetatlas-mcp:$BUNDLE_VERSION"
+    export TEAMS_BRIDGE_IMAGE="ghcr.io/dotdna-io/assetatlas-teams-bridge:$BUNDLE_VERSION"
+    export UI_IMAGE="ghcr.io/dotdna-io/assetatlas-ui:$BUNDLE_VERSION"
+    # Persist the pins, for the same reason the offline branch does: these
+    # exports die with this script, and every LATER compose invocation —
+    # the systemd unit's ExecStart, update.sh, `assetatlas-cli restart` —
+    # re-reads .env and would otherwise fall back to the moving :latest
+    # defaults in docker-compose.yml.
+    for _img_var in API_IMAGE SCHEDULER_IMAGE MCP_IMAGE TEAMS_BRIDGE_IMAGE UI_IMAGE; do
+        _set_env_var "$_img_var" "${!_img_var}"
+    done
+    # The exports matter as much as the .env lines for THIS script:
+    # verify_compose_images below expands ${VAR:-default} from the process
+    # environment, not from .env — without them it would demand the :latest
+    # images the pull was never asked to fetch.
+    #
     # api, scheduler and mcp are the SAME image published under three names —
     # release.yml retags at manifest level, so there is no rebuild and no second
     # copy. Compose still renders a progress line per service, and `docker
@@ -637,9 +684,10 @@ fi
 # ---------------------------------------------------------------------------
 # Record install metadata in system_info
 # ---------------------------------------------------------------------------
-TARGET_VERSION=$(cat "$INSTALL_DIR/VERSION" 2>/dev/null \
-    || cat "$SCRIPT_DIR/../../VERSION" 2>/dev/null \
-    || echo "unknown")
+# The version is BUNDLE_VERSION, resolved once near the top of the script (see
+# the comment there) and shared with the banner and the image pins, so the
+# recorded version can never describe a different bundle than the one the
+# pins came from.
 # Both writes below warn rather than abort, which is the policy for every step
 # between the admin seed and the summary (reference data, demo seeds, SMTP,
 # update check above; systemd below). By this point the stack is up and healthy
@@ -653,8 +701,8 @@ TARGET_VERSION=$(cat "$INSTALL_DIR/VERSION" 2>/dev/null \
 # Guarding BOTH is what makes either guard worth anything: the common cause of a
 # failure here is an unreachable DB, which fails both calls, so guarding only the
 # first would move the abort two lines down instead of preventing it.
-update_system_info "$TARGET_VERSION" "$RUNTIME" "$INSTALL_MODE" "$INSTALL_DIR" \
-    || log_warn "Could not record install metadata in system_info. The stack is running; until this is fixed nothing reports $TARGET_VERSION as the installed version."
+update_system_info "${BUNDLE_VERSION:-unknown}" "$RUNTIME" "$INSTALL_MODE" "$INSTALL_DIR" \
+    || log_warn "Could not record install metadata in system_info. The stack is running; until this is fixed nothing reports ${BUNDLE_VERSION:-unknown} as the installed version."
 
 # Update opt-in flags now that system_info row exists.
 # set_opt_in ends in a `psql -c`, which propagates errors on its own — so before

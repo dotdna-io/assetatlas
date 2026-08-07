@@ -99,18 +99,27 @@ class EmbeddingIntegrationService:
             return
         self._heavy_loaded = True
 
-        from src.services.embedding.synonym_generator import SynonymGenerator
-        if not self._synonym_generator:
-            llm_client = self.description_generator.llm_client if self.description_generator else None
-            self._synonym_generator = SynonymGenerator(llm_client=llm_client)
-
+        # The EmbeddingService is built FIRST so it can be injected into the
+        # synonym generator below — the generator building its own (as it did
+        # before) loads the ~109M-param ONNX model a second time per process
+        # (#1396). Building it before ChromaDBStore also keeps a model-load
+        # failure leaving all three components None, exactly as before.
         try:
             from src.services.embedding.chromadb_store import ChromaDBStore
             from src.services.embedding.embedding_service import EmbeddingService
-            self._chromadb_store = ChromaDBStore()
             self._embedding_service = EmbeddingService()
+            self._chromadb_store = ChromaDBStore()
         except Exception as e:
             logger.warning(f"ChromaDB/Embedding not available: {e}")
+
+        from src.services.embedding.synonym_generator import SynonymGenerator
+        if not self._synonym_generator:
+            llm_client = self.description_generator.llm_client if self.description_generator else None
+            # A failed build above leaves _embedding_service None → the
+            # generator falls back to building its own service, the same
+            # failure mode as before the injection existed.
+            self._synonym_generator = SynonymGenerator(
+                llm_client=llm_client, embedding_service=self._embedding_service)
 
     def _refresh_llm_client(self):
         """Resolve a fresh pipeline description generator from current config.
@@ -149,6 +158,29 @@ class EmbeddingIntegrationService:
     @property
     def chromadb_store(self):
         self._ensure_heavy_components()
+        return self._chromadb_store
+
+    @property
+    def is_heavy_loaded(self) -> bool:
+        """Whether the heavy components have already been built (or attempted).
+
+        Read-only: never calls ``_ensure_heavy_components()``. Exists so a
+        caller that must only OBSERVE the embedding stack (the ``/api/health``
+        probe) can tell "not built yet" apart from "built" without triggering
+        the build itself (#1390). True means the lazy build RAN — it may still
+        have failed, so check the store itself for availability.
+        """
+        return self._heavy_loaded
+
+    @property
+    def chromadb_store_if_initialized(self):
+        """The ChromaDB store if already built, else None — never builds it.
+
+        Read-only counterpart to the ``chromadb_store`` property: a health
+        probe must not initialize the embedding stack (each lazy build loads
+        the ONNX embedding model and takes an exclusive ChromaDB file lock
+        inside whichever gunicorn worker answers the request, #1390).
+        """
         return self._chromadb_store
 
     @property

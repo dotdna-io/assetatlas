@@ -2,7 +2,7 @@
 """Tests for incremental embedding integration."""
 import json
 import threading
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 
 class TestFieldRegistryExtensions:
@@ -477,3 +477,76 @@ def test_get_synonyms_by_api_field_malformed_returns_empty(tmp_path, monkeypatch
     for payload in ('null', 'not json', '{"synonyms": ["a", "b"]}', '[]'):
         lookup.write_text(payload)
         assert svc.get_synonyms_by_api_field() == {}, f"payload {payload!r} should yield {{}}"
+
+
+class TestSingleEmbeddingModelLoad:
+    """#1396: one heavy build must construct exactly ONE EmbeddingService.
+
+    The synonym generator used to build its own EmbeddingService while
+    ``_ensure_heavy_components()`` built a second one — two ~109M-param ONNX
+    model loads per gunicorn worker. These tests run the REAL SynonymGenerator
+    constructor (only the EmbeddingService / FieldRegistry / ChromaDBStore
+    classes are patched): a mocked SynonymGenerator would accept any
+    constructor signature and prove nothing about the injection.
+    """
+
+    @staticmethod
+    def _service():
+        from src.modules.asset_generation.services.embedding_integration import (
+            EmbeddingIntegrationService,
+        )
+        return EmbeddingIntegrationService(
+            MagicMock(name="db_adapter"),
+            field_registry=MagicMock(name="field_registry"),
+            description_generator=MagicMock(name="description_generator"),
+        )
+
+    def test_heavy_build_constructs_one_embedding_service(self):
+        from src.services.embedding.synonym_generator import SynonymGenerator
+        svc = self._service()
+        with patch(
+                'src.services.embedding.embedding_service.EmbeddingService'
+        ) as embedding_cls, patch(
+                'src.services.embedding.synonym_generator.EmbeddingService',
+                embedding_cls), patch(
+                'src.services.embedding.synonym_generator.FieldRegistry'), patch(
+                'src.services.embedding.chromadb_store.ChromaDBStore'):
+            svc._ensure_heavy_components()
+
+        # Exactly one construction, and the generator holds that same instance.
+        assert embedding_cls.call_count == 1
+        assert isinstance(svc._synonym_generator, SynonymGenerator)
+        assert svc._embedding_service is embedding_cls.return_value
+        assert (svc._synonym_generator.embedding_service
+                is svc._embedding_service)
+
+    def test_synonym_generator_builds_own_service_when_none_injected(self):
+        """Every pre-#1396 caller passes no service → the generator builds its
+        own, so those call sites keep working unchanged."""
+        from src.services.embedding.synonym_generator import SynonymGenerator
+        with patch(
+                'src.services.embedding.synonym_generator.EmbeddingService'
+        ) as embedding_cls, patch(
+                'src.services.embedding.synonym_generator.FieldRegistry'):
+            gen = SynonymGenerator()
+        embedding_cls.assert_called_once_with(config=gen.config)
+        assert gen.embedding_service is embedding_cls.return_value
+
+    def test_failed_heavy_build_still_degrades_to_warning(self):
+        """A failed EmbeddingService build warns and leaves the service
+        usable: _embedding_service stays None and the generator falls back to
+        building its own — the pre-#1396 failure mode, unchanged."""
+        from src.services.embedding.synonym_generator import SynonymGenerator
+        svc = self._service()
+        with patch(
+                'src.services.embedding.embedding_service.EmbeddingService',
+                side_effect=RuntimeError('model cache missing')), patch(
+                'src.services.embedding.synonym_generator.EmbeddingService'
+        ) as fallback_cls, patch(
+                'src.services.embedding.synonym_generator.FieldRegistry'), patch(
+                'src.services.embedding.chromadb_store.ChromaDBStore'):
+            svc._ensure_heavy_components()  # must not raise
+
+        assert svc._embedding_service is None
+        assert isinstance(svc._synonym_generator, SynonymGenerator)
+        assert svc._synonym_generator.embedding_service is fallback_cls.return_value

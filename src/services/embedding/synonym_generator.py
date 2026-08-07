@@ -204,10 +204,21 @@ class SynonymGenerator:
         "network card vendor", "ethernet vendor",
     ]
 
-    def __init__(self, config: Optional[EmbeddingConfig] = None, llm_client=None):
-        """Initialize synonym generator with config."""
+    def __init__(self, config: Optional[EmbeddingConfig] = None, llm_client=None,
+                 embedding_service: Optional[EmbeddingService] = None):
+        """Initialize synonym generator with config.
+
+        Args:
+            config: Embedding configuration. Uses default if not provided.
+            llm_client: Optional pipeline LLM client for Layer-2 synonyms.
+            embedding_service: Optional pre-built EmbeddingService to share.
+                When omitted the generator builds its own — loading the ONNX
+                model — so a caller that already has one must pass it in or
+                the model loads twice per process (#1396).
+        """
         self.config = config or default_config
-        self.embedding_service = EmbeddingService(config=self.config)
+        self.embedding_service = (embedding_service
+                                  or EmbeddingService(config=self.config))
         self.field_registry = FieldRegistry(config=self.config)
         self.llm_synonym_gen = LLMSynonymGenerator(llm_client) if llm_client else None
 
