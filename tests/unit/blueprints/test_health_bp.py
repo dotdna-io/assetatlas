@@ -9,6 +9,7 @@ Endpoints tested:
 """
 
 import os
+import time
 from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -16,7 +17,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.api.blueprints.health import get_application_info
-from src.api.utils.caching import cache
 from tests.tz_helpers import WEST_OF_UTC_TZ, local_timezone
 
 
@@ -574,19 +574,7 @@ class TestHealthInFlight:
 
 
 class TestUpdateCheck:
-    """GET/POST /api/health/update-check — gated, cached, admin-only force."""
-
-    CACHE_KEY = "update_check:latest"
-
-    @pytest.fixture(autouse=True)
-    def _clear_update_cache(self, blueprint_app):
-        # Delete ONLY our key — the JWT user cache (jwt_user:*) shares this
-        # Cache singleton and must survive, or auth breaks. Never cache.clear().
-        with blueprint_app.app_context():
-            cache.delete(self.CACHE_KEY)
-        yield
-        with blueprint_app.app_context():
-            cache.delete(self.CACHE_KEY)
+    """GET/POST /api/health/update-check — enable-gated, freshness-gated, admin-only force."""
 
     @staticmethod
     def _set_enabled(blueprint_app, enabled):
@@ -713,6 +701,38 @@ class TestUpdateCheck:
             resp = client.post("/api/health/update-check", headers=auth_headers())
         assert resp.status_code == 403
         fetch.assert_not_called()
+
+    def test_reads_published_state_without_fetching(
+            self, client, blueprint_app, auth_headers, monkeypatch):
+        # The scheduler publishes every 6h; an ordinary page load must render
+        # that, not make its own outbound call.
+        self._set_enabled(blueprint_app, True)
+        monkeypatch.setitem(blueprint_app.config, "APP_VERSION", "2026.27.5")
+        state = {"latest_version": "2026.28.1",
+                 "checked_at": "2026-08-08T09:00:00Z",
+                 "checked_at_ts": time.time()}
+        with patch("src.api.blueprints.health.read_state", return_value=state), \
+                patch("src.api.blueprints.health.fetch_latest_version") as fetch:
+            resp = client.get("/api/health/update-check", headers=auth_headers())
+        data = resp.get_json()
+        assert data["latest_version"] == "2026.28.1"
+        assert data["checked_at"] == "2026-08-08T09:00:00Z"
+        assert data["update_available"] is True
+        fetch.assert_not_called()
+
+    def test_stale_published_state_triggers_a_fetch(
+            self, client, blueprint_app, auth_headers, monkeypatch):
+        self._set_enabled(blueprint_app, True)
+        monkeypatch.setitem(blueprint_app.config, "APP_VERSION", "2026.27.5")
+        stale = {"latest_version": "2026.27.9",
+                 "checked_at": "2026-08-01T09:00:00Z",
+                 "checked_at_ts": time.time() - (7 * 3600)}
+        with patch("src.api.blueprints.health.read_state", return_value=stale), \
+                patch("src.api.blueprints.health.fetch_latest_version",
+                      return_value="2026.28.1") as fetch:
+            resp = client.get("/api/health/update-check", headers=auth_headers())
+        assert fetch.call_count == 1
+        assert resp.get_json()["latest_version"] == "2026.28.1"
 
 
 class TestApplicationEnvironment:

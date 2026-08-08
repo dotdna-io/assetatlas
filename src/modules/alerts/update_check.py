@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Gated, air-gap-safe "update available" check.
 
-Runs out of band from a daily scheduler job (like the pipeline watchdog). It is
-OFF by default in two independent ways:
+Runs out of band from the pipeline's own scheduler job (like the pipeline
+watchdog): its own periodic job polls hourly, but a real check happens only
+about every 6 hours (see CHECK_INTERVAL_SECONDS). It is OFF by default in two
+independent ways:
 
   1. It makes NO outbound network call unless the `system.enable_update_check`
      setting is explicitly turned on (default false, everywhere).
@@ -19,6 +21,9 @@ import re
 import time
 
 from src.modules.alerts.service import AlertsService
+from src.modules.shared.update_check_state import (  # noqa: F401 — re-exported
+    CHECK_INTERVAL_SECONDS, POLL_SECONDS, is_due, read_state, write_state,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +37,13 @@ UPDATE_RULE_SLUG = 'assetatlas-update-available'
 # Online installs fetch via /check/<installed-version> (see manifest_url_for):
 # the version rides in the URL PATH because that is the only thing free-tier
 # Cloudflare analytics can see — letting DOTDNA's distribution census count
-# alive online installs and their version mix. That is one request per day per
-# online install carrying only the version string: no install ID, no other
-# data. Installs whose version is not a release version (dev builds,
-# '0.0.0-dev') use this plain /latest.json fallback instead, and air-gapped
-# installs make no call at all (the setting stays off; see the module
-# docstring). A missing/unreachable manifest still collapses to None here —
-# swallowed → the check stays silent.
+# alive online installs and their version mix. That is at most one request
+# every ~6 hours (up to 4/day) per online install, carrying only the version
+# string: no install ID, no other data. Installs whose version is not a
+# release version (dev builds, '0.0.0-dev') use this plain /latest.json
+# fallback instead, and air-gapped installs make no call at all (the setting
+# stays off; see the module docstring). A missing/unreachable manifest still
+# collapses to None here — swallowed → the check stays silent.
 DEFAULT_MANIFEST_URL = 'https://get.assetatlas.com/latest.json'
 # Anchored fullmatch of the exact version pattern the Worker's /check/ route
 # accepts (\d{4}\.\d{1,2}\.\d+ — keep in sync with VER in get-worker.js).
@@ -46,12 +51,6 @@ DEFAULT_MANIFEST_URL = 'https://get.assetatlas.com/latest.json'
 # otherwise that install's check 404s and it silently sees "no update found"
 # forever.
 _VERSION_RE = re.compile(r'\d{4}\.\d{1,2}\.\d+')
-# Must stay strictly BELOW the daily job interval: the job fires every 24h and
-# stamps _last_ok_check a few seconds after each fire, so a 24h TTL would make
-# the very next daily fire land inside the window and skip — running only every
-# other day. 12h guards against an accidental rapid re-invocation without ever
-# suppressing the scheduled daily run.
-_CACHE_TTL_SECONDS = 12 * 3600
 # Short, fixed budget: the check is best-effort background work, so a slow or
 # unreachable manifest host must fail fast rather than tie up the request/worker.
 _HTTP_TIMEOUT_SECONDS = 5
@@ -122,7 +121,7 @@ def is_newer(latest, current):
 
 
 class UpdateCheckService:
-    """Daily, gated check for a newer AssetAtlas release."""
+    """Periodic (~6h), gated check for a newer AssetAtlas release."""
 
     def __init__(self, alert_repo, settings_manager, current_version,
                  delivery_service=None,  # AlertDeliveryService; None = no channels
@@ -136,29 +135,57 @@ class UpdateCheckService:
         # wins — tests inject a local manifest that way.
         self.url = url if url is not None else manifest_url_for(current_version)
         self._clock = clock
-        self._last_ok_check = None  # timestamp of the last successful fetch
+        self._last_check_at = None  # last check attempt, success or failure
 
     def tick(self):
         """One evaluation cycle. Never raises for network reasons."""
         rule = self.alert_repo.get_rule_by_slug(UPDATE_RULE_SLUG)
-        if rule is None:
-            return
-        # Off (setting disabled OR rule disabled) → clear any standing alert and
-        # make NO outbound network call. Resolving on setting-off prevents a
-        # stale "update available" alert lingering forever after the toggle.
-        if not self._enabled_setting() or not rule.get('enabled'):
+        # An absent rule (migration 132 deleted this one on every install at
+        # >=132) or a disabled one means NO ALERT. It no longer means no CHECK:
+        # the version census and the About-tab badge have to keep working where
+        # this alert will never be raised. The SETTING is the sole network gate.
+        enabled = self._enabled_setting()
+        alerting = rule is not None and bool(rule.get('enabled'))
+
+        if rule is not None and not (enabled and alerting):
+            # Resolve any standing alert so it cannot linger past the toggle.
             self.alert_repo.resolve_alerts_for_rule(rule['id'])
-            return
+        if not enabled:
+            return  # air-gap: no outbound call at all
 
         now = self._clock()
-        if self._last_ok_check is not None and (now - self._last_ok_check) < _CACHE_TTL_SECONDS:
-            return  # cached: at most one real check per _CACHE_TTL_SECONDS
+        if not self._is_due(now):
+            return
 
         latest = self._fetch_latest_version()
+        # Publish and stamp on FAILURE too. Otherwise neither gate advances and the
+        # hourly poll retries every hour — 24 attempts/day on an enabled-but-
+        # unreachable box, more traffic than the daily job this replaced. The API
+        # path has always published failures for the same reason.
+        write_state(latest, now=now)
+        self._last_check_at = now
         if latest is None:
-            return  # network/parse error (incl. air-gapped) → stay silent
-        self._last_ok_check = now
-        self._reconcile(rule, latest)
+            return  # network/parse error (incl. air-gapped) → no alert work
+
+        if alerting:
+            self._reconcile(rule, latest)
+
+    def _is_due(self, now):
+        """True when a real check should run.
+
+        TWO gates, and a fetch needs both. The published state is the
+        cross-process one and is what makes the cadence survive a restart; the
+        in-process floor (`_last_check_at`, stamped on every attempt —
+        success or failure — so a failure paces the same as a success) is
+        what stops an unreadable Redis from turning the hourly poll into an
+        hourly outbound call.
+        """
+        if not is_due(read_state(), now):
+            return False
+        if (self._last_check_at is not None
+                and (now - self._last_check_at) < CHECK_INTERVAL_SECONDS):
+            return False
+        return True
 
     def _enabled_setting(self):
         try:

@@ -136,18 +136,9 @@ def test_resolves_when_versions_match(monkeypatch):
     repo.create_alert.assert_not_called()
 
 
-def test_disabled_rule_resolves_and_skips(monkeypatch):
-    repo = MagicMock()
-    repo.get_rule_by_slug.return_value = _rule(enabled=False)
-    svc = _svc(repo)
-    fetch = MagicMock()
-    monkeypatch.setattr(svc, '_fetch_latest_version', fetch)
-    svc.tick()
-    repo.resolve_alerts_for_rule.assert_called_once_with('rule-uc')
-    fetch.assert_not_called()  # no network call for a disabled rule
-
-
-def test_caches_within_ttl(monkeypatch):
+def test_caches_within_the_check_interval(monkeypatch):
+    monkeypatch.setattr(uc, 'read_state', lambda: None)
+    monkeypatch.setattr(uc, 'write_state', lambda latest, now: None)
     repo = MagicMock()
     repo.get_rule_by_slug.return_value = _rule()
     repo.get_active_alert_for_rule.return_value = None
@@ -157,16 +148,9 @@ def test_caches_within_ttl(monkeypatch):
     monkeypatch.setattr(svc, '_fetch_latest_version',
                         lambda: (calls.append(1), '2026.28.1')[1])
     svc.tick()          # first tick fetches
-    t[0] += 3600        # +1h, well within the cache TTL
-    svc.tick()          # cached: must not fetch again
+    t[0] += 3600        # +1h, well inside the check interval
+    svc.tick()          # gated: must not fetch again
     assert len(calls) == 1
-
-
-def test_cache_ttl_below_daily_job_interval():
-    # The update_check job fires every 24h and stamps the cache a few seconds
-    # after each fire; a >=24h TTL would make the next daily fire land inside the
-    # window and skip it (48h effective cadence). Keep the TTL strictly below 24h.
-    assert uc._CACHE_TTL_SECONDS < 24 * 3600
 
 
 def test_older_or_equal_does_not_alert_without_existing(monkeypatch):
@@ -292,3 +276,165 @@ class TestServiceUrlDerivation:
         svc = UpdateCheckService(MagicMock(), MagicMock(), '2026.30.7',
                                  url='http://manifest.test/latest.json')
         assert svc.url == 'http://manifest.test/latest.json'
+
+
+class TestRuleDecoupling:
+    """The check runs whether or not the alert rule exists (migration 132)."""
+
+    @staticmethod
+    def _no_store(monkeypatch):
+        """Neutralise the shared store so these tests exercise tick() alone."""
+        monkeypatch.setattr(uc, 'read_state', lambda: None)
+        monkeypatch.setattr(uc, 'write_state', lambda latest, now: None)
+
+    def test_missing_rule_still_fetches(self, monkeypatch):
+        # THE regression: migration 132 deleted assetatlas-update-available, and
+        # the old `if rule is None: return` sat above the fetch — so the daily
+        # job made no outbound call at all on every install at >=132.
+        self._no_store(monkeypatch)
+        repo = MagicMock()
+        repo.get_rule_by_slug.return_value = None
+        svc = _svc(repo)
+        fetch = MagicMock(return_value='2026.33.1')
+        monkeypatch.setattr(svc, '_fetch_latest_version', fetch)
+        svc.tick()
+        fetch.assert_called_once()
+
+    def test_missing_rule_raises_no_alert(self, monkeypatch):
+        self._no_store(monkeypatch)
+        repo = MagicMock()
+        repo.get_rule_by_slug.return_value = None
+        svc = _svc(repo)
+        monkeypatch.setattr(svc, '_fetch_latest_version', lambda: '2026.33.1')
+        svc.tick()
+        repo.create_alert.assert_not_called()
+        repo.update_alert_assets.assert_not_called()
+        repo.resolve_alert.assert_not_called()
+        repo.resolve_alerts_for_rule.assert_not_called()
+
+    def test_missing_rule_publishes_state(self, monkeypatch):
+        # The census ping is the point; the badge reads what it publishes.
+        published = []
+        monkeypatch.setattr(uc, 'read_state', lambda: None)
+        monkeypatch.setattr(uc, 'write_state',
+                            lambda latest, now: published.append((latest, now)))
+        repo = MagicMock()
+        repo.get_rule_by_slug.return_value = None
+        svc = _svc(repo, clock=lambda: 1000.0)
+        monkeypatch.setattr(svc, '_fetch_latest_version', lambda: '2026.33.1')
+        svc.tick()
+        assert published == [('2026.33.1', 1000.0)]
+
+    def test_disabled_rule_fetches_but_does_not_alert(self, monkeypatch):
+        # Replaces the old test_disabled_rule_resolves_and_skips: the rule's
+        # enabled flag governs the ALERT, the setting governs the NETWORK.
+        self._no_store(monkeypatch)
+        repo = MagicMock()
+        repo.get_rule_by_slug.return_value = _rule(enabled=False)
+        svc = _svc(repo)
+        fetch = MagicMock(return_value='2026.33.1')
+        monkeypatch.setattr(svc, '_fetch_latest_version', fetch)
+        svc.tick()
+        fetch.assert_called_once()
+        repo.resolve_alerts_for_rule.assert_called_once_with('rule-uc')
+        repo.create_alert.assert_not_called()
+
+    def test_present_enabled_rule_still_reconciles(self, monkeypatch):
+        # The alert path is preserved for anyone who re-creates the rule.
+        self._no_store(monkeypatch)
+        repo = MagicMock()
+        repo.get_rule_by_slug.return_value = _rule()
+        repo.get_active_alert_for_rule.return_value = None
+        svc = _svc(repo, current='2026.27.5')
+        monkeypatch.setattr(svc, '_fetch_latest_version', lambda: '2026.33.1')
+        svc.tick()
+        repo.create_alert.assert_called_once()
+
+    def test_setting_off_makes_no_call_even_with_no_rule(self, monkeypatch):
+        # The air-gap master switch is unchanged and is now the ONLY net gate.
+        self._no_store(monkeypatch)
+        monkeypatch.setattr('requests.get', _boom)
+        repo = MagicMock()
+        repo.get_rule_by_slug.return_value = None
+        svc = _svc(repo, enabled_setting=False)
+        fetch = MagicMock()
+        monkeypatch.setattr(svc, '_fetch_latest_version', fetch)
+        svc.tick()
+        fetch.assert_not_called()
+
+
+class TestPacing:
+    """Two gates guard a fetch: published state, then the in-process floor."""
+
+    def test_published_state_inside_the_window_blocks_the_fetch(self, monkeypatch):
+        monkeypatch.setattr(uc, 'read_state',
+                            lambda: {'latest_version': '2026.33.1',
+                                     'checked_at_ts': 1000.0})
+        monkeypatch.setattr(uc, 'write_state', lambda latest, now: None)
+        repo = MagicMock()
+        repo.get_rule_by_slug.return_value = None
+        svc = _svc(repo, clock=lambda: 1000.0 + 60)
+        fetch = MagicMock()
+        monkeypatch.setattr(svc, '_fetch_latest_version', fetch)
+        svc.tick()
+        fetch.assert_not_called()
+
+    def test_stale_published_state_allows_the_fetch(self, monkeypatch):
+        monkeypatch.setattr(uc, 'read_state',
+                            lambda: {'latest_version': '2026.33.1',
+                                     'checked_at_ts': 1000.0})
+        monkeypatch.setattr(uc, 'write_state', lambda latest, now: None)
+        repo = MagicMock()
+        repo.get_rule_by_slug.return_value = None
+        svc = _svc(repo, clock=lambda: 1000.0 + uc.CHECK_INTERVAL_SECONDS)
+        fetch = MagicMock(return_value='2026.33.1')
+        monkeypatch.setattr(svc, '_fetch_latest_version', fetch)
+        svc.tick()
+        fetch.assert_called_once()
+
+    def test_in_process_floor_holds_when_redis_is_down(self, monkeypatch):
+        # Redis unreadable => read_state() is always None => the shared gate is
+        # gone. Without the in-process floor the hourly poll would become an
+        # hourly outbound call, i.e. this change would INCREASE traffic on a
+        # box whose Redis is down.
+        monkeypatch.setattr(uc, 'read_state', lambda: None)
+        monkeypatch.setattr(uc, 'write_state', lambda latest, now: None)
+        repo = MagicMock()
+        repo.get_rule_by_slug.return_value = None
+        t = [1000.0]
+        svc = _svc(repo, clock=lambda: t[0])
+        fetch = MagicMock(return_value='2026.33.1')
+        monkeypatch.setattr(svc, '_fetch_latest_version', fetch)
+        svc.tick()                              # fetches
+        t[0] += uc.POLL_SECONDS                 # one poll later
+        svc.tick()                              # must NOT fetch again
+        assert fetch.call_count == 1
+        t[0] += uc.CHECK_INTERVAL_SECONDS       # past the window
+        svc.tick()
+        assert fetch.call_count == 2
+
+    def test_failed_fetch_paces_the_same_as_a_success(self, monkeypatch):
+        # Finding 1 regression: a FAILED fetch used to return before stamping
+        # the in-process floor or publishing state, so neither gate advanced
+        # and the next hourly poll retried immediately — 24 attempts/day on
+        # an enabled-but-unreachable box, MORE traffic than the daily job this
+        # branch replaced. A failure must pace exactly like a success.
+        monkeypatch.setattr(uc, 'read_state', lambda: None)
+        published = []
+        monkeypatch.setattr(
+            uc, 'write_state',
+            lambda latest, now: published.append((latest, now)))
+        repo = MagicMock()
+        repo.get_rule_by_slug.return_value = None
+        t = [1000.0]
+        svc = _svc(repo, clock=lambda: t[0])
+        fetch = MagicMock(return_value=None)    # every attempt fails
+        monkeypatch.setattr(svc, '_fetch_latest_version', fetch)
+        svc.tick()                              # fails, but must still pace
+        assert published == [(None, 1000.0)]
+        t[0] += uc.POLL_SECONDS                 # one poll later, inside 6h
+        svc.tick()                              # must NOT retry
+        assert fetch.call_count == 1
+        t[0] += uc.CHECK_INTERVAL_SECONDS       # past the window
+        svc.tick()                              # now it may retry
+        assert fetch.call_count == 2

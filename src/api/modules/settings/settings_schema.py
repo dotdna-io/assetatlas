@@ -170,9 +170,10 @@ APPLICATION_SETTINGS: Dict[str, Dict[str, SettingDefinition]] = {
             setting_type='boolean',
             default=False,
             description=(
-                'Allow a daily check against the public release feed for a '
-                'newer AssetAtlas version. Off by default; makes no outbound '
-                'network call while disabled (safe for air-gapped installs).'
+                'Allow a periodic check (about every 6 hours) against the public '
+                'release feed for a newer AssetAtlas version. Off by default; '
+                'makes no outbound network call while disabled (safe for '
+                'air-gapped installs).'
             )
         ),
     },

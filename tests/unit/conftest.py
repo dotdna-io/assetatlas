@@ -15,6 +15,8 @@ live in ANY directory under ``tests/unit/`` (#1298):
   ``current_user`` without hitting the (mocked) DB.
 - ``authed_headers(role)`` mints a JWT and primes the user cache for that
   role in one call.
+- ``_reset_update_check_local_state`` (autouse) clears the update check's
+  in-process fallback store between tests.
 
 Tests whose POINT is revocation behaviour must not see the always-active
 stub.  They opt out either by overriding ``_stub_jwt_session_lookup``
@@ -89,3 +91,24 @@ def authed_headers(blueprint_app, auth_headers):
         return auth_headers(role=role, username=username, user_id=user_id)
 
     return _make
+
+
+@pytest.fixture(autouse=True)
+def _reset_update_check_local_state():
+    """Clear the update check's in-process fallback store between tests.
+
+    ``update_check_state._local_state`` is a plain module-level dict, used
+    whenever ``REDIS_URL`` is unset (true for every test run, per that
+    module) in place of the old per-Flask-app Flask-Caching 'simple' backend.
+    Unlike that old backend, it lives for the whole pytest process, not one
+    app instance, so without this reset a write_state() in one test (in
+    tests/unit/modules/alerts/test_update_check*.py or
+    tests/unit/blueprints/test_health_bp.py) leaks into read_state() in the
+    next: is_due() only compares elapsed wall-clock time, so a fresh leftover
+    entry reads as "not due" and silently skips a fetch an unrelated test
+    expected.
+    """
+    from src.modules.shared import update_check_state
+    update_check_state._local_state.clear()
+    yield
+    update_check_state._local_state.clear()

@@ -30,7 +30,8 @@ from src.auth.middleware.rbac import require_admin
 from src.api.utils.caching import cache
 from src.api.modules.settings.settings_schema import monitoring_dashboards_enabled
 from src.modules.alerts.update_check import (
-    fetch_latest_version, is_newer, manifest_url_for, _CACHE_TTL_SECONDS,
+    fetch_latest_version, is_newer, manifest_url_for, is_due, read_state,
+    write_state,
 )
 
 logger = logging.getLogger(__name__)
@@ -94,8 +95,6 @@ def check_cache() -> Dict[str, Any]:
         Dict with status, message, and optional details
     """
     try:
-        from src.api.utils.caching import cache
-
         # Skip check if cache is not Redis
         if current_app.config.get('CACHE_TYPE') != 'redis':
             return {
@@ -994,19 +993,18 @@ def system_about():
     return jsonify(result), 200
 
 
-_UPDATE_CHECK_CACHE_KEY = 'update_check:latest'
-
-
 def _update_check_state(force=False):
     """Compute the About-page update-check payload.
 
     Never raises for network reasons (fetch_latest_version swallows errors to
     None). Gated by system.enable_update_check: while off, makes NO outbound
     call — and `force` does not bypass that master switch (air-gap stays
-    silent), only the cache TTL. While on, the fetch result is cached for
-    _CACHE_TTL_SECONDS so callers share it: with Redis that is one fetch per
-    TTL process-wide; if the cache has fallen back to in-memory (Redis
-    unavailable at startup) it is one fetch per TTL per worker.
+    silent), only the freshness gate.
+
+    The result is read from the state the scheduler publishes every
+    CHECK_INTERVAL_SECONDS, so an ordinary page load normally makes no outbound
+    call at all. This endpoint only fetches when nothing is published yet, when
+    what is published has gone stale, or when an admin forces it.
     """
     current = current_app.config.get('APP_VERSION', '0.0.0-dev')
     enabled = bool(current_app.settings_manager.get(
@@ -1018,28 +1016,22 @@ def _update_check_state(force=False):
             'checked_at': None,
         }
 
-    cached = None if force else cache.get(_UPDATE_CHECK_CACHE_KEY)
-    if cached is not None:
-        latest = cached.get('latest_version')
-        checked_at = cached.get('checked_at')
-    else:
+    now = time.time()
+    state = read_state()
+    if force or is_due(state, now):
         # The installed version rides in the URL path (distribution census);
         # a non-release version ('0.0.0-dev') falls back to plain /latest.json.
-        latest = fetch_latest_version(manifest_url_for(current))
-        checked_at = datetime.utcnow().isoformat() + 'Z'
-        # Cache the attempt (success OR failure) so a poll storm — or an
-        # enabled-but-unreachable box — makes at most one fetch per TTL.
-        cache.set(
-            _UPDATE_CHECK_CACHE_KEY,
-            {'latest_version': latest, 'checked_at': checked_at},
-            timeout=_CACHE_TTL_SECONDS,
-        )
+        # A failed fetch is published too, so a poll storm — or an
+        # enabled-but-unreachable box — makes at most one fetch per window.
+        state = write_state(fetch_latest_version(manifest_url_for(current)),
+                            now=now)
 
+    latest = state.get('latest_version')
     return {
         'enabled': True, 'current_version': current,
         'latest_version': latest,
         'update_available': is_newer(latest, current),
-        'checked_at': checked_at,
+        'checked_at': state.get('checked_at'),
     }
 
 
@@ -1047,11 +1039,11 @@ def _update_check_state(force=False):
 @jwt_required()
 @handle_errors
 def get_update_check():
-    """Cached "is a newer release available?" for the About tab.
+    """Freshness-gated "is a newer release available?" for the About tab.
     ---
     tags:
       - Health
-    summary: Latest-version check (cached; gated by system.enable_update_check)
+    summary: Latest-version check (freshness-gated; gated by system.enable_update_check)
     responses:
       200:
         description: Update-check state
@@ -1064,7 +1056,7 @@ def get_update_check():
 @require_admin()
 @handle_errors
 def force_update_check():
-    """Admin-only "Check now": bypass the cache and re-fetch once.
+    """Admin-only "Check now": bypass the freshness gate and re-fetch once.
     ---
     tags:
       - Health

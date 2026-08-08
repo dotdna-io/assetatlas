@@ -343,19 +343,25 @@ class SchedulerWorker:
         )
         logger.info("Alert delivery drain registered (every %ss)", drain_interval)
 
-        # Gated update check — runs daily; does nothing unless the
-        # system.enable_update_check setting is on, and swallows all network
-        # errors (air-gapped installs stay quiet).
+        # Gated update check. Polls hourly and gates each poll on the last
+        # published check, so a real check happens every CHECK_INTERVAL_SECONDS
+        # (6h) no matter how often this worker restarts — a bare
+        # IntervalTrigger re-anchors to `restart + interval` under
+        # MemoryJobStore, which starved the pipeline schedule the same way
+        # before PR #1031. Does nothing unless system.enable_update_check is
+        # on, and swallows all network errors (air-gapped installs stay quiet).
+        from src.modules.alerts.update_check import POLL_SECONDS
         self.scheduler_service.scheduler.add_job(
             func=self._run_update_check,
-            trigger=IntervalTrigger(hours=24),
+            trigger=IntervalTrigger(seconds=POLL_SECONDS),
             id='update_check',
             name='Update Check',
             replace_existing=True,
             coalesce=True,
             max_instances=1,
         )
-        logger.info("Update-check job registered (daily)")
+        logger.info("Update-check job registered (polling every %ss)",
+                    POLL_SECONDS)
 
         # Check Redis for schedule changes signaled by the API (fast path)
         from apscheduler.triggers.interval import IntervalTrigger
