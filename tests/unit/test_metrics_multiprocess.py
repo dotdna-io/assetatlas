@@ -31,7 +31,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 METRICS = PROJECT_ROOT / "src" / "api" / "utils" / "metrics.py"
 GUNICORN_CONF = PROJECT_ROOT / "gunicorn.conf.py"
 DOCKERFILE = PROJECT_ROOT / "Dockerfile"
-COMPOSE = PROJECT_ROOT / "deploy" / "compose" / "docker-compose.yml"
+COMPOSE_FILES = (
+    PROJECT_ROOT / "deploy" / "compose" / "docker-compose.yml",
+    PROJECT_ROOT / "docker-compose.yml",
+)
 
 # Gauges whose values are genuinely per-worker, so the fleet number is the sum
 # over live workers. Anything left at prometheus_client's default ('all')
@@ -87,13 +90,19 @@ def test_every_gauge_declares_a_multiprocess_mode():
     )
 
 
-def test_compose_requires_nothing_the_published_image_may_lack():
-    """compose and the image do not arrive together.
+@pytest.mark.parametrize(
+    "compose",
+    COMPOSE_FILES,
+    ids=lambda p: str(p.relative_to(PROJECT_ROOT)),
+)
+def test_compose_requires_nothing_the_published_image_may_lack(compose):
+    """No compose file may override the api's gunicorn command.
 
-    An online install applies the bundle's compose but pulls `:latest`. Every
-    piece of the multiprocess setup therefore lives in the image; requiring any
-    of it from compose kills the api outright against an older image. Both
-    failure modes were observed in the E2E install job:
+    compose and the image do not arrive together. An online install applies
+    the bundle's compose but pulls `:latest`. Every piece of the multiprocess
+    setup therefore lives in the image; requiring any of it from compose kills
+    the api outright against an older image. Both failure modes were observed
+    in the E2E install job:
 
       * `-c /app/gunicorn.conf.py` in compose -> gunicorn aborts,
         "'/app/gunicorn.conf.py' doesn't exist"
@@ -101,9 +110,15 @@ def test_compose_requires_nothing_the_published_image_may_lack():
         mmap mode (it tests for PRESENCE, not truthiness) while no code in the
         old image creates the directory, and every worker dies with
         FileNotFoundError on histogram_<pid>.db
+
+    The root dev/build compose is held to the same rule even though it builds
+    the image locally: its `command:` override carried no `-c`, silently
+    shadowing the image CMD and switching multiprocess metrics off (#1416).
+    Keeping the image CMD the single source of the api's gunicorn args is
+    what makes drift like that impossible.
     """
     import yaml
-    api = yaml.safe_load(COMPOSE.read_text())["services"]["api"]
+    api = yaml.safe_load(compose.read_text())["services"]["api"]
 
     assert "command" not in api, (
         f"the api has a command override again ({api.get('command')!r}); it "

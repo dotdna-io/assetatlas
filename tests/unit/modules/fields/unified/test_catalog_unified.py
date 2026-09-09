@@ -41,6 +41,18 @@ def test_invalidate_forces_reload():
     assert not any(e.virtual_name == "lentity" for e in cat.entries())
 
 
+def test_catalog_entry_carries_materialized_flag():
+    from datetime import datetime, timezone
+    stamped = {**_DEF, "materialized_at": datetime(2026, 9, 9, tzinfo=timezone.utc)}
+    unstamped = {**_DEF, "slug": "other", "name": "other", "materialized_at": None}
+    legacy = {**_DEF, "slug": "legacy", "name": "legacy"}  # no key at all (older provider)
+    cat = _make_catalog([stamped, unstamped, legacy])
+    by_slug = {e.virtual_name: e for e in cat.entries() if e.unified_function is not None}
+    assert by_slug["lentity"].materialized is True
+    assert by_slug["other"].materialized is False
+    assert by_slug["legacy"].materialized is False
+
+
 # ── F8: unified slug colliding with built-in is skipped ──────────────────────
 def test_unified_slug_colliding_with_builtin_is_skipped():
     """A unified field whose slug matches a built-in virtual must be dropped (F8 fix)."""

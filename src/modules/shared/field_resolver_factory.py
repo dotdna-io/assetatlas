@@ -21,7 +21,7 @@ context (the API) should keep using the app-scoped, cache-primed
 path.
 """
 
-from src.modules.fields import FieldCatalog, FieldResolver
+from src.modules.fields import FieldCatalog, FieldResolver, catalog_version
 from src.modules.fields.unified.repository import UnifiedFieldsRepository
 from src.modules.integrations.repositories.integration_group_repository import (
     IntegrationGroupRepository,
@@ -38,5 +38,8 @@ def build_field_resolver(db_adapter) -> FieldResolver:
             db_adapter=db_adapter,
             group_mapping_provider=IntegrationGroupRepository(db_adapter).get_group_mapping,
             unified_fields_provider=UnifiedFieldsRepository(db_adapter).list_for_catalog,
+            # Reads REDIS_URL lazily and degrades to None/no-op without it, so
+            # the no-app-context path works with or without Redis.
+            version_source=catalog_version.default_source(),
         )
     )

@@ -346,13 +346,24 @@ class TestTheResetGuardIsOrderIndependent:
 
     def test_both_writes_land_in_one_scope(self):
         """Whatever their order, they are all-or-nothing — the guard's
-        reasoning about what the UPDATE can see depends on it."""
+        reasoning about what the UPDATE can see depends on it. The refresh
+        hook afterwards opens a SECOND begin/end pair (outside_request_scope,
+        #1428); only the first pair brackets the writes."""
         svc = _svc()
 
         svc.clear_overrides_bulk([A1], 'admin')
 
-        svc.db.conn_manager.begin_scope.assert_called_once()
-        svc.db.conn_manager.end_scope.assert_called_once_with()
+        calls = svc._manager.mock_calls
+        names = [name for name, _, _ in calls]
+        first_begin = names.index('db.conn_manager.begin_scope')
+        first_end = names.index('db.conn_manager.end_scope')
+        deactivate = names.index('override_repo.deactivate_overrides_bulk')
+        reset = next(
+            i for i, (name, args, _) in enumerate(calls)
+            if name == 'db.execute_query' and args and 'UPDATE assets' in args[0]
+        )
+        assert first_begin < deactivate < first_end
+        assert first_begin < reset < first_end
 
 
 class TestTheTwoOverridePathsAgree:

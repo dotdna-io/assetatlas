@@ -148,6 +148,41 @@ class TestUpdateApplicableCategories:
             )
 
 
+class TestApplicableCategoriesBumpCatalogStamp:
+    """Posture category changes feed the FieldCatalog's posture entries, so a
+    category update bumps the shared version stamp (#1413) to rebuild every
+    worker's catalog; a missing category changes nothing and must not bump."""
+
+    _BUMP = ("src.modules.posture_rules.services.sub_rule_management_service"
+             ".catalog_version.bump")
+
+    def test_update_bumps_the_field_catalog_stamp(self, service, repo):
+        repo.update_category_applicable_categories.return_value = {
+            "id": "secured",
+            "applicable_categories": ["server"],
+        }
+        from src.modules.posture_rules.models.rule import PostureCategoryUpdateRequest
+        from unittest.mock import patch
+        with patch(self._BUMP) as mock_bump:
+            service.update_applicable_categories(
+                "secured",
+                PostureCategoryUpdateRequest(applicable_categories=["server"]),
+            )
+        mock_bump.assert_called_once_with()
+
+    def test_missing_category_does_not_bump(self, service, repo):
+        repo.update_category_applicable_categories.return_value = None
+        from src.modules.posture_rules.models.rule import PostureCategoryUpdateRequest
+        from unittest.mock import patch
+        with patch(self._BUMP) as mock_bump:
+            with pytest.raises(CategoryNotFoundError):
+                service.update_applicable_categories(
+                    "missing",
+                    PostureCategoryUpdateRequest(applicable_categories=["server"]),
+                )
+        mock_bump.assert_not_called()
+
+
 class TestFieldNameValidation:
     """Field shape validation is now handled by Pydantic at parse time.
 

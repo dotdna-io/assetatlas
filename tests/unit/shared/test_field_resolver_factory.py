@@ -15,6 +15,7 @@ hit the MCP server in #792 and the scheduled pipeline in #791).
 """
 
 from src.modules.shared.field_resolver_factory import build_field_resolver
+from src.modules.fields import catalog_version
 from src.modules.fields.models import IntegrationGroupField
 
 
@@ -49,3 +50,12 @@ def test_build_field_resolver_resolves_integration_group_field():
     assert "extended_attributes" in where
     assert "Corp SentinelOne" in where
     assert "siteId" in where
+
+
+def test_build_field_resolver_wires_the_shared_version_source():
+    # The no-app-context path (scheduler/pipeline/MCP) must poll the shared
+    # stamp like the app-scoped catalog, so cross-worker invalidation (#1413)
+    # reaches it too. The source reads REDIS_URL lazily and degrades to
+    # None/no-op without it, so this works with no Redis configured.
+    resolver = build_field_resolver(_FakeDB())
+    assert resolver.catalog()._version_source is catalog_version.default_source()

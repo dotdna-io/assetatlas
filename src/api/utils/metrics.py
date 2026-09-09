@@ -28,6 +28,7 @@ from prometheus_flask_exporter import PrometheusMetrics
 from prometheus_client import (Counter, CollectorRegistry, Histogram, Gauge,
                                Info, REGISTRY)
 from prometheus_client.core import GaugeMetricFamily
+from psycopg2.errors import ObjectNotInPrerequisiteState, UndefinedTable
 
 logger = logging.getLogger(__name__)
 
@@ -723,28 +724,76 @@ def update_scheduled_jobs_total(total: int) -> None:
 # Point-in-time DB gauges (queried on scrape)
 # =============================================================================
 #
-# Active-alerts-by-severity and total-asset counts are live DB values, not
-# event counters, so a custom collector runs the COUNT queries at scrape time.
-# This keeps them fresh without a background refresher AND — because the
+# Active-alerts-by-severity and the total-asset count are point-in-time DB
+# values, not event counters, so a custom collector queries them at scrape
+# time. This keeps them fresh without a background refresher AND — because the
 # collector is only registered in the process that owns a db_adapter (the API,
 # via register_db_gauges) — avoids a second process exporting a stale/zero copy
 # of the same series (the bundled Prometheus scrapes both API and scheduler).
 # Best-effort: a DB error yields no sample for that scrape rather than breaking
 # /metrics.
+#
+# Scrape-safety rules (#1415):
+# - Every query opens with SET LOCAL lock_timeout = '2s' IN THE SAME execute
+#   string: the pipeline rebuilds `assets` under an ACCESS EXCLUSIVE lock for
+#   the whole TRUNCATE+INSERT transaction, and a scrape query that waits past
+#   Prometheus' 10s scrape_timeout fails the WHOLE scrape (up=0, api-down
+#   alert). A separate SET LOCAL would be rolled back with the request scope's
+#   error path; a session-level SET would leak onto the pooled connection
+#   (_release_connection does no RESET).
+# - assetatlas_assets_total never reads `assets` itself: it serves the count
+#   "as of the last pipeline run" from lock-free relations — the dashboard
+#   summary matview (refreshed CONCURRENTLY by the pipeline's post-commit
+#   stage), falling back to the latest completed run's stats only when the
+#   matview is unusable (unpopulated or missing). Do not cache the value in
+#   the collector: under gunicorn each worker would cache its own, and the
+#   series would flap between divergent values.
 
-_ACTIVE_ALERTS_SQL = (
+_LOCK_TIMEOUT_PREFIX = "SET LOCAL lock_timeout = '2s'; "
+
+_ACTIVE_ALERTS_SQL = _LOCK_TIMEOUT_PREFIX + (
     "SELECT severity, COUNT(*) AS n FROM alerts "
     "WHERE status IN ('active', 'acknowledged') GROUP BY severity"
 )
-_ASSETS_TOTAL_SQL = "SELECT COUNT(*) AS n FROM assets"
+
+# A populated matview always returns exactly one row here (single
+# view_key = 'summary' row, scalar subqueries, no GROUP BY). The failure mode
+# that matters is the RAISE: an unpopulated matview — created WITH NO DATA and
+# never refreshed, the fresh-install state — errors with SQLSTATE 55000
+# (ObjectNotInPrerequisiteState), and a DB from before the matview's migration
+# errors 42P01 (UndefinedTable). ONLY those two errors trigger the fallback
+# below; a lock/timeout error says nothing about whether the matview is
+# populated and must yield no sample for that scrape instead.
+_ASSETS_TOTAL_SQL = _LOCK_TIMEOUT_PREFIX + (
+    "SELECT total_assets AS n FROM mv_dashboard_summary "
+    "WHERE view_key = 'summary'"
+)
+
+# Latest run that actually rebuilt `assets`: completed, because a failed run
+# rolled back and never changed the table (its stats->>'total_assets', often
+# '0', is meaningless as a count); the batches_processed guard drops provable
+# no-op completions; data_settled_at orders by when the data settled. The
+# count must be recorded: stats is nullable, and a run without one has no
+# total to report.
+_ASSETS_TOTAL_FALLBACK_SQL = _LOCK_TIMEOUT_PREFIX + (
+    "SELECT stats->>'total_assets' AS n FROM pipeline_runs "
+    "WHERE data_settled_at IS NOT NULL "
+    "AND status = 'completed' "
+    "AND stats->>'total_assets' IS NOT NULL "
+    "AND NOT (status = 'completed' "
+    "AND COALESCE((stats->>'batches_processed')::int, 1) = 0) "
+    "ORDER BY data_settled_at DESC LIMIT 1"
+)
 
 
 class DatabaseGaugeCollector:
     """prometheus_client collector for the live DB gauges.
 
     ``assetatlas_active_alerts{severity}`` — open (active or acknowledged)
-    alerts grouped by severity — and ``assetatlas_assets_total`` — the current
-    asset count. Both are queried on every ``collect()`` (i.e. per scrape).
+    alerts grouped by severity — and ``assetatlas_assets_total`` — the asset
+    count as of the last pipeline run. Both are queried on every ``collect()``
+    (i.e. per scrape), each bounded by a 2s lock timeout so a scrape never
+    waits on the pipeline's TRUNCATE lock (#1415).
     """
 
     def __init__(self, db_adapter):
@@ -766,14 +815,30 @@ class DatabaseGaugeCollector:
 
         assets = GaugeMetricFamily(
             'assetatlas_assets_total',
-            'Total number of assets currently in the platform',
+            'Total number of assets as of the last pipeline run',
         )
         try:
             rows = self.db_adapter.execute_query(_ASSETS_TOTAL_SQL) or []
-            if rows:
-                assets.add_metric([], float(rows[0]['n']))
+        except (ObjectNotInPrerequisiteState, UndefinedTable):
+            # Unpopulated (55000, fresh install) or missing (42P01) matview —
+            # the only two errors that mean "use pipeline_runs instead". The
+            # scope path rolled the failed query back, so this second execute
+            # runs in a fresh implicit transaction and its own SET LOCAL binds.
+            try:
+                rows = self.db_adapter.execute_query(
+                    _ASSETS_TOTAL_FALLBACK_SQL) or []
+            except Exception:
+                logger.debug(
+                    'assets-total fallback query failed', exc_info=True)
+                rows = []
         except Exception:
+            # LockNotAvailable, QueryCanceled, connection errors, ...: no
+            # sample for this scrape and NO fallback — a lock wait on the
+            # matview says nothing about whether it is populated.
             logger.debug('assets-total gauge collection failed', exc_info=True)
+            rows = []
+        if rows and rows[0].get('n') is not None:
+            assets.add_metric([], float(rows[0]['n']))
         yield assets
 
 

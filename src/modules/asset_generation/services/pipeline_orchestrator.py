@@ -55,6 +55,10 @@ from src.modules.asset_generation.pipeline.stages.s15_os_eol_enrichment import O
 from src.modules.asset_generation.pipeline.stages.s15b_label_overrides import AssetLabelOverridesStage
 from src.modules.asset_generation.pipeline.stages.s15c_grace_carry_forward import GraceCarryForwardStage
 from src.modules.asset_generation.pipeline.stages.s16_persistence import PersistenceStage
+from src.modules.asset_generation.pipeline.stages.s16b_materialize_unified_values import (
+    MaterializeUnifiedValuesEnrichmentStage,
+    MaterializeUnifiedValuesStage,
+)
 from src.modules.asset_generation.pipeline.stages.s17_tag_rules import TagRulesStage
 from src.modules.asset_generation.pipeline.stages.s17b_evaluate_posture_rules import PostureRulesEvaluationStage
 from src.modules.asset_generation.pipeline.stages.s18_change_tracking import ChangeTrackingStage
@@ -215,6 +219,9 @@ class PipelineOrchestrator:
             AssetLabelOverridesStage(s),
             GraceCarryForwardStage(s),
             PersistenceStage(s),
+            # Materialize unified values before tag rules (s17) / posture (s17b)
+            # consume them; core stage, so a failed refresh aborts the run.
+            MaterializeUnifiedValuesStage(s, scope="all"),
             TagRulesStage(s),
         ]
         if self.posture_evaluation_service is not None:
@@ -226,6 +233,9 @@ class PipelineOrchestrator:
         # asset that had enrichment applied.
         ordered_stages += [
             CsvEnrichmentStage(s),
+            # Second pass: fields with an ext:enrichment: source must see the
+            # post-enrichment rows s21 just wrote.
+            MaterializeUnifiedValuesEnrichmentStage(s),
             ChangeTrackingStage(s),
             AlertEvaluationStage(s),
             EmbeddingUpdateStage(s),

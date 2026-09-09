@@ -234,8 +234,11 @@ export const assetsApi = {
   getFields: () =>
     apiClient.get<ExplorerFieldsResponse>('/assets/fields'),
 
-  getFieldValues: (params: FieldValuesParams) =>
-    apiClient.get<FieldValuesResponse>('/assets/values', { params: params as Record<string, any> }),
+  getFieldValues: (params: FieldValuesParams, opts?: { signal?: AbortSignal }) =>
+    apiClient.get<FieldValuesResponse>('/assets/values', {
+      params: params as Record<string, any>,
+      signal: opts?.signal,
+    }),
 
   search: (params: AssetSearchParams) =>
     apiClient.get<AssetSearchResponse>('/assets/search', { params: params as Record<string, any> }),
@@ -438,7 +441,7 @@ export function useFieldValues(params: FieldValuesParams) {
   return useApiQuery<FieldValuesResponse>(
     ['assets', 'values', JSON.stringify(params)],
     '/assets/values',
-    { params: params as Record<string, any>, enabled: !!params.field },
+    { params: params as Record<string, any>, enabled: !!params.field, staleTime: 30_000 },
   );
 }
 

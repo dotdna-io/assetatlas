@@ -9,6 +9,7 @@ by the FieldCatalog class defined later in this module (see Task 6).
 
 import logging
 import re
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -17,6 +18,8 @@ from urllib.parse import unquote
 from src.modules.fields.types import FieldDataType, FilterOperator
 from src.modules.fields.encoding import encode
 from src.modules.fields.operators import operators_for as _operators_for
+from src.modules.fields import catalog_version
+from src.modules.fields.catalog_version import CatalogVersionSource
 from src.modules.fields.models import (
     StaticField, CoreEnrichmentField, ExtendedAttributeField,
     IntegrationGroupField, TagField, PostureField, VirtualField,
@@ -339,6 +342,9 @@ class CatalogEntry:
     virtual_name: Optional[str] = None                    # virtual
     unified_function: Optional[str] = None             # unified field: merge function
     unified_sources: Optional[Tuple[str, ...]] = None  # unified field: ordered encoded source keys
+    # unified field: True once refresh_unified_values stamped materialized_at —
+    # the resolver then reads the stored value instead of the live merge SQL.
+    materialized: bool = False
     is_array: bool = False
     is_grouped: bool = False
     # Filterable, but never projectable / aggregatable / sortable. Set for
@@ -353,8 +359,38 @@ def _normalize_display_key(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).strip()
 
 
+@dataclass(frozen=True)
+class _Snapshot:
+    """One consistent view of the catalog, replaced atomically on rebuild.
+
+    entries/index/display_indexes are built from a single _build() pass so a
+    reader can never observe a mix of two builds — an index() that disagrees
+    with the entries() that preceded it, or display indexes stamped against a
+    different generation. Accessors hold ONE local reference to the snapshot,
+    so an invalidate() landing between entries() and index() cannot yield a
+    None index; the reader simply finishes on the old snapshot.
+    """
+    entries: Tuple[CatalogEntry, ...]
+    index: Dict[tuple, CatalogEntry]
+    display_indexes: Tuple[Dict[str, Any], Dict[str, Any]]
+    loaded_at: float
+    version: Optional[int]
+    generation: int
+
+
 class FieldCatalog:
-    """Builds the canonical entry list from static + dynamic sources with a TTL cache."""
+    """Builds the canonical entry list from static + dynamic sources, served
+    from an atomically-replaced in-process snapshot.
+
+    Freshness has two layers. The shared version stamp (``version_source``,
+    a Redis INCR counter every content-changing event bumps) is polled at
+    most once per ``stamp_check_interval``; a mismatch forces a rebuild, so an
+    edit on any worker is visible everywhere within the interval. The TTL is
+    the safety net behind it: ``ttl_seconds_with_stamp`` while the stamp is
+    live (every content change bumps, so expiry is rare), and the historical
+    ``ttl_seconds`` whenever the stamp is unavailable (no Redis, test config)
+    — identical to the pre-stamp behaviour.
+    """
 
     def __init__(
         self,
@@ -362,40 +398,124 @@ class FieldCatalog:
         group_mapping_provider: Callable[[], Dict[str, str]] = lambda: {},
         unified_fields_provider: Callable[[], List[Dict[str, Any]]] = lambda: [],
         ttl_seconds: float = 60.0,
+        ttl_seconds_with_stamp: float = 900.0,
+        stamp_check_interval: float = 2.0,
+        version_source: Optional[CatalogVersionSource] = None,
+        clock: Callable[[], float] = time.monotonic,
     ):
         self._db = db_adapter
         self._group_mapping_provider = group_mapping_provider
         self._unified_fields_provider = unified_fields_provider
         self._ttl = ttl_seconds
-        self._cache: Optional[List[CatalogEntry]] = None
-        self._index: Optional[Dict[tuple, CatalogEntry]] = None
-        self._loaded_at: float = 0.0
-        self._disp_idx: Optional[tuple] = None
-        self._disp_idx_loaded_at: float = -1.0
+        self._ttl_with_stamp = ttl_seconds_with_stamp
+        self._stamp_check_interval = stamp_check_interval
+        self._version_source = version_source
+        self._clock = clock
+        self._snapshot: Optional[_Snapshot] = None
+        self._generation = 0
+        self._build_lock = threading.Lock()
+        # Throttled stamp read: (time of last poll, value seen then). A fast
+        # path within the interval serves the memoised value, so entries()
+        # costs at most one Redis GET per interval per worker.
+        self._stamp_checked_at = 0.0
+        self._stamp_version: Optional[int] = None
 
-    def entries(self) -> List[CatalogEntry]:
-        now = time.monotonic()
-        if self._cache is not None and (now - self._loaded_at) < self._ttl:
-            return self._cache
-        entries = self._build()
-        self._cache = entries
-        self._index = self._build_index(entries)
-        self._loaded_at = now
-        return self._cache
-
-    def invalidate(self) -> None:
-        """Drop the cached entry list/index so the next read rebuilds. Called by
-        the Unified Fields service on create/update/delete so edits are immediate."""
-        self._cache = None
-        self._index = None
-        self._loaded_at = 0.0
-        self._disp_idx = None
-        self._disp_idx_loaded_at = -1.0
+    def entries(self) -> Tuple[CatalogEntry, ...]:
+        return self._current_snapshot().entries
 
     def index(self) -> Dict[tuple, CatalogEntry]:
         """Return the (kind, *identifiers) -> entry lookup map. Triggers rebuild if needed."""
-        self.entries()  # ensures cache + index populated
-        return self._index
+        return self._current_snapshot().index
+
+    def invalidate(self) -> None:
+        """Drop the cached snapshot so the next read rebuilds, and bump the
+        shared stamp so every OTHER worker's catalog rebuilds within its
+        stamp-check interval. Called by the Unified Fields service on
+        create/update/delete so edits are immediate.
+
+        Takes the build lock: an invalidate() that lands while another thread
+        is mid-build must not be overwritten by that build's install — the
+        lock serialises the two, and the cleared snapshot then forces the next
+        read to rebuild instead of serving the edit away for up to the TTL."""
+        with self._build_lock:
+            self._snapshot = None
+            self._generation += 1
+        # The injected source when there is one (a test's fake shares it with
+        # the "other workers"); the module default otherwise, so hand-built
+        # catalogs still propagate. bump() never raises.
+        source = self._version_source
+        if source is not None:
+            source.bump()
+        else:
+            catalog_version.bump()
+
+    def _current_version(self, now: float, force: bool = False) -> Optional[int]:
+        """The stamp value, throttled to one source read per check interval."""
+        source = self._version_source
+        if source is None:
+            return None
+        if force or (now - self._stamp_checked_at) >= self._stamp_check_interval:
+            self._stamp_checked_at = now
+            self._stamp_version = source.get()
+        return self._stamp_version
+
+    def _fresh_snapshot(self, now: float) -> Optional[_Snapshot]:
+        snap = self._snapshot
+        if snap is None:
+            return None
+        # A snapshot taken while the stamp was unavailable (None) gets the
+        # historical short TTL; a stamped one the long safety-net TTL.
+        ttl = self._ttl_with_stamp if snap.version is not None else self._ttl
+        if (now - snap.loaded_at) >= ttl:
+            return None
+        if (self._version_source is not None
+                and self._current_version(now) != snap.version):
+            return None
+        return snap
+
+    def _current_snapshot(self) -> _Snapshot:
+        snap = self._fresh_snapshot(self._clock())
+        if snap is not None:
+            return snap
+        with self._build_lock:
+            # Double-checked: with gthread workers several request threads can
+            # arrive here on the same TTL expiry, and each unlocked _build()
+            # is a ~255 ms full scan of extended_attributes. Re-test inside
+            # the lock so only one thread rebuilds; the rest serve the fresh
+            # snapshot.
+            snap = self._fresh_snapshot(self._clock())
+            if snap is not None:
+                return snap
+            return self._load_snapshot()
+
+    def _load_snapshot(self) -> _Snapshot:
+        """Caller holds _build_lock.
+
+        The stamp is read (unthrottled) immediately BEFORE the build, so a
+        bump that lands during the build mismatches on the next poll and
+        forces one (possibly spare) rebuild — never a lost one. Reading it
+        after the build would stamp the new version onto pre-edit content,
+        and the update would stay invisible until the safety-net TTL.
+        loaded_at is stamped AFTER the build, so the TTL window starts at
+        install, not at build start.
+
+        The forced pre-build get() runs under _build_lock: a hung Redis adds
+        up to socket_timeout (1s, no retries) per rebuild. Bounded and
+        acceptable — and the reason catalog_version.py must keep the short
+        client timeouts on its Redis connection.
+        """
+        version = self._current_version(self._clock(), force=True)
+        built = tuple(self._build())
+        snap = _Snapshot(
+            entries=built,
+            index=self._build_index(built),
+            display_indexes=self._build_display_indexes(built),
+            loaded_at=self._clock(),
+            version=version,
+            generation=self._generation,
+        )
+        self._snapshot = snap
+        return snap
 
     def field_id_for_display_name(self, name: str):
         """Resolve a display name to its FieldId, or None. Covers every catalog
@@ -406,35 +526,32 @@ class FieldCatalog:
         is the fallback for spelling variants like 'beszel cpu'."""
         if not name:
             return None
-        exact, fuzzy = self._display_indexes()
+        exact, fuzzy = self._current_snapshot().display_indexes
         hit = exact.get(name.lower())
         if hit is not None:
             return hit
         return fuzzy.get(_normalize_display_key(name))
 
-    def _display_indexes(self):
-        # Built lazily alongside entries(): an exact (lowercased display name)
-        # map plus a fuzzy (punctuation-collapsed) map. The exact map is
-        # consulted first so real display names resolve unambiguously and only
-        # true spelling variants fall back to fuzzy (where first writer wins).
-        self.entries()  # ensure cache fresh
-        if (self._disp_idx is not None
-                and self._disp_idx_loaded_at == self._loaded_at):
-            return self._disp_idx
+    @staticmethod
+    def _build_display_indexes(entries):
+        # An exact (lowercased display name) map plus a fuzzy
+        # (punctuation-collapsed) map. The exact map is consulted first so real
+        # display names resolve unambiguously and only true spelling variants
+        # fall back to fuzzy (where first writer wins). Built with the
+        # snapshot, not lazily against a separate stamp, so the lookup can
+        # never disagree with the entry list it indexes.
         exact: Dict[str, Any] = {}
         fuzzy: Dict[str, Any] = {}
-        for e in self._cache or []:
+        for e in entries:
             fid = _entry_field_id(e)
             exact.setdefault(e.display_name.lower(), fid)
             fkey = _normalize_display_key(e.display_name)
             if fkey:
                 fuzzy.setdefault(fkey, fid)
-        self._disp_idx = (exact, fuzzy)
-        self._disp_idx_loaded_at = self._loaded_at
-        return self._disp_idx
+        return (exact, fuzzy)
 
     @staticmethod
-    def _build_index(entries: List[CatalogEntry]) -> Dict[tuple, CatalogEntry]:
+    def _build_index(entries) -> Dict[tuple, CatalogEntry]:
         idx: Dict[tuple, CatalogEntry] = {}
         for e in entries:
             if e.kind_name == "static":
@@ -648,6 +765,7 @@ class FieldCatalog:
                 virtual_name=d["slug"],
                 unified_function=d["function"],
                 unified_sources=tuple(d["sources"]),
+                materialized=d.get("materialized_at") is not None,
                 is_array=dt in (FieldDataType.STRING_ARRAY, FieldDataType.JSONB_ARRAY),
             ))
         return out

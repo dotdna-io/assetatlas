@@ -37,9 +37,12 @@ def test_reclassify_bulk_validates_then_writes_in_scope():
     out = svc.reclassify_bulk([A1], 'network', 'switch', 'admin')
     assert out == {"updated": 1}
     svc.override_repo.save_overrides_bulk.assert_called_once()
-    svc.db.conn_manager.begin_scope.assert_called_once()
-    # ended cleanly (no error) on success
-    svc.db.conn_manager.end_scope.assert_called_once_with()
+    # Every scope opened was closed cleanly (no error): _bulk_scope's, and the
+    # refresh hook's outside_request_scope pair after it (#1428).
+    assert svc.db.conn_manager.begin_scope.call_count == \
+        svc.db.conn_manager.end_scope.call_count
+    for c in svc.db.conn_manager.end_scope.call_args_list:
+        assert c.kwargs.get('error') is None
     assert svc.db.bulk_write_chronicle_events.called
 
 
@@ -72,8 +75,11 @@ def test_clear_overrides_bulk_deactivates_and_resets():
     out = svc.clear_overrides_bulk([A1], 'admin')
     assert out == {"cleared": 1}
     svc.override_repo.deactivate_overrides_bulk.assert_called_once_with([A1])
-    svc.db.conn_manager.begin_scope.assert_called_once()
-    svc.db.conn_manager.end_scope.assert_called_once_with()
+    # Balanced and clean — see test_reclassify_bulk_validates_then_writes_in_scope.
+    assert svc.db.conn_manager.begin_scope.call_count == \
+        svc.db.conn_manager.end_scope.call_count
+    for c in svc.db.conn_manager.end_scope.call_args_list:
+        assert c.kwargs.get('error') is None
     assert svc.db.bulk_write_chronicle_events.called
 
 

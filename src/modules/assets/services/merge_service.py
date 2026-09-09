@@ -14,6 +14,14 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.database.postgres_adapter import PostgreSQLAdapter
+from src.modules.fields.unified.materialize import (
+    is_materializable,
+    outside_request_scope,
+    refresh_unified_values,
+)
+from src.modules.fields.unified.repository import UnifiedFieldsRepository
+from src.modules.shared import asset_data_version
+from src.modules.shared.field_resolver_factory import build_field_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +204,11 @@ class MergeService:
             f"(strategy={strategy}) by {user}"
         )
 
+        self._refresh_unified_values([primary_id, secondary_id])
+        # The merge rewrote the primary's field values and removed the
+        # secondary — invalidate the Explorer field-values cache (#1410).
+        asset_data_version.bump()
+
         return {
             "merged_asset": {
                 "id": primary_id,
@@ -298,6 +311,11 @@ class MergeService:
         logger.info(
             f"Asset {secondary_id} unmerged from {primary_id} by {user}"
         )
+
+        self._refresh_unified_values([primary_id, secondary_id])
+        # The unmerge restored values on both assets — invalidate the
+        # Explorer field-values cache (#1410).
+        asset_data_version.bump()
 
         return {
             "restored_asset_id": secondary_id,
@@ -480,6 +498,40 @@ class MergeService:
     # ------------------------------------------------------------------
     # Database helpers
     # ------------------------------------------------------------------
+
+    def _refresh_unified_values(self, asset_ids: List[str]) -> None:
+        """Recompute stored unified-field values for the touched assets.
+
+        Merge/unmerge rewrites the columns unified fields merge over
+        (hostname/ip/mac/sn/fqdn/manufacturer/model/category/subcategory/
+        os_normalized/confidence/owner/location), so the materialized values
+        of the affected rows must be refreshed — per-asset, hence never
+        stamped. Best-effort: a hook failure must not fail the merge; the
+        affected stamps are cleared so the resolver falls back to the live
+        merge expression until the next pipeline run re-materializes. Runs
+        outside the request scope so the merge commits first — a hook
+        DB-error can then neither roll it back nor poison its commit.
+        """
+        slugs: List[str] = []
+        with outside_request_scope(self.db.conn_manager):
+            try:
+                defs = UnifiedFieldsRepository(self.db).list_for_catalog()
+                slugs = [d["slug"] for d in defs if is_materializable(d)]
+                if not slugs:
+                    return
+                refresh_unified_values(
+                    self.db, build_field_resolver(self.db), defs, asset_ids=asset_ids)
+            except Exception:
+                logger.warning(
+                    "materialized unified-value refresh failed for %d asset(s) — "
+                    "clearing materialized stamps (live SQL until the next "
+                    "pipeline run)", len(asset_ids), exc_info=True)
+                if slugs:
+                    try:
+                        UnifiedFieldsRepository(self.db).set_materialized_at(slugs, False)
+                    except Exception:
+                        logger.warning(
+                            "could not clear materialized_at for %s", slugs, exc_info=True)
 
     def _fetch_asset(self, asset_id: str) -> Dict[str, Any]:
         """

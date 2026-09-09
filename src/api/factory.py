@@ -629,8 +629,9 @@ def _init_services(app: Flask, should_log: bool = True) -> None:
 
     # Field Resolver — the single choke-point for field identifier resolution
     # and SQL generation across tag_rules, posture, charts, reports, Explorer
-    # (issue #455). Stateless service; FieldCatalog owns a 60s TTL cache.
-    from src.modules.fields import FieldCatalog, FieldResolver
+    # (issue #455). Stateless service; FieldCatalog serves an in-process
+    # snapshot kept fresh across workers by the shared version stamp (#1413).
+    from src.modules.fields import FieldCatalog, FieldResolver, catalog_version
     from src.api.utils.caching import get_cached_group_mapping
     from src.modules.fields.unified.repository import UnifiedFieldsRepository
     from src.modules.fields.unified.service import UnifiedFieldsService
@@ -640,6 +641,7 @@ def _init_services(app: Flask, should_log: bool = True) -> None:
         db_adapter=db_adapter,
         group_mapping_provider=get_cached_group_mapping,
         unified_fields_provider=unified_fields_repo.list_for_catalog,
+        version_source=catalog_version.default_source(),
     )
     app.field_resolver = FieldResolver(catalog=field_catalog)
     app.unified_fields_service = UnifiedFieldsService(
@@ -720,6 +722,7 @@ def _init_services(app: Flask, should_log: bool = True) -> None:
     from src.modules.assets.repositories.asset_repository import AssetRepository
     from src.modules.assets.services.asset_service import AssetService
     from src.modules.assets.services.asset_history_service import AssetHistoryService
+    from src.modules.assets.services.field_values_cache import FieldValuesCache
     from src.modules.alerts.repository import AlertsRepository
 
     app.asset_repository = AssetRepository(db_adapter, resolver=app.field_resolver)
@@ -728,7 +731,13 @@ def _init_services(app: Flask, should_log: bool = True) -> None:
     # on the asset-detail header (#891). It only needs db_adapter + query_engine,
     # both already available at this point.
     app.alerts_repository = AlertsRepository(db_adapter, query_compiler=app.query_engine)
-    app.asset_service = AssetService(app.asset_repository, app.alerts_repository)
+    # Stamp-keyed Redis cache for /api/assets/values (#1410). Strict no-op
+    # without Redis, so TestConfig/simple-cache installs behave as before.
+    app.asset_service = AssetService(
+        app.asset_repository,
+        app.alerts_repository,
+        field_values_cache=FieldValuesCache(),
+    )
     app.asset_history_service = AssetHistoryService(db_adapter)
 
     from src.modules.reference_data.repository import ReferenceDataRepository

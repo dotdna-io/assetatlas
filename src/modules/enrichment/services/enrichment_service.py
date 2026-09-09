@@ -21,6 +21,11 @@ from src.modules.enrichment.domain.enrichment_matcher import (
 )
 from src.modules.enrichment.domain.match_field import match_field_to_field_id
 from src.modules.fields.models import InvalidFieldError
+from src.modules.fields.unified.materialize import (
+    outside_request_scope, refresh_for_sources,
+)
+from src.modules.fields.unified.repository import UnifiedFieldsRepository
+from src.modules.shared import asset_data_version
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +33,11 @@ MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 MAX_ROWS = 100_000
 MAX_COLUMNS = 50
 MAX_CELL_LENGTH = 1_000
+
+# Same prefix test the pipeline's enrichment-scoped materialize pass applies
+# (pipeline/stages/s16b_materialize_unified_values.py) — asset_generation is
+# off-limits to this module, so the literal is repeated, not imported.
+_ENRICHMENT_SOURCE_PREFIX = "ext:enrichment:"
 
 
 class EnrichmentService:
@@ -231,7 +241,9 @@ class EnrichmentService:
             "sample_matches": sample_matches,
         }
 
-    def apply_dataset(self, dataset_id: str) -> Optional[dict]:
+    def apply_dataset(
+        self, dataset_id: str, *, refresh_materialized: bool = True
+    ) -> Optional[dict]:
         """
         Apply an enrichment dataset to matching assets.
 
@@ -240,6 +252,12 @@ class EnrichmentService:
 
         Args:
             dataset_id: Dataset UUID.
+            refresh_materialized: Re-materialize enrichment-sourced unified
+                fields after the write (default, the API path). The pipeline
+                path (apply_all_active) passes False — its run is already
+                followed by the enrichment-scoped materialize pass, and a
+                per-dataset refresh would re-scan the whole table once per
+                dataset.
 
         Returns:
             Dict with dataset_id, dataset_name, matched_count,
@@ -276,6 +294,16 @@ class EnrichmentService:
 
         self.repo.update_matched_count(dataset_id, matched_count)
 
+        if refresh_materialized and matched_count:
+            self._refresh_enrichment_sourced_values()
+
+        # The apply rewrote extended_attributes on the matched assets, so the
+        # distinct values of every enrichment-sourced field changed. Bump the
+        # asset-data stamp to invalidate the Explorer field-values cache
+        # (#1410). On the pipeline path (refresh_materialized=False) the run's
+        # own completion bump covers this too — a second INCR is harmless.
+        asset_data_version.bump()
+
         logger.info(
             "Applied enrichment dataset '%s' (%s): %d assets matched",
             dataset["name"], dataset_id, matched_count,
@@ -286,6 +314,24 @@ class EnrichmentService:
             "dataset_name": dataset["name"],
             "matched_count": matched_count,
         }
+
+    def _refresh_enrichment_sourced_values(self) -> None:
+        """Re-materialize unified fields reading enrichment-sourced extended
+        attributes after an API-triggered apply rewrote them. Best-effort: the
+        helper clears the affected stamps on failure (resolver falls back to
+        live SQL), so a refresh problem never fails the apply. Runs outside
+        the request scope so the apply's writes commit first — a refresh
+        DB-error can then neither roll them back nor poison their commit."""
+        with outside_request_scope(self.db.conn_manager):
+            try:
+                defs = UnifiedFieldsRepository(self.db).list_for_catalog()
+                refresh_for_sources(
+                    self.db, self.field_resolver, defs, (_ENRICHMENT_SOURCE_PREFIX,))
+            except Exception:
+                logger.warning(
+                    "materialized refresh of enrichment-sourced unified fields "
+                    "failed after enrichment apply — stored values stay as they "
+                    "are until the next pipeline run", exc_info=True)
 
     def apply_all_active(self) -> List[dict]:
         """
@@ -310,7 +356,10 @@ class EnrichmentService:
         results = []
 
         for dataset in datasets:
-            result = self.apply_dataset(dataset["id"])
+            # The pipeline's own enrichment-scoped materialize pass (s16b) runs
+            # right after this stage — a per-dataset refresh here would redo a
+            # full-table scan for every dataset.
+            result = self.apply_dataset(dataset["id"], refresh_materialized=False)
             if result:
                 results.append(result)
 

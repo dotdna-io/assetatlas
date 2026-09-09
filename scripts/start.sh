@@ -272,7 +272,7 @@ else
             echo "Installing gunicorn..."
             ./venv/bin/pip install gunicorn -q
         fi
-        nohup ./venv/bin/gunicorn -w 4 -b 0.0.0.0:5001 \
+        nohup ./venv/bin/gunicorn -c gunicorn.conf.py -w 4 -b 0.0.0.0:5001 \
             --timeout 300 --access-logfile - --error-logfile - --log-level info \
             "src.api.factory:create_app()" \
             > "$PID_DIR/api.log" 2>&1 &

@@ -56,6 +56,7 @@ STAGE_TO_PHASE: Dict[str, str] = {
     # Persist & Apply Rules (s16–s17b)
     "grace_carry_forward":          "persist_apply_rules",
     "persistence":                  "persist_apply_rules",
+    "materialize_unified_values":   "persist_apply_rules",
     "tag_rules":                    "persist_apply_rules",
     "posture_rules":                "persist_apply_rules",
 
@@ -63,6 +64,7 @@ STAGE_TO_PHASE: Dict[str, str] = {
     "chronicle":                    "post_process",
     "alert_evaluation":             "post_process",
     "csv_enrichment":               "post_process",
+    "materialize_unified_values_enrichment": "post_process",
     "embedding_update":             "post_process",
 }
 

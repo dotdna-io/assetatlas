@@ -13,12 +13,38 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from src.database.postgres_adapter import PostgreSQLAdapter
+from src.modules.fields import catalog_version
+from src.modules.fields.unified.materialize import outside_request_scope
+from src.modules.shared import asset_data_version
 from src.modules.tag_rules.services.tags_column_service import (
     refresh_tags_for_asset,
     refresh_tags_for_assets,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _bump_field_catalog_stamp(db: PostgreSQLAdapter) -> None:
+    """Bump the shared field-catalog and asset-data version stamps (#1413, #1410).
+
+    asset_manual_tags feeds the catalog's tag: entries (a UNION with
+    asset_tags_v2), so a manual add/remove can introduce or retire a tag
+    field (catalog stamp), and it rewrites the denormalised assets.tags map
+    the tag fields read, so the distinct values change too (data stamp).
+    bump() never raises and is a no-op without Redis.
+
+    The bumps run inside outside_request_scope: entering it ends the request
+    scope, COMMITTING the tag write, so the new stamp is never visible to a
+    concurrent /values request before the data it describes is. A bump fired
+    while the writer's transaction is still open would let such a request
+    read the new stamp, query the pre-write snapshot, and cache stale values
+    under the new key until the next bump or the TTL. On a scope-free thread
+    (CLI/tests) the wrapper is a no-op: statements auto-commit, so a direct
+    bump is already post-commit.
+    """
+    with outside_request_scope(db.conn_manager):
+        catalog_version.bump()
+        asset_data_version.bump()
 
 
 class TagService:
@@ -92,6 +118,8 @@ class TagService:
 
         # Refresh denormalized tags column
         refresh_tags_for_asset(self.db, asset_id)
+
+        _bump_field_catalog_stamp(self.db)
 
         logger.info(
             f"Tag '{tag_name}' added to asset {asset_id} by {user}"
@@ -181,6 +209,8 @@ class TagService:
             # becomes filterable.
             refresh_tags_for_assets(self.db, ids)
 
+        _bump_field_catalog_stamp(self.db)
+
         logger.info(
             f"Tag '{name}' bulk-applied to {len(rows)} assets "
             f"({len(created_ids)} new) by {user}"
@@ -263,6 +293,8 @@ class TagService:
             # still advertises the tag on every asset.
             refresh_tags_for_assets(self.db, ids)
 
+        _bump_field_catalog_stamp(self.db)
+
         logger.info(
             f"Tag '{name}' bulk-removed from {len(removed_ids)} assets by {user}"
         )
@@ -339,6 +371,8 @@ class TagService:
 
         # Refresh denormalized tags column
         refresh_tags_for_asset(self.db, asset_id)
+
+        _bump_field_catalog_stamp(self.db)
 
         logger.info(
             f"Tag '{tag['tag_name']}' removed from asset {asset_id}"

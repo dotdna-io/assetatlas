@@ -80,9 +80,23 @@ USER assetatlas
 #
 # The access/error log flags were previously only in the compose override and
 # are folded in here so removing it changes nothing about logging.
+#
+# gthread with 4 threads per worker (#1409): 4 plain sync workers meant at most
+# 4 concurrent requests, so one slow endpoint stalled every other one
+# (/api/health measured at 16.7 s under a typeahead burst). `--worker-class`
+# is passed explicitly even though gunicorn 26 would auto-promote sync +
+# threads>1 to gthread, so the reader doesn't have to know that rule.
+#
+# Note the changed `--timeout` semantics: a sync worker heartbeats only
+# BETWEEN requests, so a request longer than 300 s got the worker SIGKILLed.
+# A gthread worker heartbeats from its event loop regardless of thread state,
+# so gunicorn no longer kills a runaway request — it is now bounded by the
+# Postgres statement_timeout (60 s) and nginx proxy_read_timeout (300 s).
 CMD ["gunicorn", "-c", "/app/gunicorn.conf.py", \
      "--bind", "0.0.0.0:5001", \
      "--workers", "4", \
+     "--worker-class", "gthread", \
+     "--threads", "4", \
      "--timeout", "300", \
      "--access-logfile", "-", \
      "--error-logfile", "-", \

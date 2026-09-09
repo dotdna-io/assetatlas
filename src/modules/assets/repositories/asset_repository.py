@@ -1038,8 +1038,9 @@ class AssetRepository:
         limit: int = 50,
         search: Optional[str] = None,
         filters: Optional[List[Dict[str, Any]]] = None,
-        logic: str = "and"
-    ) -> Tuple[List[Dict[str, Any]], int]:
+        logic: str = "and",
+        include_total: bool = True
+    ) -> Tuple[List[Dict[str, Any]], Optional[int]]:
         """
         Get distinct values and counts for a field.
 
@@ -1049,9 +1050,13 @@ class AssetRepository:
             search: Optional prefix filter on values
             filters: Optional structured filters to narrow context
                      (each filter has typed field_id + op + value)
+            include_total: When False, skip the COUNT(DISTINCT ...) companion
+                     query and return None as the total — for callers that
+                     never display it (the count costs a second scan).
 
         Returns:
-            Tuple of (list of {value, count} dicts, total distinct count)
+            Tuple of (list of {value, count} dicts, total distinct count —
+            None when include_total is False)
         """
         params: Dict[str, Any] = {'limit': limit}
 
@@ -1084,26 +1089,30 @@ class AssetRepository:
             where_clauses.extend(self._join_filter_clauses(filter_clauses, logic))
             params.update(filter_params)
 
-        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        # AND-combine a list of predicates into a WHERE clause ("" when empty).
+        def and_where(conditions):
+            return "WHERE " + " AND ".join(conditions) if conditions else ""
 
         # Detect JSONB array fields (use -> not ->>, so array type is preserved)
         is_jsonb_array = is_jsonb and "->>'" not in col_expr
 
-        if is_jsonb_array:
-            # Unnest JSONB array via jsonb_array_elements_text
-            search_clause = ""
-            if search:
-                search_clause = "AND x.value ILIKE %(val_search)s"
-                params['val_search'] = f"{search}%"
+        if search:
+            params['val_search'] = f"{search}%"
 
-            base_where = where_sql if where_sql else "WHERE 1=1"
+        if is_jsonb_array:
+            # Unnest JSONB array via jsonb_array_elements_text. The SRF
+            # evaluates col_expr once per row and is STRICT — a NULL
+            # expression yields zero rows, so no IS NOT NULL guard is needed.
+            # This branch deliberately has no empty-string filter.
+            conditions = list(where_clauses)
+            if search:
+                conditions.append("x.value ILIKE %(val_search)s")
+            where_sql = and_where(conditions)
 
             query = f"""
                 SELECT x.value AS value, COUNT(*) AS count
                 FROM assets, jsonb_array_elements_text({col_expr}) x
-                {base_where}
-                AND {col_expr} IS NOT NULL
-                {search_clause}
+                {where_sql}
                 GROUP BY x.value
                 ORDER BY count DESC, x.value ASC
                 LIMIT %(limit)s
@@ -1112,60 +1121,49 @@ class AssetRepository:
             count_query = f"""
                 SELECT COUNT(DISTINCT x.value) AS total
                 FROM assets, jsonb_array_elements_text({col_expr}) x
-                {base_where}
-                AND {col_expr} IS NOT NULL
+                {where_sql}
             """
 
         elif is_array:
-            # Unnest array, then group
-            value_expr = "x"
-            from_clause = f"(SELECT unnest({col_expr}) AS x FROM assets {where_sql}) sub"
-            where_value = ""
+            # Unnest array, then group. unnest() is a set-returning function,
+            # so the subquery already blocks pull-up: col_expr is evaluated
+            # once per row without an explicit fence.
+            from_clause = f"(SELECT unnest({col_expr}) AS x FROM assets {and_where(where_clauses)}) sub"
+            conditions = ["x IS NOT NULL", "x != ''"]
             if search:
-                where_value = "WHERE x ILIKE %(val_search)s"
-                params['val_search'] = f"{search}%"
+                conditions.append("x ILIKE %(val_search)s")
+            where_sql = and_where(conditions)
 
             query = f"""
                 SELECT x AS value, COUNT(*) AS count
                 FROM {from_clause}
-                {where_value}
-                AND x IS NOT NULL AND x != ''
+                {where_sql}
                 GROUP BY x
                 ORDER BY count DESC, x ASC
                 LIMIT %(limit)s
             """
-            # Fix: if no where_value, the AND needs to be WHERE
-            if not search:
-                query = f"""
-                    SELECT x AS value, COUNT(*) AS count
-                    FROM {from_clause}
-                    WHERE x IS NOT NULL AND x != ''
-                    GROUP BY x
-                    ORDER BY count DESC, x ASC
-                    LIMIT %(limit)s
-                """
 
             count_query = f"""
                 SELECT COUNT(DISTINCT x) AS total
                 FROM {from_clause}
-                WHERE x IS NOT NULL AND x != ''
+                {where_sql}
             """
-        else:
-            # Scalar column
-            having_clause = ""
-            search_clause = ""
+        elif resolved.sql_kind == "column":
+            # Bare column: repeating it is free, and the flat form keeps
+            # btree / index-only scans (idx_assets_category & co.) available —
+            # a fenced subquery would force a seq scan.
+            conditions = where_clauses + [
+                f"{col_expr} IS NOT NULL",
+                f"{col_expr}::text != ''",
+            ]
             if search:
-                search_clause = f"AND {col_expr}::text ILIKE %(val_search)s"
-                params['val_search'] = f"{search}%"
-
-            base_where = where_sql if where_sql else "WHERE 1=1"
+                conditions.append(f"{col_expr}::text ILIKE %(val_search)s")
+            where_sql = and_where(conditions)
 
             query = f"""
                 SELECT {col_expr} AS value, COUNT(*) AS count
                 FROM assets
-                {base_where}
-                AND {col_expr} IS NOT NULL AND {col_expr}::text != ''
-                {search_clause}
+                {where_sql}
                 GROUP BY {col_expr}
                 ORDER BY count DESC, {col_expr} ASC
                 LIMIT %(limit)s
@@ -1174,13 +1172,44 @@ class AssetRepository:
             count_query = f"""
                 SELECT COUNT(DISTINCT {col_expr}) AS total
                 FROM assets
-                {base_where}
-                AND {col_expr} IS NOT NULL AND {col_expr}::text != ''
+                {where_sql}
+            """
+        else:
+            # Heavier expression (JSONB extraction, COALESCE over dozens of
+            # paths, CASE, ...): evaluate it once per row. PostgreSQL does no
+            # common-subexpression elimination, and a plain subquery would be
+            # flattened by simple-subquery pull-up, re-substituting the
+            # expression at every reference — OFFSET 0 is the optimisation
+            # fence. The contextual filters stay INSIDE the subquery (asset
+            # columns are not visible outside the projection). The alias keeps
+            # the expression's native type so GROUP BY / ORDER BY semantics
+            # are unchanged; ::text casts live only inside the predicates.
+            inner = f"SELECT {col_expr} AS v FROM assets {and_where(where_clauses)} OFFSET 0"
+            conditions = ["v IS NOT NULL", "v::text != ''"]
+            if search:
+                conditions.append("v::text ILIKE %(val_search)s")
+            where_sql = and_where(conditions)
+
+            query = f"""
+                SELECT v AS value, COUNT(*) AS count
+                FROM ({inner}) s
+                {where_sql}
+                GROUP BY v
+                ORDER BY count DESC, v ASC
+                LIMIT %(limit)s
+            """
+
+            count_query = f"""
+                SELECT COUNT(DISTINCT v) AS total
+                FROM ({inner}) s
+                {where_sql}
             """
 
         results = self.db.execute_query(query, params)
-        count_result = self.db.execute_query(count_query, params)
-        total_distinct = count_result[0]['total'] if count_result else 0
+        total_distinct: Optional[int] = None
+        if include_total:
+            count_result = self.db.execute_query(count_query, params)
+            total_distinct = count_result[0]['total'] if count_result else 0
 
         values = [{'value': str(r['value']), 'count': r['count']} for r in (results or [])]
         return values, total_distinct

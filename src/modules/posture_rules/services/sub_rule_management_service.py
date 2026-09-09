@@ -2,6 +2,8 @@
 import logging
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
+from src.modules.fields import catalog_version
+from src.modules.fields.unified.materialize import outside_request_scope
 from src.modules.posture_rules.models.rule import (
     PostureSubRuleCreate,
     PostureSubRuleUpdate,
@@ -9,6 +11,7 @@ from src.modules.posture_rules.models.rule import (
     SubRuleAction,
 )
 from src.modules.posture_rules.repositories.posture_repository import PostureRepository
+from src.modules.shared import asset_data_version
 
 if TYPE_CHECKING:
     from src.modules.posture_rules.services.posture_evaluation_service import (
@@ -69,6 +72,20 @@ class PostureSubRuleManagementService:
                 "Post-mutation posture re-eval failed for category '%s': %s",
                 category_id, e,
             )
+
+    def _bump_data_stamp_post_commit(self) -> None:
+        """Bump the asset-data stamp AFTER the clear is durable (#1410).
+
+        clear_category_state drops a category from assets.posture_rules
+        fleet-wide, so the posture_state:/posture_output: distinct values
+        change and the Explorer field-values cache must invalidate. Entering
+        outside_request_scope ends the request scope — the commit — first, so
+        a concurrent /values request can never read the new stamp against the
+        pre-clear snapshot and cache stale posture values under the new key.
+        This service only runs on the request path (sub-rule CUD routes).
+        """
+        with outside_request_scope(self.repo.db.conn_manager):
+            asset_data_version.bump()
 
     def _record_history(
         self,
@@ -163,6 +180,7 @@ class PostureSubRuleManagementService:
         category_id = result["category_id"]
         if not enabled and self.repo.count_enabled_sub_rules(category_id) == 0:
             self.repo.clear_category_state(category_id)
+            self._bump_data_stamp_post_commit()
         else:
             self._maybe_reeval(category_id)
         self._record_history(before, result, SubRuleAction.TOGGLE, user_id, username)
@@ -182,6 +200,7 @@ class PostureSubRuleManagementService:
         category_id = before["category_id"]
         if self.repo.count_enabled_sub_rules(category_id) == 0:
             self.repo.clear_category_state(category_id)
+            self._bump_data_stamp_post_commit()
         else:
             self._maybe_reeval(category_id)
         self._record_history(before, None, SubRuleAction.DELETE, user_id, username)
@@ -205,6 +224,10 @@ class PostureSubRuleManagementService:
         )
         if result is None:
             raise CategoryNotFoundError(f"Unknown posture category '{category_id}'")
+        # The catalog's posture entries derive from posture_categories rows;
+        # bump the shared stamp so every worker's FieldCatalog picks up the
+        # category change within its check interval (#1413). Never raises.
+        catalog_version.bump()
         # Applicable_categories change flips which assets are in-scope vs N/A.
         self._maybe_reeval(category_id)
         return result

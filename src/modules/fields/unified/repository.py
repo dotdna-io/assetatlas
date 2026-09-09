@@ -12,7 +12,7 @@ from src.modules.fields.types import FieldDataType
 
 logger = logging.getLogger(__name__)
 
-_COLS = "id, slug, name, function, sources, data_type, created_at, updated_at"
+_COLS = "id, slug, name, function, sources, data_type, created_at, updated_at, materialized_at"
 
 
 class UnifiedFieldsRepository:
@@ -25,8 +25,20 @@ class UnifiedFieldsRepository:
         return [self._row(r) for r in (rows or [])]
 
     def list_for_catalog(self) -> List[Dict[str, Any]]:
+        # Deferred: materialize imports this module at module level.
+        from src.modules.fields.unified.materialize import (
+            column_present, warn_migration_149_pending)
+        # On a database without migration 149 the 6-column SELECT raises
+        # UndefinedColumn (and, inside a request scope, poisons the whole
+        # request transaction) — probe first and degrade to the pre-149 list
+        # with materialized_at=None rather than erroring.
+        if column_present(self.db, "unified_fields", "materialized_at"):
+            cols = "slug, name, function, sources, data_type, materialized_at"
+        else:
+            warn_migration_149_pending()
+            cols = "slug, name, function, sources, data_type"
         rows = self.db.execute_query(
-            "SELECT slug, name, function, sources, data_type FROM unified_fields ORDER BY lower(name)")
+            f"SELECT {cols} FROM unified_fields ORDER BY lower(name)")
         out = []
         for r in (rows or []):
             try:
@@ -36,8 +48,33 @@ class UnifiedFieldsRepository:
                                r.get("slug"), r.get("data_type"))
                 continue
             out.append({"slug": r["slug"], "name": r["name"], "function": r["function"],
-                        "sources": list(r["sources"]), "data_type": dt})
+                        "sources": list(r["sources"]), "data_type": dt,
+                        "materialized_at": r.get("materialized_at")})
         return out
+
+    def set_materialized_at(self, slugs: List[str], stamp: bool) -> int:
+        """Stamp materialized_at = NOW() for the given slugs (stamp=True), or clear
+        it to NULL (stamp=False, used when a definition changes and its stored
+        values are no longer trustworthy). Returns rows updated.
+
+        No-op returning 0 on a database without migration 149 (one WARNING per
+        process): there is no column to stamp, and the resolver is already on
+        the live-SQL path the missing stamp would have selected anyway.
+        """
+        if not slugs:
+            return 0
+        # Deferred: materialize imports this module at module level.
+        from src.modules.fields.unified.materialize import (
+            column_present, warn_migration_149_pending)
+        if not column_present(self.db, "unified_fields", "materialized_at"):
+            warn_migration_149_pending()
+            return 0
+        value = "NOW()" if stamp else "NULL"
+        rows = self.db.execute_query(
+            f"UPDATE unified_fields SET materialized_at = {value} "
+            "WHERE slug = ANY(%(slugs)s) RETURNING slug",
+            {"slugs": list(slugs)})
+        return len(rows or [])
 
     def get(self, field_id: str) -> Optional[Dict[str, Any]]:
         rows = self.db.execute_query(
@@ -102,4 +139,5 @@ class UnifiedFieldsRepository:
             "data_type": r["data_type"],
             "created_at": r["created_at"],
             "updated_at": r["updated_at"],
+            "materialized_at": r.get("materialized_at"),
         }

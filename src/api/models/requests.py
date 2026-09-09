@@ -239,6 +239,11 @@ class AssetValuesParams(BaseModel):
         default=None,
         description="JSON array of AssetFilter objects (typed field_id + op + value)"
     )
+    include_total: bool = Field(
+        default=True,
+        description="Include the total distinct count (a second query). "
+                    "Pass false to skip it — total_distinct comes back null."
+    )
 
     @field_validator('field')
     @classmethod

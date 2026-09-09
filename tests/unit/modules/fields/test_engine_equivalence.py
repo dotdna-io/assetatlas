@@ -32,6 +32,7 @@ from src.modules.shared.asset_query_compiler import AssetQueryCompiler
 from src.modules.fields import FieldCatalog, FieldResolver
 from src.modules.fields.models import StaticField
 from src.modules.fields.operators import OPERATOR_REGISTRY, OperatorCtx
+from src.modules.fields.types import FieldDataType
 
 
 def _resolver():
@@ -116,6 +117,63 @@ class TestCrossEngineSqlEquivalence:
         assert comp_sql
         assert _strip_params(repo_clauses[0]) == _strip_params(comp_sql)
         assert "ILIKE" not in repo_clauses[0]  # exact, % / _ are literals
+
+
+class TestStampedUnifiedFieldCrossEngine:
+    """#1405 part 2: a materialized (stamped) unified field compiles to its
+    stored-value reference through BOTH builders — the Explorer repo path and
+    the shared compiler — and the two fragments stay identical."""
+
+    _STAMP = {"slug": "lentity", "name": "lentity", "function": "coalesce",
+              "sources": ["static:Hostname", "static:FQDN"],
+              "data_type": FieldDataType.STRING,
+              "materialized_at": "2026-09-09T00:00:00+00:00"}
+
+    def _resolver(self):
+        db = MagicMock()
+        db.execute_query.return_value = []
+        return FieldResolver(catalog=FieldCatalog(
+            db_adapter=db, unified_fields_provider=lambda: [self._STAMP]))
+
+    def test_stamped_unified_eq_cross_engine(self):
+        resolver = self._resolver()
+        repo = AssetRepository(db_adapter=MagicMock(), resolver=resolver)
+        comp = AssetQueryCompiler(resolver=resolver)
+
+        fid = {"kind": "virtual", "name": "lentity"}
+        repo_clauses, _ = repo._build_filter_clauses(
+            [{"field_id": fid, "op": "eq", "value": "web-1"}])
+        comp_sql, _ = comp.build_where_clause(
+            [{"field_id": fid, "operator": "equals", "value": "web-1"}])
+
+        assert repo_clauses and repo_clauses[0]
+        assert comp_sql
+        # The stored-value reference, not the live merge expression.
+        assert "unified_values->>'lentity'" in repo_clauses[0]
+        assert "COALESCE" not in repo_clauses[0]
+        assert _strip_params(repo_clauses[0]) == _strip_params(comp_sql)
+
+    def test_unstamped_unified_eq_cross_engine(self):
+        # Same field without the stamp → the live merge SQL through both builders.
+        unstamped = {**self._STAMP, "materialized_at": None}
+        db = MagicMock()
+        db.execute_query.return_value = []
+        resolver = FieldResolver(catalog=FieldCatalog(
+            db_adapter=db, unified_fields_provider=lambda: [unstamped]))
+        repo = AssetRepository(db_adapter=MagicMock(), resolver=resolver)
+        comp = AssetQueryCompiler(resolver=resolver)
+
+        fid = {"kind": "virtual", "name": "lentity"}
+        repo_clauses, _ = repo._build_filter_clauses(
+            [{"field_id": fid, "op": "eq", "value": "web-1"}])
+        comp_sql, _ = comp.build_where_clause(
+            [{"field_id": fid, "operator": "equals", "value": "web-1"}])
+
+        assert repo_clauses and repo_clauses[0]
+        assert comp_sql
+        assert "unified_values" not in repo_clauses[0]
+        assert "COALESCE(" in repo_clauses[0]  # the live merge expression
+        assert _strip_params(repo_clauses[0]) == _strip_params(comp_sql)
 
 
 class TestScalarHelperCrossEngine:

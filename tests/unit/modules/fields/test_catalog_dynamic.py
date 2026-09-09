@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Tests for FieldCatalog dynamic loading (extended_attributes, tags, posture)."""
 
+import threading
+import time
 from unittest.mock import MagicMock
 
 import pytest
@@ -101,6 +103,52 @@ class TestFieldCatalog:
         time.sleep(0.02)
         cat.entries()
         assert mock_db.execute_query.call_count == 6  # two reloads
+
+    def test_concurrent_entries_after_expiry_rebuilds_once(self, mock_db):
+        """Two threads hitting an expired cache trigger exactly one _build().
+
+        The api runs gthread workers (#1409), so request threads share one
+        FieldCatalog. Without the rebuild lock, N threads arriving on the same
+        TTL expiry each run the full extended_attributes scan (~255 ms) — the
+        lock's inner TTL re-check makes every waiter serve the fresh cache
+        instead.
+        """
+        cat = FieldCatalog(db_adapter=mock_db, ttl_seconds=60)
+        cat.entries()
+        cat.invalidate()
+
+        real_build = cat._build
+        build_calls = []
+        started = threading.Barrier(3)  # the two workers + this thread
+
+        def slow_build():
+            # Widen the race window: without the lock both threads must
+            # reliably overlap inside _build, or this test cannot catch the
+            # regression.
+            build_calls.append(1)
+            time.sleep(0.2)
+            return real_build()
+
+        cat._build = slow_build
+
+        results = []
+
+        def worker():
+            started.wait()
+            results.append(cat.entries())
+
+        threads = [threading.Thread(target=worker) for _ in range(2)]
+        for t in threads:
+            t.start()
+        started.wait()  # release both threads together
+        for t in threads:
+            t.join()
+
+        assert len(build_calls) == 1, (
+            f"{len(build_calls)} concurrent _build() runs; the rebuild lock "
+            f"serialises them and the loser must re-check the TTL"
+        )
+        assert results[0] is results[1]  # both served the same cached list
 
 
 def entries_by_kind(cat, kind_name):

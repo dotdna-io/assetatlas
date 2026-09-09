@@ -79,6 +79,20 @@ class TestRequireApiKey:
         call_args = app.api_key_service.record_usage.call_args[0]
         assert call_args[0] == 'key-uuid'
 
+    def test_passes_last_used_at_through_to_record_usage(self, client, app):
+        """The throttle gate lives in the service; the decorator hands it the
+        stamp its own validate_key() lookup returned (None when absent)."""
+        from datetime import datetime, timezone
+        last_used = datetime.now(timezone.utc)
+        app.api_key_service.validate_key.return_value = {
+            'id': 'key-uuid', 'user_id': 'u', 'username': 'a', 'role': 'admin',
+            'last_used_at': last_used,
+        }
+        client.get('/test', headers={'X-API-Key': 'aa_goodkey12345678901234567890123456789012'})
+        call_args = app.api_key_service.record_usage.call_args[0]
+        assert call_args[0] == 'key-uuid'
+        assert call_args[2] is last_used
+
 
 class TestRateLimiting:
     def test_rate_limit_returns_429(self, client, app):

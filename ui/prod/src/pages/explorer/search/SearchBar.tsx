@@ -6,8 +6,10 @@ import {
   useEffect,
   useMemo,
 } from 'react';
+import { useQueryClient, CancelledError } from '@tanstack/react-query';
 import type { FieldCatalogEntry } from '@/types/field-id';
 import { assetsApi } from '@/api/assets';
+import type { FieldValuesResponse } from '@/api/assets';
 import { findFieldEntry, getDisplayName, getEntrySource } from '../explorer-utils';
 import { tokenizeQuery } from '../explorer-tokenizer';
 import type { ParseResult } from '../explorer-query-parser';
@@ -638,6 +640,7 @@ function buildDefaultSuggestions(fields: FieldCatalogEntry[]): SuggestionItem[] 
 
 export function SearchBar({ value, onChange, fields, synonymLookup }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const [localValue, setLocalValue] = useState(value);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionMode, setSuggestionMode] = useState<SuggestionMode>(null);
@@ -650,6 +653,9 @@ export function SearchBar({ value, onChange, fields, synonymLookup }: SearchBarP
 
   // Debounce timer for semantic suggestions
   const semanticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounce timer for value suggestions
+  const valueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sequence counter for value suggestion requests
   const valueSuggestionSeqRef = useRef(0);
@@ -681,6 +687,21 @@ export function SearchBar({ value, onChange, fields, synonymLookup }: SearchBarP
   // Memoize default field suggestions
   const defaultSuggestions = useMemo(() => buildDefaultSuggestions(fields), [fields]);
 
+  // Cancel a value fetch that no longer has a context: clears the pending
+  // debounce timer, invalidates any response already in flight (the seq bump
+  // fails its stale check) and aborts the network request. Without this, a
+  // timer scheduled by a value keystroke fires after the cursor has left
+  // value mode and its response re-opens the value panel over a completed
+  // filter.
+  const cancelPendingValueFetch = useCallback(() => {
+    if (valueTimerRef.current) {
+      clearTimeout(valueTimerRef.current);
+      valueTimerRef.current = null;
+    }
+    ++valueSuggestionSeqRef.current;
+    queryClient.cancelQueries({ queryKey: ['assets', 'values'] });
+  }, [queryClient]);
+
   // -------------------------------------------------------------------
   // Fetch value suggestions from API
   // -------------------------------------------------------------------
@@ -689,38 +710,73 @@ export function SearchBar({ value, onChange, fields, synonymLookup }: SearchBarP
       // /api/assets/values requires an encoded FieldId — resolve any token.
       const entry = findFieldEntry(field, fields);
       if (!entry) {
+        cancelPendingValueFetch();
         setShowSuggestions(false);
         return;
       }
       const seq = ++valueSuggestionSeqRef.current;
 
-      assetsApi
-        .getFieldValues({ field: entry.encoded_key, limit: 30, search: partial || undefined })
-        .then((data) => {
-          if (seq !== valueSuggestionSeqRef.current) return; // superseded
-          const values = (data.values || []).map(
-            (v): SuggestionItem => ({
-              text: String(v.value),
-              value: String(v.value),
-              count: v.count,
-            }),
-          );
-          if (values.length === 0) {
+      // A new keystroke supersedes any in-flight value request — abort it
+      // instead of letting the server finish a query nobody is waiting for.
+      queryClient.cancelQueries({ queryKey: ['assets', 'values'] });
+      if (valueTimerRef.current) clearTimeout(valueTimerRef.current);
+
+      const run = () => {
+        const params = {
+          field: entry.encoded_key,
+          limit: 30,
+          search: partial || undefined,
+        };
+        queryClient
+          .fetchQuery<FieldValuesResponse>({
+            // Same key shape as useFieldValues so identical prefixes dedupe
+            // and share the cache (invalidated app-wide by DataVersionWatcher
+            // on every pipeline run). Exact-key only — a 30-of-N page must
+            // never be reused for a longer prefix via client-side filtering.
+            queryKey: ['assets', 'values', JSON.stringify(params)],
+            queryFn: ({ signal }) => assetsApi.getFieldValues(params, { signal }),
+            staleTime: 30_000,
+            retry: false,
+          })
+          .then((data) => {
+            if (seq !== valueSuggestionSeqRef.current) return; // superseded
+            const values = (data.values || []).map(
+              (v): SuggestionItem => ({
+                text: String(v.value),
+                value: String(v.value),
+                count: v.count,
+              }),
+            );
+            if (values.length === 0) {
+              setShowSuggestions(false);
+              return;
+            }
+            setSuggestionMode('value');
+            setSuggestions(values);
+            setSelectedIndex(-1);
+            setShowSuggestions(true);
+          })
+          .catch((err) => {
+            // Self-initiated abort of a superseded request — keep the panel.
+            if (err instanceof CancelledError) return;
+            if (seq !== valueSuggestionSeqRef.current) return;
+            // Silently hide on error
             setShowSuggestions(false);
-            return;
-          }
-          setSuggestionMode('value');
-          setSuggestions(values);
-          setSelectedIndex(-1);
-          setShowSuggestions(true);
-        })
-        .catch(() => {
-          if (seq !== valueSuggestionSeqRef.current) return;
-          // Silently hide on error
-          setShowSuggestions(false);
-        });
+          });
+      };
+
+      // An empty partial comes from focus/click or the post-pick re-open,
+      // where the dropdown must not lag — fetch immediately. Non-empty
+      // partials debounce at 250 ms so a burst of keystrokes costs one
+      // request, offset from the 300 ms grid onChange so the two refetches
+      // don't land on the same tick.
+      if (partial === '') {
+        run();
+      } else {
+        valueTimerRef.current = setTimeout(run, 250);
+      }
     },
-    [fields],
+    [fields, queryClient, cancelPendingValueFetch],
   );
 
   // -------------------------------------------------------------------
@@ -791,6 +847,15 @@ export function SearchBar({ value, onChange, fields, synonymLookup }: SearchBarP
       const ctx = detectContext(inputValue, cursor, synonymLookup, fieldKeySet);
       setContextRef(ctx);
 
+      // The context left value mode, so a debounced value fetch scheduled by
+      // an earlier keystroke must not fire — its response passes the seq
+      // check (nothing else bumps it) and re-opens the value panel over a
+      // completed filter. detectContext always sets `field` on a value
+      // context, so this covers every path that skips fetchValueSuggestions.
+      if (ctx.type !== 'value') {
+        cancelPendingValueFetch();
+      }
+
       if (ctx.type === null) {
         setShowSuggestions(false);
         setSuggestionMode(null);
@@ -855,6 +920,7 @@ export function SearchBar({ value, onChange, fields, synonymLookup }: SearchBarP
       defaultSuggestions,
       fetchValueSuggestions,
       fetchSemanticSuggestions,
+      cancelPendingValueFetch,
     ],
   );
 
@@ -1106,8 +1172,10 @@ export function SearchBar({ value, onChange, fields, synonymLookup }: SearchBarP
     return () => {
       if (onChangeTimerRef.current) clearTimeout(onChangeTimerRef.current);
       if (semanticTimerRef.current) clearTimeout(semanticTimerRef.current);
+      if (valueTimerRef.current) clearTimeout(valueTimerRef.current);
+      queryClient.cancelQueries({ queryKey: ['assets', 'values'] });
     };
-  }, []);
+  }, [queryClient]);
 
   return (
     <div className={styles.searchWrap}>

@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone, timedelta
 
-from src.modules.api_keys.service import ApiKeyService
+from src.modules.api_keys.service import ApiKeyService, LAST_USED_STAMP_INTERVAL_S
 
 
 @pytest.fixture
@@ -125,3 +125,48 @@ class TestDeleteKey:
     def test_delegates_to_repo(self, service, repo):
         repo.delete.return_value = True
         assert service.delete_key('k') is True
+
+
+class TestRecordUsageThrottle:
+    def test_none_last_used_at_stamps(self, service, repo):
+        """A key that was never stamped (NULL) always stamps."""
+        service.record_usage('key-uuid', '10.1.2.3', None)
+        repo.update_last_used.assert_called_once_with(
+            'key-uuid', '10.1.2.3', stale_after_s=LAST_USED_STAMP_INTERVAL_S
+        )
+
+    def test_default_last_used_at_stamps(self, service, repo):
+        """Callers that pass only (key_id, ip) keep stamping (backward compat)."""
+        service.record_usage('key-uuid', '10.1.2.3')
+        repo.update_last_used.assert_called_once()
+
+    def test_fresh_stamp_skips_the_repository(self, service, repo):
+        """Stamped 10 s ago: inside the 60 s window, zero SQL."""
+        fresh = datetime.now(timezone.utc) - timedelta(seconds=10)
+        service.record_usage('key-uuid', '10.1.2.3', fresh)
+        repo.update_last_used.assert_not_called()
+
+    def test_stale_stamp_writes(self, service, repo):
+        """Stamped 120 s ago: outside the window, the UPDATE runs."""
+        stale = datetime.now(timezone.utc) - timedelta(seconds=120)
+        service.record_usage('key-uuid', '10.1.2.3', stale)
+        repo.update_last_used.assert_called_once_with(
+            'key-uuid', '10.1.2.3', stale_after_s=LAST_USED_STAMP_INTERVAL_S
+        )
+
+    def test_naive_datetime_is_read_as_utc(self, service, repo):
+        """A naive stamp 10 s old must still skip, not crash or stamp."""
+        fresh_naive = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=10)
+        service.record_usage('key-uuid', '10.1.2.3', fresh_naive)
+        repo.update_last_used.assert_not_called()
+
+    def test_naive_stale_datetime_still_stamps(self, service, repo):
+        stale_naive = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=120)
+        service.record_usage('key-uuid', '10.1.2.3', stale_naive)
+        repo.update_last_used.assert_called_once()
+
+    def test_interval_constant_drives_the_sql_interval(self, service, repo):
+        """The one module constant feeds both the Python gate and the SQL."""
+        assert LAST_USED_STAMP_INTERVAL_S == 60
+        service.record_usage('key-uuid', '10.1.2.3', None)
+        assert repo.update_last_used.call_args[1]['stale_after_s'] == 60

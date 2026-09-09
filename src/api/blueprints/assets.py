@@ -108,6 +108,8 @@ def get_field_values(query_params: AssetValuesParams):
         limit (int): Max values to return (default: 50)
         search (str): Optional prefix filter on values
         filters (str): Optional JSON-encoded structured filters for context
+        include_total (bool): Pass false to skip the distinct-count query
+            (total_distinct comes back null)
 
     Returns:
         200: Field values with counts
@@ -123,7 +125,8 @@ def get_field_values(query_params: AssetValuesParams):
             field=query_params.field,
             limit=query_params.limit,
             search=query_params.search,
-            filters=filters_list
+            filters=filters_list,
+            include_total=query_params.include_total,
         )
     except InvalidFieldError as e:
         raise ValidationError(str(e))

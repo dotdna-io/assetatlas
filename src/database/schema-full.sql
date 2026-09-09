@@ -977,6 +977,7 @@ CREATE TABLE public.assets (
     posture_rules jsonb DEFAULT '{}'::jsonb NOT NULL,
     os_orig text,
     asset_label_override text,
+    unified_values jsonb,
     CONSTRAINT chk_os_eol_status CHECK (((os_eol_status)::text = ANY (ARRAY[('active'::character varying)::text, ('approaching_eol'::character varying)::text, ('end_of_life'::character varying)::text, ('unknown'::character varying)::text, (NULL::character varying)::text])))
 );
 
@@ -1277,6 +1278,13 @@ COMMENT ON COLUMN public.assets.os_orig IS 'Single raw OS value that corresponds
 
 
 --
+-- Name: COLUMN assets.unified_values; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.assets.unified_values IS 'Materialized Unified Field values keyed by slug. Written only by refresh_unified_values (the pipeline materialize stages); deliberately absent from bulk_upsert_assets, so the TRUNCATE+INSERT rebuild leaves it NULL until the materialize stage runs.';
+
+
+--
 -- Name: assets_history; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1321,7 +1329,8 @@ CREATE TABLE public.assets_history (
     os_eol_date date,
     os_is_lts boolean,
     tags jsonb DEFAULT '{}'::jsonb,
-    posture_rules jsonb DEFAULT '{}'::jsonb
+    posture_rules jsonb DEFAULT '{}'::jsonb,
+    unified_values jsonb
 );
 
 
@@ -1379,6 +1388,13 @@ COMMENT ON COLUMN public.assets_history.confidence_breakdown IS 'Confidence scor
 --
 
 COMMENT ON COLUMN public.assets_history.os_orig IS 'Single raw OS value that corresponds to the selected best OS (os_normalized)';
+
+
+--
+-- Name: COLUMN assets_history.unified_values; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.assets_history.unified_values IS 'Historical snapshot of assets.unified_values at archive time.';
 
 
 --
@@ -5560,10 +5576,10 @@ CREATE INDEX idx_assets_category ON public.assets USING btree (category);
 
 
 --
--- Name: idx_assets_confidence; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_assets_confidence_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_assets_confidence ON public.assets USING btree (confidence);
+CREATE INDEX idx_assets_confidence_id ON public.assets USING btree (confidence DESC NULLS LAST, id ASC);
 
 
 --
@@ -5708,24 +5724,17 @@ COMMENT ON INDEX public.idx_assets_last_run IS 'Links assets to their last gener
 
 
 --
--- Name: idx_assets_last_seen; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_assets_last_seen_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_assets_last_seen ON public.assets USING btree (last_seen DESC);
-
-
---
--- Name: INDEX idx_assets_last_seen; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON INDEX public.idx_assets_last_seen IS 'Supports queries like "show assets not seen in 30 days" for compliance reporting.';
+CREATE INDEX idx_assets_last_seen_id ON public.assets USING btree (last_seen DESC NULLS LAST, id ASC);
 
 
 --
--- Name: idx_assets_last_time; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_assets_last_time_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_assets_last_time ON public.assets USING btree (last_time DESC);
+CREATE INDEX idx_assets_last_time_id ON public.assets USING btree (last_time DESC NULLS LAST, id ASC);
 
 
 --
@@ -7771,8 +7780,16 @@ CREATE TABLE public.unified_fields (
     sources    JSONB NOT NULL,
     data_type  TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    materialized_at TIMESTAMPTZ
 );
+
+
+--
+-- Name: COLUMN unified_fields.materialized_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.unified_fields.materialized_at IS 'Stamped by refresh_unified_values after a successful full-table refresh of this field; NULL means the field has no usable materialized values. Definition changes clear it.';
 
 
 --
@@ -8213,5 +8230,7 @@ INSERT INTO public.schema_migrations (filename) VALUES
     ('144_add_audit_trail_semantic_columns.sql'),
     ('145_repoint_auth_role_granted_rule.sql'),
     ('146_archive_and_drop_auth_audit_log.sql'),
-    ('147_revise_ootb_posture_rules.sql')
+    ('147_revise_ootb_posture_rules.sql'),
+    ('148_add_assets_sort_indexes.sql'),
+    ('149_add_unified_values_materialization.sql')
 ON CONFLICT DO NOTHING;

@@ -190,11 +190,13 @@ def _expires_at_epoch(value: Optional[datetime]) -> Optional[int]:
 def _validate_and_stamp(
     db, plaintext_key: str, client_address: str
 ) -> Optional[Dict[str, Any]]:
-    """Validate an API key and stamp its usage — one worker thread, two queries.
+    """Validate an API key and stamp its usage — one worker thread, ≤2 queries.
 
     Both calls are blocking psycopg2, so they run off the event loop together
-    rather than costing two hops. The stamp is fire-and-forget exactly as the
-    Flask decorator treats it (``src/auth/api_key_auth.py``): a key that
+    rather than costing two hops. The stamp is throttled to one write per key
+    per minute (``LAST_USED_STAMP_INTERVAL_S``) and skipped entirely when the
+    row's ``last_used_at`` is still fresh; it is fire-and-forget exactly as
+    the Flask decorator treats it (``src/auth/api_key_auth.py``): a key that
     authenticates must not be rejected because its usage row would not write.
     """
     service = ApiKeyService(ApiKeyRepository(db))
@@ -203,7 +205,7 @@ def _validate_and_stamp(
         return None
 
     try:
-        service.record_usage(row['id'], client_address)
+        service.record_usage(row['id'], client_address, row.get('last_used_at'))
     except Exception:
         logger.debug("Failed to record API key usage", exc_info=True)
 

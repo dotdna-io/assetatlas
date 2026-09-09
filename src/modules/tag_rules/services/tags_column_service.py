@@ -8,9 +8,39 @@ Source of truth remains asset_tags_v2 (rule-based) and asset_manual_tags (manual
 
 import logging
 from typing import Dict, Any, List
+
+from flask import has_request_context
+
 from src.database.postgres_adapter import PostgreSQLAdapter
+from src.modules.fields.unified.materialize import outside_request_scope
+from src.modules.shared import asset_data_version
 
 logger = logging.getLogger(__name__)
+
+
+def _bump_data_stamp_post_commit(db: PostgreSQLAdapter) -> None:
+    """Bump the asset-data stamp AFTER the fleet-wide tags rewrite is durable.
+
+    The rewrite changes every tag: field's distinct values, so the Explorer
+    field-values cache must invalidate (#1410). On the request path
+    (single-rule execute / execute-all routes) the UPDATE commits only at
+    request teardown, so the bump runs inside outside_request_scope —
+    entering it ends the request scope (the commit) first; a bump fired
+    earlier would let a concurrent /values request read the new stamp,
+    query the pre-write snapshot, and cache stale tag values under the new
+    key until the next bump or the TTL.
+
+    On the pipeline thread (s17 runs this inside the orchestrator's write
+    scope) the scope must NOT be unwound — it is the run's atomic asset
+    transaction — so the bump is skipped there; PipelineService bumps the
+    stamp on every terminal run path. With no active scope (CLI/tests)
+    statements auto-commit, so a direct bump is already post-commit.
+    """
+    if has_request_context():
+        with outside_request_scope(db.conn_manager):
+            asset_data_version.bump()
+    elif not db.conn_manager.is_scope_active():
+        asset_data_version.bump()
 
 
 def refresh_tags_column(db: PostgreSQLAdapter) -> Dict[str, Any]:
@@ -41,11 +71,12 @@ def refresh_tags_column(db: PostgreSQLAdapter) -> Dict[str, Any]:
     """
     try:
         db.execute_query(query, {}, fetch=False)
-        logger.info("Refreshed tags column for all assets")
-        return {"status": "success"}
     except Exception as e:
         logger.error(f"Failed to refresh tags column: {e}", exc_info=True)
         return {"status": "failed", "error": str(e)}
+    logger.info("Refreshed tags column for all assets")
+    _bump_data_stamp_post_commit(db)
+    return {"status": "success"}
 
 
 def refresh_tags_for_assets(db: PostgreSQLAdapter, asset_ids: List[str]) -> None:

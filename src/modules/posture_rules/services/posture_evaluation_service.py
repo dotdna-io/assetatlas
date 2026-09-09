@@ -3,14 +3,44 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Set
 
+from flask import has_request_context
+
 from src.database.postgres_adapter import PostgreSQLAdapter
 from src.modules.fields import InvalidFieldError, coerce_field_id
 from src.modules.fields.resolver import FieldResolver
+from src.modules.fields.unified.materialize import outside_request_scope
 from src.modules.posture_rules.models.rule import PostureState, criteria_logic_to_sql
 from src.modules.posture_rules.repositories.posture_repository import PostureRepository
+from src.modules.shared import asset_data_version
 from src.modules.tag_rules.services.query_engine_service import QueryEngineService
 
 logger = logging.getLogger(__name__)
+
+
+def _bump_data_stamp_post_commit(db: PostgreSQLAdapter) -> None:
+    """Bump the asset-data stamp AFTER the posture write is durable (#1410).
+
+    Evaluation merges per-asset state into assets.posture_rules, which the
+    posture_state:/posture_output: fields read — their distinct values change,
+    so the Explorer field-values cache must invalidate. On the request path
+    (execute_all route, sub-rule CUD re-eval) the write commits only at
+    request teardown, so the bump runs inside outside_request_scope —
+    entering it ends the request scope (the commit) first; a bump fired
+    earlier would let a concurrent /values request read the new stamp, query
+    the pre-write snapshot, and cache stale posture values under the new key
+    until the next bump or the TTL.
+
+    On the pipeline thread (s17b runs inside the orchestrator's write scope)
+    the scope must NOT be unwound — it is the run's atomic asset transaction
+    — so the bump is skipped there; PipelineService bumps the stamp on every
+    terminal run path. With no active scope (CLI/tests) statements
+    auto-commit, so a direct bump is already post-commit.
+    """
+    if has_request_context():
+        with outside_request_scope(db.conn_manager):
+            asset_data_version.bump()
+    elif not db.conn_manager.is_scope_active():
+        asset_data_version.bump()
 
 
 class PostureEvaluationService:
@@ -113,6 +143,8 @@ class PostureEvaluationService:
             except Exception as e:
                 logger.warning("Failed to release posture evaluation lock: %s", e)
 
+        _bump_data_stamp_post_commit(self.db)
+
         duration_ms = int((time.time() - t0) * 1000)
         logger.info(
             "Posture evaluation: assets=%d categories=%d sub_rules=%d duration_ms=%d",
@@ -181,6 +213,8 @@ class PostureEvaluationService:
                 )
             except Exception as e:
                 logger.warning("Failed to release posture evaluation lock: %s", e)
+
+        _bump_data_stamp_post_commit(self.db)
 
         duration_ms = int((time.time() - t0) * 1000)
         logger.info(

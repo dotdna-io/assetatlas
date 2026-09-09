@@ -490,6 +490,7 @@ class TestFieldValues:
         assert resp.status_code == 200
         blueprint_app.asset_service.get_field_values.assert_called_once_with(
             field="static:Hostname", limit=10, search="srv", filters=None,
+            include_total=True,
         )
 
     def test_values_with_context_filters(self, client, authed_headers, blueprint_app):
@@ -507,6 +508,34 @@ class TestFieldValues:
         assert resp.status_code == 200
         call_kwargs = blueprint_app.asset_service.get_field_values.call_args.kwargs
         assert call_kwargs["filters"] is not None
+
+    def test_values_include_total_false(self, client, authed_headers, blueprint_app):
+        """?include_total=false is parsed to a bool and threaded through (#1406)."""
+        blueprint_app.asset_service.get_field_values.return_value = {
+            "field": "static:Hostname", "values": [], "total_distinct": None,
+        }
+
+        resp = client.get(
+            "/api/assets/values?field=static:Hostname&include_total=false",
+            headers=authed_headers("user"),
+        )
+        assert resp.status_code == 200
+        blueprint_app.asset_service.get_field_values.assert_called_once_with(
+            field="static:Hostname", limit=50, search=None, filters=None,
+            include_total=False,
+        )
+        assert resp.get_json()["data"]["total_distinct"] is None
+
+    def test_values_include_total_defaults_true(self, client, authed_headers, blueprint_app):
+        blueprint_app.asset_service.get_field_values.return_value = []
+
+        resp = client.get(
+            "/api/assets/values?field=static:Hostname",
+            headers=authed_headers("user"),
+        )
+        assert resp.status_code == 200
+        call_kwargs = blueprint_app.asset_service.get_field_values.call_args.kwargs
+        assert call_kwargs["include_total"] is True
 
 
 # ---------------------------------------------------------------------------

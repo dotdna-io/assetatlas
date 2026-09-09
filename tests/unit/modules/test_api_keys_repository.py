@@ -103,7 +103,31 @@ class TestUpdate:
 class TestUpdateLastUsed:
     def test_updates_timestamp_and_ip(self, repo, db):
         db.execute_query.return_value = []
-        repo.update_last_used('key-uuid', '10.1.2.3')
+        repo.update_last_used('key-uuid', '10.1.2.3', stale_after_s=60)
         sql = db.execute_query.call_args[0][0]
         assert 'last_used_at' in sql
         assert 'last_used_ip' in sql
+
+    def test_set_clause_is_unchanged(self, repo, db):
+        db.execute_query.return_value = []
+        repo.update_last_used('key-uuid', '10.1.2.3', stale_after_s=60)
+        sql = db.execute_query.call_args[0][0]
+        assert 'SET last_used_at = NOW(), last_used_ip = %(ip)s::inet' in sql
+
+    def test_throttle_predicate_guards_the_write(self, repo, db):
+        """Multi-worker guard: only stamp when never stamped or stale.
+
+        A MagicMock never evaluates SQL, so the predicate itself is asserted
+        on the generated text (see .claude/rules/backend.md -> Tests).
+        """
+        db.execute_query.return_value = []
+        repo.update_last_used('key-uuid', '10.1.2.3', stale_after_s=60)
+        sql = db.execute_query.call_args[0][0]
+        assert 'last_used_at IS NULL' in sql
+        assert "INTERVAL '60 seconds'" in sql
+
+    def test_interval_literal_follows_the_argument(self, repo, db):
+        db.execute_query.return_value = []
+        repo.update_last_used('key-uuid', '10.1.2.3', stale_after_s=120)
+        sql = db.execute_query.call_args[0][0]
+        assert "INTERVAL '120 seconds'" in sql

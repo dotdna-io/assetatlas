@@ -135,6 +135,36 @@ class TestApiKeyBranch:
 
         assert token is not None
 
+    async def test_a_fresh_last_used_at_skips_the_stamp(self, verifier, db):
+        """Stamped 10 s ago: inside the 60 s throttle window, so the request
+        costs only the SELECT — no UPDATE at all."""
+        fresh = datetime.now(timezone.utc) - timedelta(seconds=10)
+        db.execute_query.side_effect = rows_for(key_row(last_used_at=fresh))
+
+        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+            token = await verifier.verify_token(VALID_KEY)
+
+        assert token is not None
+        stamps = [
+            call for call in db.execute_query.call_args_list
+            if 'UPDATE api_keys' in call.args[0]
+        ]
+        assert stamps == []
+
+    async def test_a_stale_last_used_at_stamps_again(self, verifier, db):
+        stale = datetime.now(timezone.utc) - timedelta(seconds=120)
+        db.execute_query.side_effect = rows_for(key_row(last_used_at=stale))
+
+        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+            token = await verifier.verify_token(VALID_KEY)
+
+        assert token is not None
+        stamps = [
+            call for call in db.execute_query.call_args_list
+            if 'UPDATE api_keys' in call.args[0]
+        ]
+        assert len(stamps) == 1
+
     async def test_revoked_key_returns_none(self, verifier, db):
         db.execute_query.side_effect = rows_for(key_row(is_active=False))
 

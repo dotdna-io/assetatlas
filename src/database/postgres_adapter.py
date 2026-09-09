@@ -836,7 +836,18 @@ class PostgreSQLAdapter:
         Returns:
             Number of assets archived
         """
-        query = """
+        # Deferred: this adapter is the bottom of the layering — a module-level
+        # import of the fields module would invert it. On a database without
+        # migration 149 the column is left out of BOTH lists (each probe result
+        # is read once, here, so the two column lists can never disagree).
+        from src.modules.fields.unified.materialize import column_present
+
+        unified = ""
+        history_has = column_present(self, "assets_history", "unified_values")
+        assets_has = column_present(self, "assets", "unified_values")
+        if history_has and assets_has:
+            unified = ", unified_values"
+        query = f"""
             INSERT INTO assets_history (
                 generation_run_id, archived_at,
                 id, asset, hostname, fqdn, ip, mac, sn,
@@ -847,7 +858,7 @@ class PostgreSQLAdapter:
                 confidence,
                 ipam_location, owner, location,
                 user_field, extended_attributes,
-                first_time, last_time, updated_at
+                first_time, last_time, updated_at{unified}
             )
             SELECT
                 %s, NOW(),
@@ -859,7 +870,7 @@ class PostgreSQLAdapter:
                 confidence,
                 ipam_location, owner, location,
                 user_field, extended_attributes,
-                first_time, last_time, updated_at
+                first_time, last_time, updated_at{unified}
             FROM assets
         """
 
@@ -939,7 +950,18 @@ class PostgreSQLAdapter:
         Returns:
             Dictionary with counts: {'assets': count, 'providers': count}
         """
-        query_assets = """
+        # Deferred: this adapter is the bottom of the layering — a module-level
+        # import of the fields module would invert it. On a database without
+        # migration 149 the column is left out of BOTH lists (each probe result
+        # is read once, here, so the two column lists can never disagree).
+        from src.modules.fields.unified.materialize import column_present
+
+        unified = ""
+        history_has = column_present(self, "assets_history", "unified_values")
+        assets_has = column_present(self, "assets", "unified_values")
+        if history_has and assets_has:
+            unified = ", unified_values"
+        query_assets = f"""
             INSERT INTO assets_history (
                 generation_run_id, archived_at,
                 id, asset, hostname, fqdn, ip, mac, sn,
@@ -952,7 +974,7 @@ class PostgreSQLAdapter:
                 ipam_location, owner, location,
                 user_field, extended_attributes, tags, posture_rules,
                 first_time, last_time, updated_at,
-                first_seen, last_seen, missing_since, last_generation_run_id
+                first_seen, last_seen, missing_since, last_generation_run_id{unified}
             )
             SELECT
                 %s, NOW(),
@@ -966,7 +988,7 @@ class PostgreSQLAdapter:
                 ipam_location, owner, location,
                 user_field, extended_attributes, tags, posture_rules,
                 first_time, last_time, updated_at,
-                first_seen, last_seen, missing_since, last_generation_run_id
+                first_seen, last_seen, missing_since, last_generation_run_id{unified}
             FROM assets
         """
 

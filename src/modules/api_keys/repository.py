@@ -122,12 +122,22 @@ class ApiKeyRepository:
         rows = self.db.execute_query(sql, {'key_id': key_id})
         return len(rows) > 0
 
-    def update_last_used(self, key_id: str, ip_address: str) -> None:
-        """Stamp last_used_at and last_used_ip (called on every API request)."""
-        sql = """
+    def update_last_used(self, key_id: str, ip_address: str, stale_after_s: int) -> None:
+        """Stamp last_used_at and last_used_ip, unless another worker just did.
+
+        The WHERE predicate is the multi-worker half of the stamp throttle in
+        ``ApiKeyService.record_usage``: every worker that read a stamp older
+        than ``stale_after_s`` seconds issues this UPDATE, but only the first
+        lands — the rest match zero rows. ``last_used_at`` is therefore
+        accurate to about ``stale_after_s`` seconds, and ``last_used_ip`` is
+        the address of a request within that window.
+        """
+        sql = f"""
             UPDATE api_keys
             SET last_used_at = NOW(), last_used_ip = %(ip)s::inet
             WHERE id = %(key_id)s::uuid
+              AND (last_used_at IS NULL
+                   OR last_used_at < NOW() - INTERVAL '{int(stale_after_s)} seconds')
         """
         self.db.execute_query(sql, {
             'key_id': key_id,

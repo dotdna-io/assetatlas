@@ -7,7 +7,7 @@ split, one chronicle round trip for the batch, the denormalized assets.tags
 refresh scoped to the affected ids, and the all-or-nothing scope.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 from uuid import UUID
 
 import pytest
@@ -147,11 +147,23 @@ def test_all_writes_share_one_scope():
 
     names = [c[0] for c in db.mock_calls]
     assert names[0] == "conn_manager.begin_scope"
-    assert names[-1] == "conn_manager.end_scope"
-    assert names.count("conn_manager.begin_scope") == 1
-    assert names.count("conn_manager.end_scope") == 1
-    # Committed, not rolled back.
-    db.conn_manager.end_scope.assert_called_once_with()
+    # The bulk scope wraps every write (begin … end). The trailing
+    # end/begin pair is the post-commit stamp bump leaving and re-entering
+    # the request scope via outside_request_scope (#1410) — no write runs
+    # after the bulk scope closes.
+    scope_events = [n for n in names
+                    if n in ("conn_manager.begin_scope", "conn_manager.end_scope")]
+    assert scope_events == [
+        "conn_manager.begin_scope",   # _bulk_scope opens
+        "conn_manager.end_scope",     # _bulk_scope closes — all writes inside
+        "conn_manager.end_scope",     # outside_request_scope: the commit
+        "conn_manager.begin_scope",   # …and the request scope is re-begun
+    ]
+    write_idx = [i for i, n in enumerate(names)
+                 if n in ("execute_query", "bulk_write_chronicle_events")]
+    assert max(write_idx) < names.index("conn_manager.end_scope")
+    # Committed, not rolled back — neither end_scope carried an error.
+    assert db.conn_manager.end_scope.call_args_list == [call(), call()]
 
 
 @pytest.mark.parametrize("failing", ["upsert", "refresh"])

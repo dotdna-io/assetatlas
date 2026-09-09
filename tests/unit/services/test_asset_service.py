@@ -474,7 +474,19 @@ class TestAssetServiceFieldValues:
 
         assert result['total_distinct'] == 1
         repo.get_field_values.assert_called_once_with(
-            'static:Category', 20, None, None
+            'static:Category', 20, None, None, include_total=True
+        )
+
+    def test_include_total_false_is_forwarded(self, service):
+        """include_total=False reaches the repo and nulls total_distinct (#1406)."""
+        svc, repo = service
+        repo.get_field_values.return_value = ([{'value': 'Server', 'count': 10}], None)
+
+        result = svc.get_field_values(field='static:Category', include_total=False)
+
+        assert result['total_distinct'] is None
+        repo.get_field_values.assert_called_once_with(
+            'static:Category', 50, None, None, include_total=False
         )
 
     def test_confidence_level_check_uses_decode_not_string_compare(self, service):

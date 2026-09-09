@@ -4,7 +4,7 @@
 import hashlib
 import logging
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List, Optional
 
 from src.modules.api_keys.repository import ApiKeyRepository
@@ -14,6 +14,11 @@ logger = logging.getLogger(__name__)
 # Key format: aa_ prefix + 40 hex chars = 43 chars total
 KEY_PREFIX = 'aa_'
 KEY_RANDOM_BYTES = 20  # 20 bytes = 40 hex chars
+
+# Minimum seconds between last_used_at stamps per key. Drives both the
+# record_usage() gate below and the repository's UPDATE predicate, so the
+# hot path costs zero SQL while the stamp stays accurate to ~this long.
+LAST_USED_STAMP_INTERVAL_S = 60
 
 
 class ApiKeyService:
@@ -87,9 +92,34 @@ class ApiKeyService:
 
         return row
 
-    def record_usage(self, key_id: str, ip_address: str) -> None:
-        """Stamp last_used_at and last_used_ip after a successful request."""
-        self.repo.update_last_used(key_id, ip_address)
+    def record_usage(
+        self,
+        key_id: str,
+        ip_address: str,
+        last_used_at: Optional[datetime] = None,
+    ) -> None:
+        """Stamp last_used_at and last_used_ip after a successful request.
+
+        Throttled to at most one write per key per
+        ``LAST_USED_STAMP_INTERVAL_S``: ``last_used_at`` is the value the
+        caller's ``validate_key()`` lookup already returned, and when it is
+        fresher than the interval this returns without touching the
+        repository (zero SQL on the hot path). ``None`` (never stamped)
+        always stamps; a naive datetime is read as UTC, matching
+        ``validate_key``. The repository repeats the interval as a WHERE
+        predicate so concurrent workers that all read a stale stamp don't
+        all write. The stamp is therefore accurate to ~60 s, and
+        ``last_used_ip`` is the address of a request within that window.
+        """
+        if last_used_at is not None:
+            if last_used_at.tzinfo is None:
+                last_used_at = last_used_at.replace(tzinfo=timezone.utc)
+            age = datetime.now(timezone.utc) - last_used_at
+            if age < timedelta(seconds=LAST_USED_STAMP_INTERVAL_S):
+                return
+        self.repo.update_last_used(
+            key_id, ip_address, stale_after_s=LAST_USED_STAMP_INTERVAL_S
+        )
 
     def list_keys(self) -> List[Dict[str, Any]]:
         """List all API keys."""

@@ -5,7 +5,7 @@ Tests for MergeService — merging two asset records.
 Mocks: PostgreSQLAdapter (db_adapter)
 """
 
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 from uuid import uuid4
 
 import pytest
@@ -425,3 +425,117 @@ class TestLabelOverrideUnmergeRestore:
             primary_id="p", secondary_id="s",
         )
         # No assertion needed — must just not crash.
+
+
+# ===========================================================================
+# Materialized unified-value refresh hook (#1405 part 3)
+# ===========================================================================
+
+class TestMaterializedUnifiedValueRefresh:
+    """Merge/unmerge rewrite the columns unified fields merge over, so the
+    touched rows' materialized values are refreshed per-asset (which never
+    stamps). The hook is best-effort: it must never fail the merge."""
+
+    _MODULE = "src.modules.assets.services.merge_service"
+
+    def _run_merge(self, svc, db, pid, sid):
+        db.execute_query.side_effect = [
+            [_asset_row(asset_id=pid)],       # fetch primary
+            [_asset_row(asset_id=sid)],       # fetch secondary
+            None,                              # _update_primary_asset
+            None,                              # _set_merged_into
+            [],                                # _get_mappings
+            None,                              # _reassign_mappings
+            None,                              # _insert_merge_record
+        ]
+        db.bulk_write_chronicle_events = MagicMock()
+        return svc.execute_merge(pid, sid, 'prefer_primary', 'admin')
+
+    def _run_unmerge(self, svc, db, pid, sid):
+        record = {
+            "id": "merge-record-1",
+            "field_resolutions": {"original_mappings": [],
+                                  "primary_arrays_snapshot": {}},
+        }
+        db.execute_query.side_effect = [
+            [record],                          # _get_merge_record
+            [_asset_row(asset_id=pid)],        # fetch primary
+            [_asset_row(asset_id=sid, merged_into=pid)],  # fetch secondary
+            None,                              # _restore_primary_arrays
+            None,                              # clear merged_into
+            None,                              # _delete_merge_record
+        ]
+        db.bulk_write_chronicle_events = MagicMock()
+        return svc.unmerge(pid, sid, 'admin')
+
+    def _patched(self):
+        return (
+            patch(f"{self._MODULE}.refresh_unified_values"),
+            patch(f"{self._MODULE}.build_field_resolver"),
+            patch(f"{self._MODULE}.UnifiedFieldsRepository"),
+        )
+
+    def test_execute_merge_refreshes_both_assets_never_stamping(self):
+        db = MagicMock()
+        svc = MergeService(db_adapter=db)
+        pid, sid = str(uuid4()), str(uuid4())
+        defs = [{"slug": "f1", "sources": ["static:Category"]}]
+        p_refresh, p_build, p_repo = self._patched()
+        with p_refresh as refresh, p_build as build, p_repo as repo_cls:
+            repo_cls.return_value.list_for_catalog.return_value = defs
+
+            result = self._run_merge(svc, db, pid, sid)
+
+            assert result['merged_asset']['id'] == pid
+            build.assert_called_once_with(db)
+            # per-asset refresh of ALL materializable fields: no slugs filter,
+            # and per-asset refreshes never stamp (helper behaviour)
+            refresh.assert_called_once_with(
+                db, build.return_value, defs, asset_ids=[pid, sid])
+
+    def test_unmerge_refreshes_both_assets(self):
+        db = MagicMock()
+        svc = MergeService(db_adapter=db)
+        pid, sid = str(uuid4()), str(uuid4())
+        defs = [{"slug": "f1", "sources": ["static:Category"]}]
+        p_refresh, p_build, p_repo = self._patched()
+        with p_refresh as refresh, p_build as build, p_repo as repo_cls:
+            repo_cls.return_value.list_for_catalog.return_value = defs
+
+            result = self._run_unmerge(svc, db, pid, sid)
+
+            assert result['restored_asset_id'] == sid
+            refresh.assert_called_once_with(
+                db, build.return_value, defs, asset_ids=[pid, sid])
+
+    def test_refresh_failure_does_not_fail_merge_and_clears_stamps(self):
+        db = MagicMock()
+        svc = MergeService(db_adapter=db)
+        pid, sid = str(uuid4()), str(uuid4())
+        defs = [{"slug": "f1", "sources": ["static:Category"]},
+                {"slug": "posture_mix", "sources": ["posture_state:secured"]}]
+        p_refresh, p_build, p_repo = self._patched()
+        with p_refresh as refresh, p_build as build, p_repo as repo_cls:
+            repo_cls.return_value.list_for_catalog.return_value = defs
+            refresh.side_effect = RuntimeError("boom")
+
+            result = self._run_merge(svc, db, pid, sid)   # must not raise
+
+            assert result['merged_asset']['id'] == pid
+            # only the materializable slug's stamp is cleared
+            repo_cls.return_value.set_materialized_at.assert_called_once_with(
+                ["f1"], False)
+
+    def test_no_unified_fields_means_no_refresh_and_no_resolver_built(self):
+        db = MagicMock()
+        svc = MergeService(db_adapter=db)
+        pid, sid = str(uuid4()), str(uuid4())
+        p_refresh, p_build, p_repo = self._patched()
+        with p_refresh as refresh, p_build as build, p_repo as repo_cls:
+            repo_cls.return_value.list_for_catalog.return_value = []
+
+            result = self._run_merge(svc, db, pid, sid)
+
+            assert result['merged_asset']['id'] == pid
+            refresh.assert_not_called()
+            build.assert_not_called()

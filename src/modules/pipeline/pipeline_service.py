@@ -17,7 +17,9 @@ from uuid import UUID, uuid4
 
 from src.database.postgres_connection import PostgreSQLConnectionManager
 from src.database.postgres_adapter import PostgreSQLAdapter
+from src.modules.fields import catalog_version
 from src.modules.integrations.services.asset_generation_trigger_service import AssetGenerationTriggerService
+from src.modules.shared import asset_data_version
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +247,18 @@ class PipelineService:
             # because _invalidate_dashboard_cache swallows everything — a stale
             # cache must never turn a run into a failure.
             self._invalidate_dashboard_cache(run_id)
+            # A run with work rebuilds `assets`, which can introduce (or drop)
+            # extended_attributes keys — the field catalog's ext:/group:
+            # entries. Bump the shared version stamp so every worker's
+            # FieldCatalog rebuilds within its check interval instead of
+            # waiting out the TTL. Safe here for the same reason as the
+            # dashboard flush: bump() swallows every Redis error and needs no
+            # app context, so it can never turn a run into a failure.
+            catalog_version.bump()
+            # Same for the asset-data stamp (#1410): a run with work rebuilds
+            # `assets`, so every cached Explorer field-values entry is stale.
+            # A bump here changes the cache keys fleet-wide; no pattern delete.
+            asset_data_version.bump()
             # Flush FIRST, stamp SECOND — keep it that way. A client that sees a
             # new data version immediately refetches the dashboard endpoints, so
             # stamping first would let that refetch race the flush and re-cache

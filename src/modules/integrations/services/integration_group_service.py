@@ -9,7 +9,17 @@ import logging
 import uuid as uuid_mod
 from typing import Dict, Any, List, Optional
 
+from src.modules.fields.unified.materialize import (
+    outside_request_scope, refresh_for_sources,
+)
+from src.modules.fields.unified.repository import UnifiedFieldsRepository
+from src.modules.shared import asset_data_version
+from src.modules.shared.field_resolver_factory import build_field_resolver
+
 logger = logging.getLogger(__name__)
+
+# Encoded prefix of integration-group field sources (group:<group>:<attr>).
+_GROUP_SOURCE_PREFIX = "group:"
 
 
 class IntegrationGroupService:
@@ -29,6 +39,37 @@ class IntegrationGroupService:
         """
         self.group_repository = group_repository
         self.integration_repository = integration_repository
+
+    def _refresh_group_sourced_values(self) -> None:
+        """Re-materialize unified fields with a ``group:`` source after a group
+        mutation changed what those sources resolve to. Best-effort: the helper
+        clears the affected stamps on failure (resolver falls back to live
+        SQL), so a refresh problem never fails the mutation. Runs outside the
+        request scope so the mutation commits first — a refresh DB-error can
+        then neither roll it back nor poison its commit.
+
+        The resolver is built DB-direct (not the app-scoped, cache-primed one):
+        the 300s group-mapping cache is invalidated by the CALLER after this
+        service returns, and a refresh built on the stale cached mapping would
+        bake — and stamp — values from the pre-mutation membership.
+
+        Also bumps the asset-data version stamp (#1410): a group mutation
+        changes what every ``group:`` field's values are, so the Explorer
+        field-values cache must invalidate. Placed after the refresh block,
+        outside the request scope, so a Redis error can never roll the
+        mutation back (bump() swallows everything anyway).
+        """
+        db = self.group_repository.db
+        with outside_request_scope(db.conn_manager):
+            try:
+                defs = UnifiedFieldsRepository(db).list_for_catalog()
+                refresh_for_sources(db, build_field_resolver(db), defs, (_GROUP_SOURCE_PREFIX,))
+            except Exception:
+                logger.warning(
+                    "materialized refresh of group-sourced unified fields failed "
+                    "after an integration-group change — stored values stay as "
+                    "they are until the next pipeline run", exc_info=True)
+        asset_data_version.bump()
 
     def list_groups(self) -> List[Dict[str, Any]]:
         """
@@ -62,7 +103,9 @@ class IntegrationGroupService:
         Returns:
             Created group dict
         """
-        return self.group_repository.create(name, integration_type)
+        group = self.group_repository.create(name, integration_type)
+        self._refresh_group_sourced_values()
+        return group
 
     def update_group(self, group_id: str, name: str) -> Optional[Dict[str, Any]]:
         """
@@ -75,7 +118,10 @@ class IntegrationGroupService:
         Returns:
             Updated group dict, or None if not found
         """
-        return self.group_repository.update(group_id, name)
+        group = self.group_repository.update(group_id, name)
+        if group is not None:
+            self._refresh_group_sourced_values()
+        return group
 
     def delete_group(self, group_id: str) -> None:
         """
@@ -91,6 +137,7 @@ class IntegrationGroupService:
         if not group:
             raise ValueError(f"Integration group not found: {group_id}")
         self.group_repository.delete(group_id)
+        self._refresh_group_sourced_values()
 
     def add_members(self, group_id: str, integration_ids: List[str]) -> None:
         """
@@ -133,6 +180,7 @@ class IntegrationGroupService:
                 )
 
         self.group_repository.add_members(group_id, integration_ids)
+        self._refresh_group_sourced_values()
 
     def remove_member(self, group_id: str, integration_id: str) -> None:
         """
@@ -149,6 +197,7 @@ class IntegrationGroupService:
         if not group:
             raise ValueError(f"Integration group not found: {group_id}")
         self.group_repository.remove_member(group_id, integration_id)
+        self._refresh_group_sourced_values()
 
     def get_group_mapping(self) -> Dict[str, str]:
         """

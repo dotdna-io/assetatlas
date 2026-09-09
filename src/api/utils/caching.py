@@ -30,6 +30,8 @@ from threading import Lock
 from flask import request, current_app
 from flask_caching import Cache
 
+from src.modules.fields import catalog_version
+
 logger = logging.getLogger(__name__)
 
 # Cache statistics tracking
@@ -583,6 +585,10 @@ def invalidate_group_mapping_cache():
         logger.info("Invalidated integration group mapping cache")
     except Exception as e:
         logger.error(f"Cache DELETE error for {cache_key}: {e}")
+    # Group membership changes the catalog's integration_group entries; bump
+    # the shared stamp so every worker's FieldCatalog rebuilds (#1413).
+    # Never raises; no-op without Redis.
+    catalog_version.bump()
 
 
 def clear_all_cache():

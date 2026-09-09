@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { FieldCatalogEntry } from '@/types/field-id';
 import { SearchBar } from '../SearchBar';
+import type { ComponentProps } from 'react';
 
 // Value suggestions come from the API; the list-operator tests below drive the
 // value dropdown, so stub it with a couple of Data Source values.
@@ -17,6 +19,17 @@ vi.mock('@/api/assets', () => ({
     getSemanticSuggestions: vi.fn().mockResolvedValue({ suggestions: [] }),
   },
 }));
+
+// SearchBar reads the react-query client for value suggestions — wrap every
+// render in a fresh client.
+function renderSearchBar(props: ComponentProps<typeof SearchBar>) {
+  const queryClient = new QueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <SearchBar {...props} />
+    </QueryClientProvider>,
+  );
+}
 
 // A text field exposing both value-taking and valueless operators, mirroring a
 // live /fields payload.
@@ -40,9 +53,7 @@ const hostnameField: FieldCatalogEntry = {
  *  the named operator suggestion. Returns the captured onChange mock. */
 function selectOperator(label: string) {
   const onChange = vi.fn();
-  render(
-    <SearchBar value="" onChange={onChange} fields={[hostnameField]} synonymLookup={null} />,
-  );
+  renderSearchBar({ value: '', onChange, fields: [hostnameField], synonymLookup: null });
   const input = screen.getByPlaceholderText(/search your asset inventory/i) as HTMLInputElement;
 
   // "hostname " (field + space) -> operator-suggestion context. Pass an explicit
@@ -107,9 +118,7 @@ const dataSourceField: FieldCatalogEntry = {
  *  dropdown surfaces, then click the 'Unifi' value. Returns the input's value
  *  after insertion. */
 async function pickValueAfter(prefix: string): Promise<string> {
-  render(
-    <SearchBar value="" onChange={vi.fn()} fields={[dataSourceField]} synonymLookup={null} />,
-  );
+  renderSearchBar({ value: '', onChange: vi.fn(), fields: [dataSourceField], synonymLookup: null });
   const input = screen.getByPlaceholderText(/search your asset inventory/i) as HTMLInputElement;
   // Mirror real usage: the input is already focused while the user types, so the
   // handler's inputRef.focus() is a no-op (a spurious focus event would re-run
@@ -136,9 +145,7 @@ describe('SearchBar — list operator value chaining', () => {
   });
 
   it('re-opens the value dropdown after a pick so a second value chains', async () => {
-    render(
-      <SearchBar value="" onChange={vi.fn()} fields={[dataSourceField]} synonymLookup={null} />,
-    );
+    renderSearchBar({ value: '', onChange: vi.fn(), fields: [dataSourceField], synonymLookup: null });
     const input = screen.getByPlaceholderText(/search your asset inventory/i) as HTMLInputElement;
     input.focus();
     fireEvent.change(input, { target: { value: '"Data Source" IN ', selectionStart: 17 } });
@@ -153,9 +160,7 @@ describe('SearchBar — list operator value chaining', () => {
   });
 
   it('caps a between filter at two bounds: comma after the first, space after the second', async () => {
-    render(
-      <SearchBar value="" onChange={vi.fn()} fields={[dataSourceField]} synonymLookup={null} />,
-    );
+    renderSearchBar({ value: '', onChange: vi.fn(), fields: [dataSourceField], synonymLookup: null });
     const input = screen.getByPlaceholderText(/search your asset inventory/i) as HTMLInputElement;
     input.focus();
     fireEvent.change(input, { target: { value: '"Data Source" between ', selectionStart: 22 } });

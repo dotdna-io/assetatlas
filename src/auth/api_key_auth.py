@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import logging
 import os
+import threading
 import time
 from functools import wraps
 from typing import Optional
@@ -14,8 +15,11 @@ logger = logging.getLogger(__name__)
 
 API_KEY_HEADER = 'X-API-Key'
 
-# In-memory rate limit counters (per-process; for multi-process, use Redis)
+# In-memory rate limit counters (per-process; for multi-process, use Redis).
+# The lock guards the read-modify-write in _check_rate_limit: without it,
+# threaded workers lose updates and the limit drifts permissive.
 _rate_counters: dict = {}
+_rate_counters_lock = threading.Lock()
 
 
 def _check_rate_limit(key_id: str, limit: Optional[int] = None) -> tuple:
@@ -32,19 +36,20 @@ def _check_rate_limit(key_id: str, limit: Optional[int] = None) -> tuple:
     now = time.time()
     window_start = now - 60
 
-    if key_id not in _rate_counters:
-        _rate_counters[key_id] = []
+    with _rate_counters_lock:
+        if key_id not in _rate_counters:
+            _rate_counters[key_id] = []
 
-    # Prune old timestamps
-    _rate_counters[key_id] = [t for t in _rate_counters[key_id] if t > window_start]
+        # Prune old timestamps
+        _rate_counters[key_id] = [t for t in _rate_counters[key_id] if t > window_start]
 
-    if len(_rate_counters[key_id]) >= limit:
-        oldest = _rate_counters[key_id][0]
-        retry_after = int(oldest + 60 - now) + 1
-        return False, max(retry_after, 1)
+        if len(_rate_counters[key_id]) >= limit:
+            oldest = _rate_counters[key_id][0]
+            retry_after = int(oldest + 60 - now) + 1
+            return False, max(retry_after, 1)
 
-    _rate_counters[key_id].append(now)
-    return True, 0
+        _rate_counters[key_id].append(now)
+        return True, 0
 
 
 def require_api_key(fn=None, *, rate_limit_setting='EXTERNAL_API_RATE_LIMIT'):
@@ -111,9 +116,14 @@ def require_api_key(fn=None, *, rate_limit_setting='EXTERNAL_API_RATE_LIMIT'):
                 'role': key_data['role'],
             }
 
-            # Record usage (fire and forget)
+            # Record usage (fire and forget; throttled to one stamp per
+            # LAST_USED_STAMP_INTERVAL_S inside record_usage)
             try:
-                service.record_usage(key_data['id'], request.remote_addr or '0.0.0.0')
+                service.record_usage(
+                    key_data['id'],
+                    request.remote_addr or '0.0.0.0',
+                    key_data.get('last_used_at'),
+                )
             except Exception:
                 logger.debug("Failed to record API key usage", exc_info=True)
 

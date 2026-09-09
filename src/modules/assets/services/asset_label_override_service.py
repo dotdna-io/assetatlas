@@ -17,6 +17,8 @@ from src.database.postgres_adapter import PostgreSQLAdapter
 from src.modules.asset_generation.repositories.asset_label_override_repository import (
     AssetLabelOverrideRepository,
 )
+from src.modules.fields.unified.materialize import outside_request_scope
+from src.modules.shared import asset_data_version
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +64,8 @@ class AssetLabelOverrideService:
             asset_id, "manual_label_override_set", "set", previous, label, user, now,
         )
 
+        self._bump_data_stamp_post_commit()
+
         logger.info(
             f"Asset {asset_id} label override set: {previous!r} -> {label!r} by {user}"
         )
@@ -94,6 +98,8 @@ class AssetLabelOverrideService:
         self._write_chronicle(
             asset_id, "manual_label_override_cleared", "cleared", previous, None, user, now,
         )
+
+        self._bump_data_stamp_post_commit()
 
         logger.info(
             f"Asset {asset_id} label override cleared (previous={previous!r}) by {user}"
@@ -134,6 +140,20 @@ class AssetLabelOverrideService:
             (value, updated_at, asset_id),
             fetch=False,
         )
+
+    def _bump_data_stamp_post_commit(self) -> None:
+        """Bump the asset-data stamp AFTER the override write commits (#1410).
+
+        Both set/clear change the asset_label virtual field's values, so the
+        Explorer field-values cache must invalidate. Entering
+        outside_request_scope ends the request scope — the commit — first: a
+        bump fired while the transaction is still open would let a concurrent
+        /values request read the new stamp, query the pre-write snapshot, and
+        cache stale values under the new key until the next bump or the TTL.
+        No-op wrapper on a scope-free thread, where statements auto-commit.
+        """
+        with outside_request_scope(self.db.conn_manager):
+            asset_data_version.bump()
 
     def _write_chronicle(
         self,

@@ -553,3 +553,80 @@ class TestApplyAllActiveRefreshesCatalog:
         assert "error" not in results[0], results[0]
         assert results[0]["matched_count"] == 1
         repo.update_matched_count.assert_called_once_with("legal-entities", 1)
+
+
+class TestApplyDatasetMaterializedRefresh:
+    """#1405 part 3: an API-triggered apply rewrites extended_attributes, so
+    enrichment-sourced materialized unified fields must be refreshed. The
+    pipeline path (apply_all_active, s21) is already followed by the
+    enrichment-scoped materialize pass and must NOT refresh per dataset."""
+
+    @patch("src.modules.enrichment.services.enrichment_service.refresh_for_sources")
+    @patch("src.modules.enrichment.services.enrichment_service.UnifiedFieldsRepository")
+    @patch("src.modules.enrichment.services.enrichment_service.build_match_and_apply_query")
+    def test_api_apply_refreshes_enrichment_sourced_fields(
+        self, mock_build_query, mock_repo_cls, mock_refresh,
+        service, mock_repo, mock_db,
+    ):
+        mock_repo.get_dataset.return_value = dict(SAMPLE_DATASET)
+        mock_build_query.return_value = ("UPDATE ...", {"dataset_id": SAMPLE_DATASET_ID})
+        mock_db.execute_query.return_value = [{"id": "a1"}, {"id": "a2"}]
+        defs = [{"slug": "legal_entity", "sources": ["ext:enrichment:legal_entity"]}]
+        mock_repo_cls.return_value.list_for_catalog.return_value = defs
+
+        result = service.apply_dataset(SAMPLE_DATASET_ID)
+
+        assert result["matched_count"] == 2
+        mock_refresh.assert_called_once_with(
+            mock_db, service.field_resolver, defs, ("ext:enrichment:",))
+
+    @patch("src.modules.enrichment.services.enrichment_service.refresh_for_sources")
+    @patch("src.modules.enrichment.services.enrichment_service.UnifiedFieldsRepository")
+    @patch("src.modules.enrichment.services.enrichment_service.build_match_and_apply_query")
+    def test_apply_with_no_matches_does_not_refresh(
+        self, mock_build_query, mock_repo_cls, mock_refresh,
+        service, mock_repo, mock_db,
+    ):
+        mock_repo.get_dataset.return_value = dict(SAMPLE_DATASET)
+        mock_build_query.return_value = ("UPDATE ...", {"dataset_id": SAMPLE_DATASET_ID})
+        mock_db.execute_query.return_value = []
+
+        result = service.apply_dataset(SAMPLE_DATASET_ID)
+
+        assert result["matched_count"] == 0
+        mock_refresh.assert_not_called()
+
+    @patch("src.modules.enrichment.services.enrichment_service.refresh_for_sources")
+    @patch("src.modules.enrichment.services.enrichment_service.UnifiedFieldsRepository")
+    @patch("src.modules.enrichment.services.enrichment_service.build_match_and_apply_query")
+    def test_pipeline_path_does_not_double_refresh(
+        self, mock_build_query, mock_repo_cls, mock_refresh,
+        service, mock_repo, mock_db,
+    ):
+        dataset = dict(SAMPLE_DATASET)
+        mock_repo.get_active_datasets.return_value = [dataset]
+        mock_repo.get_dataset.return_value = dataset
+        mock_build_query.return_value = ("UPDATE ...", {"dataset_id": "x"})
+        mock_db.execute_query.return_value = [{"id": "a1"}]
+
+        results = service.apply_all_active()
+
+        assert len(results) == 1
+        mock_refresh.assert_not_called()
+        mock_repo_cls.assert_not_called()
+
+    @patch("src.modules.enrichment.services.enrichment_service.refresh_for_sources")
+    @patch("src.modules.enrichment.services.enrichment_service.UnifiedFieldsRepository")
+    @patch("src.modules.enrichment.services.enrichment_service.build_match_and_apply_query")
+    def test_refresh_failure_does_not_fail_the_apply(
+        self, mock_build_query, mock_repo_cls, mock_refresh,
+        service, mock_repo, mock_db,
+    ):
+        mock_repo.get_dataset.return_value = dict(SAMPLE_DATASET)
+        mock_build_query.return_value = ("UPDATE ...", {"dataset_id": SAMPLE_DATASET_ID})
+        mock_db.execute_query.return_value = [{"id": "a1"}]
+        mock_repo_cls.return_value.list_for_catalog.side_effect = RuntimeError("boom")
+
+        result = service.apply_dataset(SAMPLE_DATASET_ID)   # must not raise
+
+        assert result["matched_count"] == 1

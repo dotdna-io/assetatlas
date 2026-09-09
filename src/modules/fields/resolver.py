@@ -150,6 +150,8 @@ class FieldResolver:
             return "posture_jsonb", f"posture_rules->'{cat_esc}'->>'{read_esc}'"
         if entry.kind_name == "virtual":
             if entry.unified_function is not None:
+                if entry.materialized:
+                    return self._emit_materialized_unified(entry)
                 # User-defined unified field: generate merge SQL by composing each
                 # source's already-resolved, escaped SQL. Lazy import avoids any
                 # import cycle through the fields package.
@@ -160,3 +162,31 @@ class FieldResolver:
             # Built-in virtual: VIRTUAL_FIELDS[name]["sql"] is trusted — hardcoded.
             return "virtual_expr", VIRTUAL_FIELDS[entry.virtual_name]["sql"]
         raise InvalidFieldError(f"unknown catalog entry kind: {entry.kind_name}")
+
+    @staticmethod
+    def _emit_materialized_unified(entry: CatalogEntry) -> Tuple[str, str]:
+        """Typed reference to the value refresh_unified_values stored under
+        ``unified_values`` for a stamped (materialized_at IS NOT NULL) field.
+
+        These references are proven equal to the live merge SQL by the parity
+        harness (tests/integration/test_unified_values_parity.py). sql_kind
+        stays exactly what the live path emits ("virtual_array" for union,
+        "virtual_expr" otherwise) so every consumer branch — is_native_array,
+        is_jsonb_sourced, unnest, [1], array_length, DATE_TRUNC — behaves
+        identically. The reference is column-relative, so it binds to whichever
+        alias (assets, assets_history h) the consumer's FROM clause provides.
+        """
+        slug = _escape_literal(entry.virtual_name)
+        if entry.unified_function == "union":
+            return "virtual_array", (
+                "COALESCE(ARRAY(SELECT jsonb_array_elements_text("
+                f"CASE WHEN jsonb_typeof(unified_values->'{slug}')='array' "
+                f"THEN unified_values->'{slug}' END)), '{{}}'::text[])"
+            )
+        from src.modules.fields.unified.definition import type_class
+        cls = type_class(entry.data_type)
+        if cls == "number":
+            return "virtual_expr", f"(unified_values->>'{slug}')::numeric"
+        if cls == "date":
+            return "virtual_expr", f"(unified_values->>'{slug}')::timestamptz"
+        return "virtual_expr", f"unified_values->>'{slug}'"

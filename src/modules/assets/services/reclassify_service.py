@@ -23,6 +23,14 @@ from src.modules.asset_generation.repositories.category_override_repository impo
 from src.modules.assets.repositories.custom_subcategory_repository import (
     CustomSubcategoryRepository,
 )
+from src.modules.fields.unified.materialize import (
+    is_materializable,
+    outside_request_scope,
+    refresh_unified_values,
+)
+from src.modules.fields.unified.repository import UnifiedFieldsRepository
+from src.modules.shared import asset_data_version
+from src.modules.shared.field_resolver_factory import build_field_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -252,6 +260,11 @@ class ReclassifyService:
             f"by {user}"
         )
 
+        self._refresh_unified_values([asset_id])
+        # Category/subcategory values changed — invalidate the Explorer
+        # field-values cache (#1410).
+        asset_data_version.bump()
+
         return {
             "id": asset_id,
             "category": category,
@@ -314,6 +327,14 @@ class ReclassifyService:
         logger.info(
             f"Bulk reclassified {len(asset_ids)} assets -> {category}/{subcategory} by {user}"
         )
+        # _bulk_scope's exit only closed its NESTED scope — under Flask the
+        # request scope is still open, so the refresh must leave it (via
+        # outside_request_scope in the helper) to make the reclassify durable
+        # before the hook runs; a hook DB-error then cannot roll it back.
+        self._refresh_unified_values(asset_ids)
+        # Category/subcategory values changed — invalidate the Explorer
+        # field-values cache (#1410).
+        asset_data_version.bump()
         return {"updated": len(asset_ids)}
 
     def get_override_state(self, asset_id: str) -> Dict[str, Any]:
@@ -420,6 +441,11 @@ class ReclassifyService:
         logger.info(
             f"Bulk cleared category overrides for {cleared} of {len(asset_ids)} matched assets by {user}"
         )
+        if overridden_ids:
+            self._refresh_unified_values(overridden_ids)
+            # Restored categories change the distinct values — invalidate the
+            # Explorer field-values cache (#1410).
+            asset_data_version.bump()
         return {"cleared": cleared}
 
     @contextmanager
@@ -442,6 +468,44 @@ class ReclassifyService:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    def _refresh_unified_values(self, asset_ids: List[str]) -> None:
+        """Recompute stored unified-field values for the reclassified assets.
+
+        category/subcategory are unified-field inputs, so the materialized
+        values of the touched rows must be refreshed — per-asset, hence never
+        stamped. ALL materializable fields are refreshed rather than only
+        static:Category/static:Subcategory-sourced ones: the per-asset UPDATE
+        is one statement either way, and a single helper shape covers both
+        this and the merge hook. Runs inside outside_request_scope: the
+        caller's writes (single-asset UPDATEs, or the bulk scope's work whose
+        inner end_scope does NOT commit under Flask) commit at the scope exit
+        FIRST, so a hook failure can neither roll the user's reclassify back
+        nor poison its transaction; on failure the affected stamps are
+        cleared — durably, on the per-call path — so the resolver falls back
+        to the live merge expression until the next pipeline run
+        re-materializes.
+        """
+        slugs: List[str] = []
+        with outside_request_scope(self.db.conn_manager):
+            try:
+                defs = UnifiedFieldsRepository(self.db).list_for_catalog()
+                slugs = [d["slug"] for d in defs if is_materializable(d)]
+                if not slugs:
+                    return
+                refresh_unified_values(
+                    self.db, build_field_resolver(self.db), defs, asset_ids=asset_ids)
+            except Exception:
+                logger.warning(
+                    "materialized unified-value refresh failed for %d asset(s) — "
+                    "clearing materialized stamps (live SQL until the next "
+                    "pipeline run)", len(asset_ids), exc_info=True)
+                if slugs:
+                    try:
+                        UnifiedFieldsRepository(self.db).set_materialized_at(slugs, False)
+                    except Exception:
+                        logger.warning(
+                            "could not clear materialized_at for %s", slugs, exc_info=True)
 
     def _load_categories(self) -> List[Dict[str, Any]]:
         """Load categories from data/categories.json."""

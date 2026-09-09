@@ -15,6 +15,7 @@ import uuid
 from unittest.mock import MagicMock
 
 from prometheus_client import CollectorRegistry, REGISTRY
+import psycopg2
 
 from src.api.utils import metrics as m
 
@@ -123,18 +124,47 @@ def test_asset_generation_stats_failure_counts_failed():
 
 
 class _FakeDB:
-    """Minimal db_adapter stub: routes COUNT queries by table name."""
+    """Minimal db_adapter stub: routes gauge queries by source table.
 
-    def __init__(self, alerts_rows, assets_rows):
+    ``assets_exc`` makes the matview query raise instead of returning rows —
+    the real failure modes (unpopulated matview, lock timeout) are RAISES, not
+    empty results.
+    """
+
+    def __init__(self, alerts_rows, assets_rows, fallback_rows=None,
+                 assets_exc=None):
         self._alerts = alerts_rows
         self._assets = assets_rows
+        self._fallback = fallback_rows or []
+        self._assets_exc = assets_exc
+        self.queries = []
 
     def execute_query(self, query, *args, **kwargs):
+        self.queries.append(query)
         if "FROM alerts" in query:
             return self._alerts
-        if "FROM assets" in query:
+        if "FROM mv_dashboard_summary" in query:
+            if self._assets_exc is not None:
+                raise self._assets_exc
             return self._assets
+        if "FROM pipeline_runs" in query:
+            return self._fallback
         return []
+
+
+def test_db_gauge_queries_never_read_assets():
+    """The SQL text is the behaviour here — a MagicMock DB never evaluates it."""
+    assert "FROM mv_dashboard_summary" in m._ASSETS_TOTAL_SQL
+    assert "FROM pipeline_runs" in m._ASSETS_TOTAL_FALLBACK_SQL
+    # The fallback must pick the latest run that actually rebuilt `assets`:
+    # completed (a failed run rolled back and never changed the table), with a
+    # recorded count, excluding provable no-op completions.
+    assert "status = 'completed'" in m._ASSETS_TOTAL_FALLBACK_SQL
+    assert "stats->>'total_assets' IS NOT NULL" in m._ASSETS_TOTAL_FALLBACK_SQL
+    assert "batches_processed" in m._ASSETS_TOTAL_FALLBACK_SQL
+    # The gauge must never block on the pipeline's TRUNCATE assets lock.
+    assert "FROM assets" not in m._ASSETS_TOTAL_SQL
+    assert "FROM assets" not in m._ASSETS_TOTAL_FALLBACK_SQL
 
 
 def test_db_gauge_collector_reports_alerts_by_severity_and_assets():
@@ -154,6 +184,123 @@ def test_db_gauge_collector_reports_alerts_by_severity_and_assets():
     )
     assert reg.get_sample_value("assetatlas_active_alerts", {"severity": "high"}) == 5.0
     assert reg.get_sample_value("assetatlas_assets_total") == 1234.0
+    # The matview answered, so the pipeline_runs fallback is never queried.
+    assert not any("FROM pipeline_runs" in q for q in db.queries)
+    # Asserted on what collect() actually handed to execute_query, not on the
+    # module constants: every query must bound its lock wait in the SAME
+    # execute string (a separate SET LOCAL is rolled back with the request
+    # scope; a session-level SET leaks onto the pooled connection).
+    assert db.queries and all(
+        q.startswith("SET LOCAL lock_timeout = '2s';") for q in db.queries
+    )
+
+
+def test_db_gauge_collector_falls_back_when_matview_unusable():
+    # The only two primary-query errors that mean "use pipeline_runs": the
+    # fresh-install unpopulated matview (55000) and a DB from before the
+    # matview's migration (42P01).
+    for exc in (
+        psycopg2.errors.ObjectNotInPrerequisiteState(
+            'materialized view "mv_dashboard_summary" has not been populated'),
+        psycopg2.errors.UndefinedTable(
+            'relation "mv_dashboard_summary" does not exist'),
+    ):
+        db = _FakeDB(
+            alerts_rows=[{"severity": "high", "n": 1}],
+            assets_rows=[],
+            fallback_rows=[{"n": "4321"}],
+            assets_exc=exc,
+        )
+        reg = CollectorRegistry()
+        reg.register(m.DatabaseGaugeCollector(db))
+
+        assert reg.get_sample_value("assetatlas_assets_total") == 4321.0
+        fallback_qs = [q for q in db.queries if "FROM pipeline_runs" in q]
+        assert len(fallback_qs) == 1
+        # The fallback SQL actually handed to the DB picks a completed run
+        # that rebuilt `assets`, and is lock-bounded in the same string.
+        assert "status = 'completed'" in fallback_qs[0]
+        assert fallback_qs[0].startswith("SET LOCAL lock_timeout = '2s';")
+        # The other gauge is unaffected.
+        assert (
+            reg.get_sample_value("assetatlas_active_alerts", {"severity": "high"})
+            == 1.0
+        )
+
+
+def test_db_gauge_collector_lock_error_skips_fallback():
+    # A lock/timeout on the matview says nothing about whether it is
+    # populated: no fallback query, no sample for that scrape.
+    for exc in (
+        psycopg2.errors.LockNotAvailable("lock not available"),
+        psycopg2.errors.QueryCanceled("statement timeout"),
+    ):
+        db = _FakeDB(
+            alerts_rows=[{"severity": "high", "n": 1}],
+            assets_rows=[],
+            fallback_rows=[{"n": "4321"}],
+            assets_exc=exc,
+        )
+        reg = CollectorRegistry()
+        reg.register(m.DatabaseGaugeCollector(db))
+
+        assert reg.get_sample_value("assetatlas_assets_total") is None
+        assert not any("FROM pipeline_runs" in q for q in db.queries)
+        assert (
+            reg.get_sample_value("assetatlas_active_alerts", {"severity": "high"})
+            == 1.0
+        )
+
+
+def test_db_gauge_collector_fallback_without_total_yields_no_sample():
+    # The fallback ran (matview unpopulated) but no completed run carries a
+    # total (stats nullable) -> no sample, never a misleading zero.
+    for fallback_rows in ([], [{"n": None}]):
+        db = _FakeDB(
+            alerts_rows=[{"severity": "high", "n": 1}],
+            assets_rows=[],
+            fallback_rows=fallback_rows,
+            assets_exc=psycopg2.errors.ObjectNotInPrerequisiteState(
+                "not populated"),
+        )
+        reg = CollectorRegistry()
+        reg.register(m.DatabaseGaugeCollector(db))
+
+        assert reg.get_sample_value("assetatlas_assets_total") is None
+        # The other gauge is unaffected.
+        assert (
+            reg.get_sample_value("assetatlas_active_alerts", {"severity": "high"})
+            == 1.0
+        )
+
+
+def test_db_gauge_collector_one_failing_query_does_not_sink_the_other():
+    class _AlertsBoomDB:
+        def execute_query(self, query, *a, **k):
+            if "FROM alerts" in query:
+                raise RuntimeError("lock not available")
+            if "FROM mv_dashboard_summary" in query:
+                return [{"n": 77}]
+            return []
+
+    reg = CollectorRegistry()
+    reg.register(m.DatabaseGaugeCollector(_AlertsBoomDB()))
+    assert reg.get_sample_value("assetatlas_assets_total") == 77.0
+    assert (
+        reg.get_sample_value("assetatlas_active_alerts", {"severity": "high"})
+        is None
+    )
+
+    class _AssetsBoomDB:
+        def execute_query(self, query, *a, **k):
+            if "FROM alerts" in query:
+                return [{"severity": "low", "n": 3}]
+            raise RuntimeError("lock not available")
+
+    reg = CollectorRegistry()
+    reg.register(m.DatabaseGaugeCollector(_AssetsBoomDB()))
+    assert reg.get_sample_value("assetatlas_assets_total") is None
+    assert reg.get_sample_value("assetatlas_active_alerts", {"severity": "low"}) == 3.0
 
 
 def test_db_gauge_collector_is_best_effort_on_db_error():

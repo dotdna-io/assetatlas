@@ -67,6 +67,16 @@ def test_no_app_context_resolver_resolves_integration_group_field():
     assert "siteId" in where
 
 
+def test_no_app_context_resolver_wires_the_shared_version_source():
+    # The scheduler path's catalog must poll the shared version stamp (#1413)
+    # like the app-scoped one; the source degrades to None/no-op without
+    # REDIS_URL, so the no-context path works with or without Redis.
+    from src.modules.fields import catalog_version
+    with patch("flask.has_app_context", return_value=False):
+        resolver = _build_pipeline_field_resolver(_FakeDB())
+    assert resolver.catalog()._version_source is catalog_version.default_source()
+
+
 def test_app_context_resolver_is_reused_not_rebuilt():
     # Inside a Flask app context the helper must return the app-scoped resolver
     # as-is (its catalog cache is shared/primed) rather than building a local one.

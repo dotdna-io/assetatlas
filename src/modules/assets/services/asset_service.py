@@ -153,6 +153,7 @@ class AssetService:
         self,
         repository: AssetRepository,
         alerts_repository: Optional[AlertsRepository] = None,
+        field_values_cache=None,
     ):
         """
         Initialize service with repositories.
@@ -163,9 +164,14 @@ class AssetService:
                 the asset-detail header badge. Optional (defaults to None) so
                 existing single-repository callers still construct the service;
                 when absent, alert_count falls back to 0.
+            field_values_cache: Optional FieldValuesCache for get_field_values
+                (#1410). Optional so existing callers keep constructing the
+                service with repositories only; when absent, values are always
+                computed live.
         """
         self.repo = repository
         self.alerts_repo = alerts_repository
+        self.field_values_cache = field_values_cache
 
     def get_asset_detail(self, asset_id: str) -> Optional[AssetDetailResponse]:
         """
@@ -440,7 +446,8 @@ class AssetService:
         field: str,
         limit: int = 50,
         search: Optional[str] = None,
-        filters: Optional[List[Dict[str, Any]]] = None
+        filters: Optional[List[Dict[str, Any]]] = None,
+        include_total: bool = True
     ) -> Dict[str, Any]:
         """
         Get distinct values and counts for a field.
@@ -450,9 +457,12 @@ class AssetService:
             limit: Max values to return
             search: Optional prefix filter on values
             filters: Optional structured filters for context (typed field_id)
+            include_total: When False, skip the distinct-count query and
+                     return total_distinct as None
 
         Returns:
-            Dict with field, values list, total_distinct
+            Dict with field, values list, total_distinct (None when
+            include_total is False)
         """
         # Static enum values for the virtual confidence_level field.
         # Decode to a typed FieldId so the check is format-independent.
@@ -469,15 +479,42 @@ class AssetService:
                 'total_distinct': 3
             }
 
-        values, total_distinct = self.repo.get_field_values(
-            field, limit, search, filters
+        # virtual:alert is answered from the `alerts` table, whose writers
+        # (scheduler interval evaluation, ack/resolve routes, the alertmanager
+        # webhook) never bump the version stamps — a stamp-keyed entry would
+        # serve a stale alert list until the TTL. The query is tens of rows:
+        # skip the cache entirely (same bypass class as confidence_level).
+        cacheable = not (
+            isinstance(field_id, VirtualField) and field_id.name == 'alert'
         )
 
-        return {
+        # Stamp-keyed Redis cache (#1410): repeat requests are served without
+        # scanning assets; any asset-data write bumps a stamp and implicitly
+        # invalidates every entry. Strict no-op when Redis is unavailable.
+        cache_payload = {
+            'field': field,
+            'limit': limit,
+            'search': search,
+            'filters': filters,
+            'include_total': include_total,
+        }
+        if self.field_values_cache is not None and cacheable:
+            cached = self.field_values_cache.get(cache_payload)
+            if cached is not None:
+                return cached
+
+        values, total_distinct = self.repo.get_field_values(
+            field, limit, search, filters, include_total=include_total
+        )
+
+        result = {
             'field': field,
             'values': values,
             'total_distinct': total_distinct
         }
+        if self.field_values_cache is not None and cacheable:
+            self.field_values_cache.set(cache_payload, result)
+        return result
 
     def aggregate_assets(
         self,
