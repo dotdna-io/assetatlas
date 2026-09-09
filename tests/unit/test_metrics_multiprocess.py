@@ -31,9 +31,23 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 METRICS = PROJECT_ROOT / "src" / "api" / "utils" / "metrics.py"
 GUNICORN_CONF = PROJECT_ROOT / "gunicorn.conf.py"
 DOCKERFILE = PROJECT_ROOT / "Dockerfile"
+# The root docker-compose.yml is the DEV compose; scrub.py excludes it from the
+# published mirror (#1282), where tests/ still ships and tests.yml still runs.
+# So that one parameter must skip on the mirror -- but ONLY there. The marker is
+# scripts/publish/: scrub.py excludes it unconditionally (it holds the scrubbing
+# data and must never ship), so its presence positively identifies a dev
+# checkout, where a missing root compose is a real regression and the test must
+# FAIL, not skip. Do not "simplify" this to `not compose.exists()` -- that turns
+# a deleted root compose on dev into a silent green run. Same marker and same
+# reasoning as tests/unit/test_app_image_contents.py (#1340).
+_ON_PUBLIC_MIRROR = not (PROJECT_ROOT / "scripts" / "publish").is_dir()
+_SKIP_ON_MIRROR = pytest.mark.skipif(
+    _ON_PUBLIC_MIRROR,
+    reason="the root dev compose is excluded from the published mirror (#1282)",
+)
 COMPOSE_FILES = (
     PROJECT_ROOT / "deploy" / "compose" / "docker-compose.yml",
-    PROJECT_ROOT / "docker-compose.yml",
+    pytest.param(PROJECT_ROOT / "docker-compose.yml", marks=_SKIP_ON_MIRROR),
 )
 
 # Gauges whose values are genuinely per-worker, so the fleet number is the sum
@@ -93,7 +107,7 @@ def test_every_gauge_declares_a_multiprocess_mode():
 @pytest.mark.parametrize(
     "compose",
     COMPOSE_FILES,
-    ids=lambda p: str(p.relative_to(PROJECT_ROOT)),
+    ids=["deploy/compose/docker-compose.yml", "docker-compose.yml"],
 )
 def test_compose_requires_nothing_the_published_image_may_lack(compose):
     """No compose file may override the api's gunicorn command.
