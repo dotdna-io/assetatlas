@@ -19,6 +19,9 @@ These assert against the real repository tree, not fixtures. That is the point.
 """
 
 import re
+import shlex
+import subprocess
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -362,4 +365,117 @@ def test_offline_build_builds_the_bridge_and_refuses_a_bundle_missing_images():
     )
     assert "missing_imgs" in text and "Refusing to write a bundle" in text, (
         "build-offline.sh can silently ship a bundle with app images missing again"
+    )
+
+
+def _extract_retag_with_retry() -> str:
+    """Pull release.yml's `retag_with_retry` shell function out of the YAML.
+
+    The function lives inline in a `run:` block, so there is no way to import
+    it. Extracting the real text and executing it is still worth more than
+    grepping for keywords: the tests below assert what the retry DOES, which is
+    the property that broke, not which words appear near it.
+    """
+    text = RELEASE_WORKFLOW.read_text()
+    m = re.search(r"^( *)retag_with_retry\(\) \{\n(.*?)^\1\}\n", text, re.S | re.M)
+    assert m, "release.yml no longer defines retag_with_retry()"
+    return textwrap.dedent(m.group(0))
+
+
+# Each case drives a stub `docker` that fails with the given output. `attempts`
+# is how many times the stub must be called; `rc` is the function's exit status.
+_RETRY_CASES = [
+    # (id, docker stderr text, succeed_on_attempt, expected_rc, expected_attempts)
+    ("success", "", 1, 0, 1),
+    # The v2026.37.2 failure (run 34437271715): a GHCR token-exchange blip on
+    # the cross-repo blob copy. Must be retried — every image was already built.
+    (
+        "transient_401",
+        "401 Unauthorized\nunauthorized: unauthenticated: "
+        "User cannot be authenticated with the token provided.",
+        3,
+        0,
+        3,
+    ),
+    # A real permissions fault must still fail on the FIRST attempt. Retrying
+    # this is what the step's comment forbids: it buries a broken release
+    # (unlinked package, missing write role) under minutes of backoff.
+    ("permission_denied", "denied: permission_denied: write_package", 0, 1, 1),
+    # The v2026.32.8 failure: retried on the long schedule, all 4 attempts.
+    ("rate_limit", "You have exceeded a secondary rate limit", 0, 1, 4),
+    # Credentials that are actually wrong 401 forever — bounded, not infinite.
+    ("persistent_401", "401 Unauthorized\nunauthenticated", 0, 1, 4),
+]
+
+
+@_SKIP_ON_MIRROR
+@pytest.mark.parametrize(
+    "output,succeed_on,expected_rc,expected_attempts",
+    [c[1:] for c in _RETRY_CASES],
+    ids=[c[0] for c in _RETRY_CASES],
+)
+def test_retag_retries_transient_401_but_not_permission_denied(
+    tmp_path, output, succeed_on, expected_rc, expected_attempts
+):
+    """The retag retry must separate blips from genuinely broken releases.
+
+    v2026.37.2 died because the matcher recognised only the rate limit, so an
+    intermittent `401 Unauthorized` on `imagetools create` — which cleared
+    within seconds, and which the identical command did not hit with a PAT —
+    failed a release whose images were all built. Widening the matcher is only
+    safe while 403 `permission_denied` still fails fast, so both halves are
+    asserted here together.
+    """
+    counter = tmp_path / "attempts"
+    counter.write_text("0")
+    script = tmp_path / "drive.sh"
+    script.write_text(
+        "set -uo pipefail\n"
+        f". {tmp_path / 'fn.sh'}\n"
+        'SRC="ghcr.io/o/assetatlas-api:1"\n'
+        # Stub the clock so the real 120s/480s backoffs cost nothing.
+        "sleep() { echo \"SLEPT ${1}s\"; }\n"
+        "docker() {\n"
+        f"  n=$(cat {counter}); n=$((n + 1)); echo \"$n\" > {counter}\n"
+        f"  if [ {succeed_on} -gt 0 ] && [ \"$n\" -ge {succeed_on} ]; then return 0; fi\n"
+        f"  printf '%s\\n' {shlex.quote(output)}\n"
+        "  return 1\n"
+        "}\n"
+        'retag_with_retry "ghcr.io/o/assetatlas-mcp:1"\n'
+    )
+    (tmp_path / "fn.sh").write_text(_extract_retag_with_retry())
+
+    proc = subprocess.run(
+        ["bash", str(script)], capture_output=True, text=True, timeout=60
+    )
+    assert proc.returncode == expected_rc, (
+        f"expected rc={expected_rc}, got {proc.returncode}\n{proc.stdout}\n{proc.stderr}"
+    )
+    assert int(counter.read_text()) == expected_attempts, (
+        f"expected {expected_attempts} docker invocation(s), got "
+        f"{counter.read_text().strip()}\n{proc.stdout}\n{proc.stderr}"
+    )
+
+
+@_SKIP_ON_MIRROR
+def test_transient_401_backoff_stays_short():
+    """A 401 must not inherit the rate limit's minutes-long schedule.
+
+    Retrying 401 is only safe because wrong credentials still fail the job in
+    about a minute. If someone folds the two classes into one matcher, the
+    delays collapse onto 120s/240s/480s and a bad token costs ~14 minutes
+    before the release fails — the exact cost the step's comment refuses to pay.
+    """
+    fn = _extract_retag_with_retry()
+    assert re.search(r"401 unauthorized|unauthenticated", fn, re.I), (
+        "retag_with_retry no longer recognises the transient 401 signature"
+    )
+    # The 401 arm's delay must be seconds; the rate-limit arm's must be minutes.
+    assert "5 * 3 ** (attempt - 1)" in fn, (
+        "the transient-401 backoff (5s/15s/45s) is gone — a blip now either "
+        "fails fast again or waits out the rate-limit schedule"
+    )
+    assert "120 << (attempt - 1)" in fn, (
+        "the rate-limit backoff must stay minutes-long (120s/240s/480s); "
+        "a 5s retry burns every attempt inside GHCR's cooldown (v2026.32.8)"
     )
