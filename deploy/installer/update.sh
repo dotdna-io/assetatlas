@@ -25,12 +25,24 @@
 #                           detects an existing install and dispatches here:
 #                           the operator asked to install, so applying
 #                           unattended would silently reinterpret that as
-#                           "back up and upgrade". A bare --apply-local (the
-#                           air-gapped entry point) does not prompt.
+#                           "back up and upgrade". A non-linear version jump
+#                           folds its warning into THIS one ask — a separate
+#                           question first would foreclose the dry-run answer.
+#                           A bare --apply-local (the air-gapped entry point)
+#                           does not prompt HERE — the version check may still
+#                           ask about a non-linear jump.
 #
 # Behavior (atomic body, reached via --apply-local or the self-fetch apply):
 #   - Pre-flight checks (disk, in-flight pipeline, cert)
-#   - Version check (refuses non-linear jumps unless --allow-version-skip)
+#   - Version check (a non-linear jump — more than one release week — is
+#     DECIDED at a prompt when a terminal is present: on the self-fetch
+#     front-end the warning precedes the usual [u/d/c] BEFORE anything is
+#     downloaded or extracted, and choosing "update" carries the consent into
+#     the re-exec as --allow-version-skip; under --confirm it folds into that
+#     same [u/d/c]; a bare --apply-local asks a standalone [y/N] defaulting to
+#     NO. With no terminal or under --unattended/-y the jump is refused
+#     outright, before any download, with a message naming the override;
+#     --allow-version-skip skips the check entirely)
 #   - DB backup + state snapshot before any destructive operation, including a
 #     baseline of which containers were ALREADY not healthy (#1211)
 #   - Apply migrations + pull/load new images + restart services
@@ -50,7 +62,14 @@
 #   update.sh --rollback [v2026.17.30]  # named snapshot, or the most recent
 #
 # Other flags:
-#   --allow-version-skip   bypass linear-version check (for catch-up upgrades)
+#   --allow-version-skip   skip the linear-version check entirely (for catch-up
+#                          upgrades). Without it, a non-linear jump PROMPTS when
+#                          a terminal is present (declining exits 0 with nothing
+#                          touched) and is refused otherwise. The refusal names
+#                          all three spellings of the override:
+#                          update.sh --allow-version-skip
+#                          assetatlas update --allow-version-skip
+#                          curl -fsSL https://get.assetatlas.com | sudo bash -s -- --allow-version-skip
 #   --force                bypass in-flight pipeline check
 #   --unattended           no interactive prompts (assumes yes for rollback confirmation)
 #   --install-dir PATH     override install directory (default: the tree this
@@ -152,7 +171,7 @@ while [ $# -gt 0 ]; do
         # --confirm is added by install.sh's dispatch on an existing install;
         # the gate itself runs after the version check, before the backup.
         --confirm)            CONFIRM=1 ;;
-        -h|--help)            sed -n '2,57p' "$0"; exit 0 ;;
+        -h|--help)            sed -n '2,76p' "$0"; exit 0 ;;
         --with-monitoring|--no-monitoring|--no-systemd|--with-demo-data)
             log_info "Ignoring install-only flag on update: $1 (this setting persists from install)." ;;
         --install-mode)
@@ -414,6 +433,22 @@ fi
 
 # --- Self-fetch front-end (skipped for --apply-local, i.e. the bundle is
 #     already extracted into $INSTALL_DIR by the header or by our own apply step) ---
+
+# nonlinear_refusal <from> <to> : the one refusal every non-linear gate shares,
+# so the two call sites (front-end gate below, step 2 of the atomic body) can
+# never drift onto different advice. A non-linear jump is refused when nobody
+# can be asked (no terminal) or the run said not to ask (--unattended/-y):
+# automation must never be silently carried across many releases. The message
+# names ALL three spellings of the override because the operator may have
+# arrived from any entry point: the bare flag for a direct update.sh run, the
+# assetatlas CLI pass-through, and `sudo bash -s --` for the curl one-liner,
+# where a flag appended to plain `sudo bash` is eaten by bash itself and never
+# reaches the installer. The leading "Non-linear update <from> → <to>" is
+# load-bearing: test_update_dispatch.bats pins it as proof the run stopped here.
+nonlinear_refusal() {
+    die "Non-linear update $1 → $2. Pass --allow-version-skip to override: update.sh --allow-version-skip, assetatlas update --allow-version-skip, or through the curl one-liner — curl -fsSL https://get.assetatlas.com | sudo bash -s -- --allow-version-skip (a flag appended to plain 'sudo bash' is eaten by bash and never reaches the installer)."
+}
+
 if [ "$APPLY_LOCAL" != "1" ]; then
     log_info "Checking for the latest AssetAtlas version..."
     # Run resolve_latest_version in the CURRENT shell (not a command-substitution
@@ -429,6 +464,38 @@ if [ "$APPLY_LOCAL" != "1" ]; then
         exit 0
     fi
     log_info "Update available: $CURRENT -> $LATEST"
+    # A non-linear jump (more than one release week) is decided HERE — before
+    # download_bundle, before the extract over $INSTALL_DIR — never left for
+    # the re-exec'd atomic body to litigate after the install tree was already
+    # overwritten: the re-exec below carries --yes, so the body's version check
+    # could only DIE there, which was the round-1 dead end. Both versions are
+    # known at this point, and the existing [u/d/c] is the ONE question asked:
+    #
+    # No terminal, or --unattended/-y: refuse outright. The no-tty arm must be
+    # THIS explicit runtime_have_tty check — update_decide_mode cannot be the
+    # gate, because its bare `read` on no tty returns empty and silently lands
+    # on the dry-run default, a fall-through rather than a decision.
+    #
+    # A terminal and none of those flags: warn, and let update_decide_mode
+    # decide — its dry-run default is the safe answer an unsure operator can
+    # give. FRONTEND_NONLINEAR records that the warning was shown, so a choice
+    # of "update" can carry the consent into the re-exec (see APPLY_ARGS).
+    #
+    # --dry-run skips the gate entirely: it only ever previews into a scratch
+    # dir and reports, and the report is where the jump is flagged NON-LINEAR.
+    # An unreadable installed version (the 0.0.0-pre-system-info sentinel)
+    # skips it too — same carve-out the atomic body's check makes.
+    FRONTEND_NONLINEAR=0
+    if [ "$DRY_RUN" != "1" ] && [ "$ALLOW_VERSION_SKIP" != "1" ] \
+        && [ "$CURRENT" != "0.0.0-pre-system-info" ] \
+        && ! is_linear_jump "$CURRENT" "$LATEST"; then
+        if [ "$ASSUME_YES" = "1" ] || [ "$UNATTENDED" = "1" ] || ! runtime_have_tty; then
+            nonlinear_refusal "$CURRENT" "$LATEST"
+        fi
+        log_warn "Non-linear update $CURRENT → $LATEST: this jump covers more than one release week."
+        log_warn "Answering 'update' below skips the intermediate releases; the default (dry-run) previews the jump and changes nothing."
+        FRONTEND_NONLINEAR=1
+    fi
     MODE=$(update_decide_mode)
     case "$MODE" in
         cancel)  log_info "Update cancelled."; exit 0 ;;
@@ -456,6 +523,10 @@ if [ "$APPLY_LOCAL" != "1" ]; then
             # opted into (--allow-version-skip) or bypassed (--force).
             APPLY_ARGS=(--apply-local --yes --install-dir "$INSTALL_DIR")
             [ "$ALLOW_VERSION_SKIP" = "1" ] && APPLY_ARGS+=(--allow-version-skip)
+            # A warned operator who picked "update" at the prompt above has
+            # consented to the skip: forward the flag so the re-exec'd body
+            # does not re-litigate it — its own --yes would force the refusal.
+            [ "$FRONTEND_NONLINEAR" = "1" ] && APPLY_ARGS+=(--allow-version-skip)
             [ "$FORCE" = "1" ] && APPLY_ARGS+=(--force)
             [ "$UNATTENDED" = "1" ] && APPLY_ARGS+=(--unattended)
             exec "$INSTALL_DIR/installer/update.sh" "${APPLY_ARGS[@]}"
@@ -487,9 +558,62 @@ if [ "$CURRENT_VERSION" = "$TARGET_VERSION" ]; then
     exit 0
 fi
 
+# Set only by the deferral arm below; read by the --confirm gate at 2a.
+# Initialised here so a skipped check (linear jump, --allow-version-skip, the
+# sentinel) never trips `set -u` there.
+NONLINEAR_TO_CONFIRM=0
 if [ "$CURRENT_VERSION" != "0.0.0-pre-system-info" ] && [ "$ALLOW_VERSION_SKIP" != "1" ]; then
     if ! is_linear_jump "$CURRENT_VERSION" "$TARGET_VERSION"; then
-        die "Non-linear update $CURRENT_VERSION → $TARGET_VERSION. Use --allow-version-skip to override."
+        # A jump of more than one release week. Three outcomes, by which gate
+        # (if any) can ask the operator:
+        #
+        # --confirm with a terminal (install.sh's dispatch on an existing
+        # install): DEFER to the [u/d/c] gate at 2a — the warning is printed
+        # there, immediately before that prompt, and its one answer decides.
+        # Asking a separate [y/N] HERE first would be two questions for one
+        # decision, and worse: answering "n" would exit 0 and foreclose the
+        # gate's dry-run, the safest answer an unsure operator has.
+        #
+        # Bare --apply-local with a terminal (the air-gapped entry point —
+        # no [u/d/c] gate follows): ASK here, [y/N] defaulting to NO. The curl
+        # entry point reaches here WITH a tty — the bootstrap runs the bundle
+        # with </dev/tty — yet had no way to pass the flag, so the bare refusal
+        # was a dead end on exactly the advertised path (an operator going
+        # 2026.32.15 → 2026.37.1 hit it). The default is NO: an empty answer
+        # must never read as consent to skip releases. A declined offer exits 0
+        # — a decision, not a failure, the same contract
+        # ensure_container_runtime documents — so no FATAL and nothing is
+        # touched.
+        #
+        # No terminal, or --unattended/-y: the hard failure this has always
+        # been — automation must never be silently carried across many
+        # releases — but with an actionable message naming the override in all
+        # three spellings (see nonlinear_refusal). (--dry-run never reaches
+        # this block — the flag parser refuses --apply-local --dry-run and the
+        # self-fetch front-end exits first — so it is simply excluded from the
+        # prompt conditions; if it ever did arrive, the refusal below is the
+        # fail-safe arm.)
+        #
+        # The self-fetch front-end makes this decision even earlier — before
+        # anything is downloaded — and forwards the consent as
+        # --allow-version-skip on its re-exec, so a run that lands here from
+        # that path either was flagged linear or already has the flag.
+        #
+        # runtime_have_tty, never a bare [ -t 0 ]: one probe, overridable in
+        # tests.
+        if [ "$CONFIRM" = "1" ] && [ "$DRY_RUN" != "1" ] && [ "$ASSUME_YES" != "1" ] && [ "$UNATTENDED" != "1" ] && runtime_have_tty; then
+            NONLINEAR_TO_CONFIRM=1
+        elif [ "$DRY_RUN" != "1" ] && [ "$ASSUME_YES" != "1" ] && [ "$UNATTENDED" != "1" ] && runtime_have_tty; then
+            log_warn "Non-linear update $CURRENT_VERSION → $TARGET_VERSION: this jump covers more than one release week."
+            if prompt_yn "Skip the intermediate releases and update anyway?" N; then
+                log_warn "Non-linear update confirmed by the operator; proceeding as if --allow-version-skip had been given."
+            else
+                log_info "Update cancelled."
+                exit 0
+            fi
+        else
+            nonlinear_refusal "$CURRENT_VERSION" "$TARGET_VERSION"
+        fi
     fi
 fi
 
@@ -500,8 +624,20 @@ fi
 # transition (and after "already at X" has exited, so there is something to
 # confirm), and BEFORE step 3 takes the DB backup, the first destructive act.
 # A bare --apply-local — the only air-gapped entry point — carries no --confirm
-# and applies without asking, exactly as before.
+# and skips THIS ask, exactly as before (the version check above may still
+# prompt for a non-linear jump when a terminal is present — see step 2).
 if [ "$CONFIRM" = "1" ]; then
+    # The non-linear decision step 2 deferred: warn HERE, immediately before
+    # the ONE [u/d/c] ask — two questions for one decision is how "n" used to
+    # foreclose this gate's dry-run, the safest answer an unsure operator has.
+    # The flag can only be set when a terminal is present and neither
+    # --unattended nor -y was given — step 2's deferral arm checks exactly
+    # that — so the gate below genuinely asks; its own no-tty refusal covers
+    # every other shape.
+    if [ "$NONLINEAR_TO_CONFIRM" = "1" ]; then
+        log_warn "Non-linear update $CURRENT_VERSION → $TARGET_VERSION: this jump covers more than one release week."
+        log_warn "Answering 'update' below skips the intermediate releases; dry-run (the default) previews the update and changes nothing."
+    fi
     # A refusal (no terminal, no --unattended/-y) already logged itself in
     # update_decide_apply_local; exit without touching anything.
     CONFIRM_MODE=$(update_decide_apply_local "$INSTALL_DIR" "$CURRENT_VERSION" "$TARGET_VERSION") || exit 1

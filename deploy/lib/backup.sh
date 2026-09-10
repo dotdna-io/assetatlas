@@ -56,14 +56,25 @@ backup_db() {
     # eval is intentional here: the value is set by the installer, not user input.
     # We write to a temp file first so we can capture pg_dump's exit code cleanly:
     # piping through eval collapses PIPESTATUS to a single element under bash 3.2.
-    eval "$PG_DUMP_CMD" > "$tmp_dump"
-    local pg_exit=$?
+    #
+    # The exit code is captured with `|| pg_exit=$?` on the SAME line, never a
+    # bare command with the check on the next line: update.sh calls this
+    # function under `set -e`, and a bare failing command aborts the shell
+    # before any next-line check runs (#1440) — both dies were unreachable,
+    # $tmp_dump leaked, and the gzip arm left a truncated .sql.gz behind. The
+    # `||` suspends errexit for exactly this command without touching the
+    # caller's `set` options, and behaves identically when the caller has no
+    # errexit at all. `if ! cmd` is the wrong shape here: it would report the
+    # inverted status, not pg_dump's real exit code.
+    local pg_exit=0
+    eval "$PG_DUMP_CMD" > "$tmp_dump" || pg_exit=$?
     if [ "$pg_exit" -ne 0 ]; then
         rm -f "$tmp_dump"
         die "DB backup failed (pg_dump exit=$pg_exit)."
     fi
-    gzip -c "$tmp_dump" > "$out"
-    local gz_exit=$?
+    # Same `||` capture as the eval above, for the same reason.
+    local gz_exit=0
+    gzip -c "$tmp_dump" > "$out" || gz_exit=$?
     rm -f "$tmp_dump"
     if [ "$gz_exit" -ne 0 ]; then
         rm -f "$out"
