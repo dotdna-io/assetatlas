@@ -23,7 +23,7 @@ from anyio import to_thread
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.provider import TokenVerifier as MCPTokenVerifier
 
-from src.mcp.context import get_app_context
+from src.mcp.context import ensure_app_context
 from src.modules.api_keys.repository import ApiKeyRepository
 from src.modules.api_keys.service import KEY_PREFIX, ApiKeyService
 
@@ -242,11 +242,13 @@ class MCPJWTTokenVerifier(MCPTokenVerifier):
         """Authenticate an ``aa_…`` API key against the database.
 
         The adapter is resolved per call and never cached: this verifier is
-        built in ``create_server()``, but the pool is opened by
-        ``app_lifespan`` and published to the module-level context only once
-        startup finishes. A request that races startup finds no context and is
-        an auth failure, never an exception — the SDK's auth backend would
-        surface a raise as a 500 instead of a 401.
+        built in ``create_server()``, before the process scope opens the pool.
+        Auth runs before any MCP session or lifespan, so it goes through
+        ``ensure_app_context()`` — which builds the context if startup could
+        not (a DB still coming up) — rather than reading the global (#1448).
+        A context that still cannot be built is an auth failure, never an
+        exception — the SDK's auth backend would surface a raise as a 500
+        instead of a 401.
 
         There is deliberately NO rate limiting on this path (#1158). The Flask
         decorator throttles before it touches the DB, but that counter is
@@ -257,12 +259,16 @@ class MCPJWTTokenVerifier(MCPTokenVerifier):
         until a shared-store limiter exists. It is documented in the *MCP
         Server* help topic too, not just here.
         """
-        app_ctx = get_app_context()
-        if app_ctx is None or app_ctx.db is None:
+        try:
+            app_ctx = await ensure_app_context()
+        except Exception:
             logger.warning(
-                "API key presented before the MCP app context was ready — "
-                "rejecting"
+                "API key presented while the MCP app context is unavailable — "
+                "rejecting", exc_info=True
             )
+            return None
+        if app_ctx.db is None:
+            logger.warning("MCP app context has no database — rejecting API key")
             return None
 
         try:

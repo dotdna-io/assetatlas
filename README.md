@@ -103,8 +103,8 @@ vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 Releases follow `YYYY.WW.N` — year, ISO week, and release number within that
 week. The current version is in [`VERSION`](VERSION); see
-the
-[GitHub Releases](https://github.com/dotdna-io/assetatlas/releases) changelog.
+[CHANGELOG.md](CHANGELOG.md) and
+[GitHub Releases](https://github.com/dotdna-io/assetatlas/releases).
 
 ## License
 

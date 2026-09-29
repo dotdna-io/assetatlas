@@ -14,10 +14,11 @@ import argparse
 import logging
 import os
 import sys
+from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
 
-from src.mcp.context import app_lifespan
+from src.mcp.context import app_context_process_scope, app_lifespan
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +85,8 @@ def _register_all(server: FastMCP) -> None:
 
 
 class _AssetAtlasFastMCP(FastMCP):
-    """FastMCP plus one ASGI middleware on the Streamable HTTP app."""
+    """FastMCP plus the process-level app context and one ASGI middleware on
+    the Streamable HTTP app."""
 
     def streamable_http_app(self):
         # `add_middleware` prepends, so ClientAddressMiddleware ends up OUTSIDE
@@ -94,10 +96,36 @@ class _AssetAtlasFastMCP(FastMCP):
         # hands `verify_token` the token and nothing else. FastMCP builds the
         # Starlette app itself and exposes no middleware hook, so overriding
         # the factory it calls at startup is the seam. stdio never calls this.
+        from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
         from src.mcp.auth import ClientAddressMiddleware
 
         app = super().streamable_http_app()
+        # Honour nginx's X-Forwarded-Proto so the `/mcp/` -> `/mcp` 307 that
+        # Starlette's redirect_slashes builds keeps `https` (#1448). uvicorn
+        # only applies it for peers in `forwarded_allow_ips` (127.0.0.1), and
+        # nginx is another container. Trusting every peer is safe for the same
+        # reason the Host check is off: the port is reachable only through
+        # nginx, which overwrites the header with its own $scheme. Added
+        # BEFORE ClientAddressMiddleware so that one stays outermost and reads
+        # the untouched socket peer; X-Real-IP is what it prefers anyway.
+        app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
         app.add_middleware(ClientAddressMiddleware)
+
+        # The DB pool, Redis and services live for the PROCESS, not per MCP
+        # session: the SDK enters `app_lifespan` inside every `Server.run()`,
+        # i.e. per session, and API-key auth runs before any session exists
+        # (#1448). The Starlette lifespan runs once per process, so the
+        # process scope is wrapped around the SDK's own (session_manager.run).
+        sdk_lifespan = app.router.lifespan_context
+
+        @asynccontextmanager
+        async def lifespan(starlette_app):
+            async with app_context_process_scope():
+                async with sdk_lifespan(starlette_app) as state:
+                    yield state
+
+        app.router.lifespan_context = lifespan
         return app
 
 
@@ -117,6 +145,7 @@ def create_server(transport: str = "stdio", port: int = 8100) -> FastMCP:
     if transport == "streamable-http":
         from pydantic import AnyHttpUrl
         from mcp.server.auth.settings import AuthSettings
+        from mcp.server.transport_security import TransportSecuritySettings
         from src.mcp.auth import MCPJWTTokenVerifier
 
         api_url = os.getenv("API_URL", f"http://localhost:{port}")
@@ -129,12 +158,29 @@ def create_server(transport: str = "stdio", port: int = 8100) -> FastMCP:
             # in practice an admin-level read credential (#1158).
             required_scopes=[],
         )
+        kwargs["host"] = "0.0.0.0"
+        kwargs["port"] = port
+        # Stateless: every POST is served on its own and no session outlives
+        # its request. SDK 1.x never frees a session its client DELETEs and
+        # has no idle timeout, so a client that opens a session per tool call
+        # leaked one each time (#1448). Every tool is a read-only one-shot, so
+        # nothing is lost; the per-request lifespan only borrows the process
+        # context. A DELETE is answered 405, which the spec allows.
+        kwargs["stateless_http"] = True
+        # DNS-rebinding protection OFF, and said so explicitly: FastMCP turns
+        # it on with a localhost-only Host allowlist whenever it is built for
+        # a loopback host with no settings, and nginx forwards the public
+        # `Host`, so every proxied request got a 421 (#1448). The check guards
+        # a browser page reaching a local server with ambient credentials;
+        # here the port is container-internal (`expose`d, never published),
+        # reachable only through nginx, and every request must carry a bearer
+        # token in a header — a rebinding page has none and gets a 401 anyway.
+        # Explicit settings also stop a future SDK default from re-enabling it.
+        kwargs["transport_security"] = TransportSecuritySettings(
+            enable_dns_rebinding_protection=False,
+        )
 
     server = _AssetAtlasFastMCP(**kwargs)
-
-    if transport == "streamable-http":
-        server.settings.host = "0.0.0.0"
-        server.settings.port = port
 
     _register_all(server)
     return server

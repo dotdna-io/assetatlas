@@ -7,7 +7,7 @@ against regression.
 
 import hashlib
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
 import pytest
@@ -66,6 +66,12 @@ def app_context(db):
     return ctx
 
 
+def ready(ctx):
+    """Patch the verifier's context lookup to hand back `ctx`."""
+    return patch('src.mcp.auth.ensure_app_context',
+                 new=AsyncMock(return_value=ctx))
+
+
 def rows_for(row):
     """execute_query side effect: the lookup returns `row`, the stamp nothing."""
     def _execute(sql, params=None, **kwargs):
@@ -79,7 +85,7 @@ class TestApiKeyBranch:
     async def test_valid_key_returns_access_token_with_owner_role(self, verifier, db):
         db.execute_query.side_effect = rows_for(key_row())
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             token = await verifier.verify_token(VALID_KEY)
 
         assert token is not None
@@ -91,7 +97,7 @@ class TestApiKeyBranch:
         expires = datetime(2030, 6, 1, 12, 0, tzinfo=timezone.utc)
         db.execute_query.side_effect = rows_for(key_row(expires_at=expires))
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             token = await verifier.verify_token(VALID_KEY)
 
         # Epoch seconds, not None — the SDK drops the session once it passes.
@@ -101,7 +107,7 @@ class TestApiKeyBranch:
         naive = datetime(2030, 6, 1, 12, 0)
         db.execute_query.side_effect = rows_for(key_row(expires_at=naive))
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             token = await verifier.verify_token(VALID_KEY)
 
         assert token.expires_at == int(
@@ -111,7 +117,7 @@ class TestApiKeyBranch:
     async def test_valid_key_stamps_last_used(self, verifier, db):
         db.execute_query.side_effect = rows_for(key_row())
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             await verifier.verify_token(VALID_KEY)
 
         stamps = [
@@ -130,7 +136,7 @@ class TestApiKeyBranch:
 
         db.execute_query.side_effect = _execute
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             token = await verifier.verify_token(VALID_KEY)
 
         assert token is not None
@@ -141,7 +147,7 @@ class TestApiKeyBranch:
         fresh = datetime.now(timezone.utc) - timedelta(seconds=10)
         db.execute_query.side_effect = rows_for(key_row(last_used_at=fresh))
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             token = await verifier.verify_token(VALID_KEY)
 
         assert token is not None
@@ -155,7 +161,7 @@ class TestApiKeyBranch:
         stale = datetime.now(timezone.utc) - timedelta(seconds=120)
         db.execute_query.side_effect = rows_for(key_row(last_used_at=stale))
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             token = await verifier.verify_token(VALID_KEY)
 
         assert token is not None
@@ -168,48 +174,50 @@ class TestApiKeyBranch:
     async def test_revoked_key_returns_none(self, verifier, db):
         db.execute_query.side_effect = rows_for(key_row(is_active=False))
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             assert await verifier.verify_token(VALID_KEY) is None
 
     async def test_expired_key_returns_none(self, verifier, db):
         expired = datetime.now(timezone.utc) - timedelta(days=1)
         db.execute_query.side_effect = rows_for(key_row(expires_at=expired))
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             assert await verifier.verify_token(VALID_KEY) is None
 
     async def test_key_of_a_deactivated_user_returns_none(self, verifier, db):
         db.execute_query.side_effect = rows_for(key_row(user_is_active=False))
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             assert await verifier.verify_token(VALID_KEY) is None
 
     async def test_unknown_key_returns_none(self, verifier, db):
         db.execute_query.side_effect = rows_for(None)
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             assert await verifier.verify_token(VALID_KEY) is None
 
     async def test_missing_app_context_returns_none_not_an_exception(self, verifier):
-        # A request racing lifespan startup: the pool is not published yet.
-        with patch('src.mcp.auth.get_app_context', return_value=None):
+        # The context cannot be built (DB still down, or no process scope):
+        # a 401, never a raise the SDK would surface as a 500.
+        unavailable = AsyncMock(side_effect=ConnectionError('DB down'))
+        with patch('src.mcp.auth.ensure_app_context', new=unavailable):
             assert await verifier.verify_token(VALID_KEY) is None
 
     async def test_app_context_without_a_db_returns_none(self, verifier):
         ctx = MagicMock()
         ctx.db = None
 
-        with patch('src.mcp.auth.get_app_context', return_value=ctx):
+        with ready(ctx):
             assert await verifier.verify_token(VALID_KEY) is None
 
     async def test_db_failure_returns_none_not_an_exception(self, verifier, db):
         db.execute_query.side_effect = RuntimeError('connection pool exhausted')
 
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             assert await verifier.verify_token(VALID_KEY) is None
 
     async def test_non_key_garbage_never_reaches_the_database(self, verifier, db):
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             assert await verifier.verify_token('not-a-jwt-and-not-a-key') is None
 
         db.execute_query.assert_not_called()
@@ -284,7 +292,7 @@ class TestClientAddress:
         }
 
         async def inner_app(_scope, _receive, _send):
-            with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+            with ready(app_context(db)):
                 await verifier.verify_token(VALID_KEY)
 
         await ClientAddressMiddleware(inner_app)(scope, None, None)
@@ -318,7 +326,7 @@ class TestClientAddress:
         # Outside any request the contextvar is back at its default, so a key
         # verified off-request stamps the placeholder rather than the last
         # caller's address.
-        with patch('src.mcp.auth.get_app_context', return_value=app_context(db)):
+        with ready(app_context(db)):
             await verifier.verify_token(VALID_KEY)
 
         stamp = next(

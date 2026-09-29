@@ -3,6 +3,14 @@
 
 Manages DB pool and Redis connections, initialized via lifespan manager
 and made available to tools/resources/prompts through FastMCP's Context.
+
+Two shapes (#1448). stdio: ``app_lifespan`` builds the context, publishes it,
+and closes it when the one session ends. Streamable HTTP: the SDK enters
+``app_lifespan`` once per session (once per request when stateless), so the
+context is instead owned by ``app_context_process_scope``, entered once around
+the Starlette app's lifespan; every session, request and API-key check shares
+it through ``ensure_app_context()``, which builds it lazily if startup could
+not.
 """
 
 import logging
@@ -12,6 +20,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
+import anyio
 from mcp.server.fastmcp import FastMCP
 
 from src.database.postgres_connection import PostgreSQLConnectionManager
@@ -31,6 +40,13 @@ logger = logging.getLogger(__name__)
 # cannot receive Context injection (FastMCP treats any parameter as a
 # template variable for resources).
 _app_context: Optional["AppContext"] = None
+
+# Serialises the lazy build in `ensure_app_context`. Non-None exactly while an
+# HTTP process scope is active — which is also how `app_lifespan` tells the
+# HTTP shape from stdio. Created inside the scope, never at import: an
+# asyncio-backed lock binds to the first event loop that waits on it, and the
+# test suite runs many loops in one process.
+_build_lock: Optional[anyio.Lock] = None
 
 
 def get_app_context() -> Optional["AppContext"]:
@@ -94,9 +110,14 @@ class AppContext:
     settings_manager: Optional[Any] = None
 
 
-@asynccontextmanager
-async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
-    """Initialize DB pool on startup, clean up on shutdown."""
+def _build_app_context() -> AppContext:
+    """Open the DB pool, check it, connect Redis and build the services.
+
+    Blocking (psycopg2, Redis ping, service construction): the HTTP shape runs
+    it in a worker thread. Raises ``ValueError`` without ``DATABASE_URL`` and
+    ``ConnectionError`` on an unhealthy DB, closing the pool it opened first so
+    a retried build never strands one.
+    """
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise ValueError("DATABASE_URL environment variable is required")
@@ -106,6 +127,19 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         min_connections=1,
         max_connections=3,
     )
+    try:
+        return _build_on_pool(conn_manager)
+    except BaseException:
+        try:
+            conn_manager.close_all_connections()
+        except Exception:
+            logger.debug("Closing the pool of a failed build failed",
+                         exc_info=True)
+        raise
+
+
+def _build_on_pool(conn_manager: PostgreSQLConnectionManager) -> AppContext:
+    """Everything `_build_app_context` builds once the pool exists."""
     db = PostgreSQLAdapter(connection_manager=conn_manager)
 
     # Optional Redis connection
@@ -194,21 +228,100 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     field_resolver = _init_optional_service(
         "field resolver", lambda: _build_field_resolver(db))
 
+    return AppContext(db=db, conn_manager=conn_manager,
+                      field_resolver=field_resolver,
+                      redis=redis_client,
+                      suggestion_service=suggestion_service,
+                      dashboard_service=dashboard_service,
+                      pipeline_service=pipeline_service,
+                      scheduler_service=scheduler_service,
+                      integration_service=integration_service,
+                      alerts_service=alerts_service,
+                      settings_manager=settings_manager)
+
+
+def _close_app_context(app_ctx: AppContext) -> None:
+    app_ctx.conn_manager.close_all_connections()
+    logger.info("Database connections closed")
+
+
+async def ensure_app_context() -> AppContext:
+    """Return the published AppContext, building it first if there is none.
+
+    Only an active process scope may build: the build runs in a worker thread
+    under the scope's lock, so concurrent callers wait for one build rather
+    than each opening a pool, and a failed build publishes nothing — it
+    raises, and the next call retries. Outside a scope (stdio, whose context
+    ``app_lifespan`` owns) there is nothing to build with, so no context
+    raises ``RuntimeError``.
+    """
     global _app_context
-    app_ctx = AppContext(db=db, conn_manager=conn_manager,
-                         field_resolver=field_resolver,
-                         redis=redis_client,
-                         suggestion_service=suggestion_service,
-                         dashboard_service=dashboard_service,
-                         pipeline_service=pipeline_service,
-                         scheduler_service=scheduler_service,
-                         integration_service=integration_service,
-                         alerts_service=alerts_service,
-                         settings_manager=settings_manager)
+    if _app_context is not None:
+        return _app_context
+    lock = _build_lock
+    if lock is None:
+        raise RuntimeError("MCP app context is not available")
+    async with lock:
+        if _app_context is None:
+            built = await anyio.to_thread.run_sync(_build_app_context)
+            if _build_lock is not lock:
+                # The scope shut down while the build ran — nothing would
+                # ever close this pool.
+                _close_app_context(built)
+                raise RuntimeError("MCP server is shutting down")
+            _app_context = built
+        return _app_context
+
+
+@asynccontextmanager
+async def app_context_process_scope() -> AsyncIterator[None]:
+    """Own the AppContext for the life of one HTTP server process.
+
+    Entered once, around the SDK's session-manager lifespan (see
+    ``_AssetAtlasFastMCP.streamable_http_app``). Startup attempts the build; a
+    failure is logged and the server still starts, because
+    ``ensure_app_context`` retries on the next request — an MCP container that
+    exits while Postgres is still coming up would otherwise crash-loop.
+    Shutdown closes the pool and clears the global.
+    """
+    global _app_context, _build_lock
+    if _build_lock is not None:
+        raise RuntimeError("An MCP app-context process scope is already active")
+    _build_lock = anyio.Lock()
+    try:
+        try:
+            await ensure_app_context()
+        except Exception:
+            logger.error(
+                "MCP app context could not be built at startup — serving "
+                "anyway and retrying on the next request", exc_info=True)
+        yield
+    finally:
+        _build_lock = None
+        app_ctx, _app_context = _app_context, None
+        if app_ctx is not None:
+            _close_app_context(app_ctx)
+
+
+@asynccontextmanager
+async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
+    """FastMCP lifespan: the AppContext every handler of a session sees.
+
+    Inside an HTTP process scope it only borrows the shared context — it is
+    entered per session / per request, and closing the pool here would break
+    every other client (#1448). Raises if the context still cannot be built,
+    failing that request. Outside a scope (stdio) it owns the context:
+    build, publish, and close when the session ends.
+    """
+    global _app_context
+    if _build_lock is not None:
+        yield await ensure_app_context()
+        return
+
+    app_ctx = _build_app_context()
     _app_context = app_ctx
     try:
         yield app_ctx
     finally:
         _app_context = None
-        conn_manager.close_all_connections()
-        logger.info("Database connections closed")
+        _close_app_context(app_ctx)
