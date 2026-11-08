@@ -101,6 +101,57 @@ _SERVICE_ATTRS = [
 ]
 
 
+# Every mocked app built by ``_wire_mock_app``; the autouse fixture below walks
+# these to undo attribute deletions that ``monkeypatch`` leaves behind.
+_MOCK_APPS = []
+
+
+def _undelete_mock_attrs(mock_obj, _seen=None):
+    """Re-enable attributes that were ``delattr``-ed off a mock (and its children).
+
+    A MagicMock auto-creates children in ``_mock_children``, never in
+    ``__dict__``.  pytest >= 9.2 (#10644) records a monkeypatched instance
+    attribute's old value from ``target.__dict__``, so for a mock's auto-created
+    child it sees "absent" and its undo calls ``delattr`` -- which makes the mock
+    raise ``AttributeError`` for that name from then on.  The service mocks hang
+    off the session-scoped ``blueprint_app``, so one ``monkeypatch.setattr(
+    app.settings_manager, "set", ...)`` poisoned every later test that touched
+    the same attribute: 32 failures + 5 errors on CI's fresh pytest 9.2.0 that
+    never reproduced against 9.1.1.
+
+    Dropping the ``_deleted`` marker makes the name auto-create again, exactly
+    as it did the first time it was touched.
+    """
+    from unittest import mock as _mock
+
+    deleted = getattr(_mock, "_deleted", None)
+    if deleted is None or not isinstance(mock_obj, _mock.NonCallableMock):
+        return
+    _seen = set() if _seen is None else _seen
+    if id(mock_obj) in _seen:
+        return
+    _seen.add(id(mock_obj))
+    for name, child in list(mock_obj._mock_children.items()):
+        if child is deleted:
+            del mock_obj._mock_children[name]
+        else:
+            _undelete_mock_attrs(child, _seen)
+
+
+@pytest.fixture(autouse=True)
+def _heal_service_mock_attrs():
+    """Keep ``monkeypatch`` from leaving deleted attributes on shared mocks.
+
+    Autouse fixtures are set up before the ``monkeypatch`` a test requests, so
+    this one is torn down after monkeypatch's undo -- the heal below runs once
+    the deletion has already happened.
+    """
+    yield
+    for app in _MOCK_APPS:
+        for attr in _SERVICE_ATTRS:
+            _undelete_mock_attrs(getattr(app, attr, None))
+
+
 def _wire_get_cursor(cm):
     """Configure ``cm.get_cursor(...)`` as a working context manager yielding
     a ``(cursor, conn)`` 2-tuple.
@@ -178,6 +229,7 @@ def _wire_mock_app(app):
         return default
 
     app.settings_manager.get = _settings_get
+    _MOCK_APPS.append(app)
     return app
 
 

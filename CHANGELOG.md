@@ -8,6 +8,15 @@ number within that week. See [CONTRIBUTING.md](CONTRIBUTING.md#versioning).
 Release notes for each version are also on the
 [Releases](https://github.com/dotdna-io/assetatlas/releases) page.
 
+## 2026.45.1 — 2026-11-08
+
+### Security
+- The database port published by the bundled container configuration is now
+  reachable from the local host only, instead of from every network interface
+  on the server.
+- Deployments that reach the database directly from another machine need to
+  set `DB_BIND` to `0.0.0.0` in their environment file to keep that access.
+
 ## 2026.40.1 — 2026-09-29
 
 ### Improved
