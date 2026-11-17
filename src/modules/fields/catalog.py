@@ -814,6 +814,35 @@ def _entry_field_id(entry: CatalogEntry):
     raise ValueError(f"unknown kind: {entry.kind_name}")
 
 
+def operator_codes_for_entry(entry: CatalogEntry) -> List[str]:
+    """Filter operator codes ``entry`` accepts, in dropdown order.
+
+    The exact set the Explorer filter builder offers for the field: the
+    per-data-type list (``operators_for``) narrowed by the field's own
+    allow-list when it has one (``confidence_level``/``alert`` take eq/any,
+    ``in_grace`` eq — their bespoke clause builders drop anything else).
+    Served by GET /api/v1/fields and enforced by GET /api/v1/assets/search, so
+    an operator the catalog advertises is exactly one the search accepts.
+    """
+    return [
+        spec["code"] for spec in _operator_specs_for(
+            entry.data_type, entry.is_array, entry.allowed_operator_codes
+        )
+    ]
+
+
+def field_id_for_plain_id(catalog: "FieldCatalog", plain_id: str):
+    """The live FieldId whose plain form (``field_id`` in GET /api/v1/fields)
+    is exactly ``plain_id``, or None. The decoder cannot recover a plain id
+    whose segments themselves contain ':' (``tag:env:prod``); matching the
+    catalog's own rendering can."""
+    for entry in catalog.entries():
+        fid = _entry_field_id(entry)
+        if _plain_field_id(encode(fid)) == plain_id:
+            return fid
+    return None
+
+
 def _operator_specs_for(data_type, is_array: bool, allowed=None):
     """Ordered operator_specs for a field (§5.3). label resolved for is_array.
 
@@ -885,7 +914,7 @@ def _plain_field_id(encoded_key: str) -> str:
     return ":".join([parts[0]] + [unquote(p) for p in parts[1:]])
 
 
-def build_external_fields_response(catalog: "FieldCatalog", kinds=None):
+def build_external_fields_response(catalog: "FieldCatalog", kinds=None, q=None):
     """Public field catalog for the external (API-key) route — one flat,
     machine-consumable entry per selectable field, sorted by (kind, display_name).
 
@@ -903,8 +932,15 @@ def build_external_fields_response(catalog: "FieldCatalog", kinds=None):
     filter_only entries are ALWAYS skipped: they cannot be projected by the
     inventory route, so offering one would sell a field that hangs a scan.
     ``kinds`` (optional iterable of prefixes from EXTERNAL_FIELD_KINDS) narrows
-    the listing; validation of the values is the route's job.
+    the listing; validation of the values is the route's job. ``q`` (optional)
+    keeps entries whose plain field_id or display_name contains it,
+    case-insensitively — how a consumer finds "the field holding the primary
+    user" in a large ext catalogue without paging the whole list.
+
+    ``operators`` is additive (every pre-existing key and value is unchanged):
+    the filter operator codes the field accepts — see operator_codes_for_entry.
     """
+    needle = q.lower() if q else None
     out = []
     for entry in catalog.entries():
         if entry.filter_only:
@@ -913,8 +949,13 @@ def build_external_fields_response(catalog: "FieldCatalog", kinds=None):
         kind = encoded_key.split(":", 1)[0]
         if kinds is not None and kind not in kinds:
             continue
+        plain_id = _plain_field_id(encoded_key)
+        if needle is not None and not (
+            needle in plain_id.lower() or needle in entry.display_name.lower()
+        ):
+            continue
         out.append({
-            "field_id": _plain_field_id(encoded_key),
+            "field_id": plain_id,
             "field_id_encoded": encoded_key,
             "display_name": entry.display_name,
             "kind": kind,
@@ -922,6 +963,7 @@ def build_external_fields_response(catalog: "FieldCatalog", kinds=None):
             "is_array": entry.is_array,
             "member_sources": (list(entry.member_sources)
                                if entry.member_sources else None),
+            "operators": operator_codes_for_entry(entry),
         })
     out.sort(key=lambda e: (e["kind"], e["display_name"]))
     return {"success": True, "count": len(out), "fields": out}

@@ -8,6 +8,16 @@ number within that week. See [CONTRIBUTING.md](CONTRIBUTING.md#versioning).
 Release notes for each version are also on the
 [Releases](https://github.com/dotdna-io/assetatlas/releases) page.
 
+## 2026.47.1 — 2026-11-17
+
+### Added
+- API-key clients can search assets with `GET /api/v1/assets/search`, by free text across hostnames, addresses, serial numbers, owners, users, locations and more, by structured field filters, or both, and receive one page of matches with the true total.
+- The search endpoint rejects any filter it cannot apply with a message that names the valid fields or operators, so an automated client never receives a silently broader result than it asked for.
+- The search endpoint has its own per-key request budget, set with `EXTERNAL_API_SEARCH_RATE_LIMIT` (300 requests per minute by default), counted separately from the other API-key endpoints.
+
+### Improved
+- The API-key field catalog lists the filter operators each field accepts and can be narrowed with a `q` text match on field names.
+
 ## 2026.45.1 — 2026-11-08
 
 ### Security

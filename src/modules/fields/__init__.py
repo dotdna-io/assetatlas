@@ -22,7 +22,7 @@ from src.modules.fields.encoding import (
 )
 from src.modules.fields.catalog import (
     FieldCatalog, CatalogEntry, build_catalog_response,
-    build_external_fields_response, EXTERNAL_FIELD_KINDS,
+    build_external_fields_response, EXTERNAL_FIELD_KINDS, operator_codes_for_entry,
 )
 from src.modules.fields.resolver import FieldResolver, ResolvedField
 from src.modules.fields.operators import (
@@ -37,7 +37,7 @@ __all__ = [
     "IntegrationGroupField", "TagField", "PostureField", "VirtualField",
     "encode", "decode", "coerce_field_id", "FIELD_ID_ADAPTER",
     "FieldCatalog", "CatalogEntry", "build_catalog_response",
-    "build_external_fields_response", "EXTERNAL_FIELD_KINDS",
+    "build_external_fields_response", "EXTERNAL_FIELD_KINDS", "operator_codes_for_entry",
     "FieldResolver", "ResolvedField",
     "Operator", "OPERATOR_REGISTRY", "OperatorResolutionError",
     "resolve_operator", "operators_for",

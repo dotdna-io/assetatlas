@@ -52,7 +52,8 @@ def _check_rate_limit(key_id: str, limit: Optional[int] = None) -> tuple:
         return True, 0
 
 
-def require_api_key(fn=None, *, rate_limit_setting='EXTERNAL_API_RATE_LIMIT'):
+def require_api_key(fn=None, *, rate_limit_setting='EXTERNAL_API_RATE_LIMIT',
+                    own_window=False):
     """
     Decorator that authenticates requests via the X-API-Key header.
 
@@ -65,6 +66,11 @@ def require_api_key(fn=None, *, rate_limit_setting='EXTERNAL_API_RATE_LIMIT'):
     per-minute budget. It is resolved per request and falls back to
     ``EXTERNAL_API_RATE_LIMIT`` when the named key is absent, so the existing
     bare usage is unchanged.
+
+    By default every route shares ONE per-key window and compares it against
+    its own ceiling. ``own_window=True`` counts this route's calls in a window
+    of their own, so its traffic neither consumes nor is consumed by the shared
+    one (an agent's 60 searches must not 429 its next GET /api/v1/fields).
 
     On success, sets:
         g.api_key_id   — UUID of the API key
@@ -87,8 +93,9 @@ def require_api_key(fn=None, *, rate_limit_setting='EXTERNAL_API_RATE_LIMIT'):
             # budget through; _check_rate_limit applies the EXTERNAL_API_RATE_LIMIT
             # fallback when the named setting is absent (single fallback site).
             key_hash = hashlib.sha256(key.encode()).hexdigest()
+            bucket = f"{key_hash}:{rate_limit_setting}" if own_window else key_hash
             allowed, retry_after = _check_rate_limit(
-                key_hash, current_app.config.get(rate_limit_setting)
+                bucket, current_app.config.get(rate_limit_setting)
             )
             if not allowed:
                 return jsonify({

@@ -857,12 +857,18 @@ def list_assets_query(
     sort_dir: str = "desc",
     fields: Optional[str] = None,
     logic: str = "and",
+    confidence_thresholds: Optional[Tuple[float, float]] = None,
 ) -> Tuple[List[dict], int]:
     """Normalize args, run the repo list query, and return ``(rows, total)``.
 
     Applies the same limit clamp (1-200), page clamp (≥1), filter
     normalization, field encoding, and sort normalization as the impl.
     Returns ``([], 0)`` when the repo finds nothing.
+
+    ``confidence_thresholds`` — the configured ``(medium, high)`` pair — makes a
+    ``virtual:confidence_level`` filter/column bucket exactly as the Explorer
+    does. ``None`` keeps the repo's built-in defaults (the historical behaviour
+    of every chat/MCP caller).
 
     The chat binding uses this split to build a table artifact from the
     raw rows while ``list_assets_impl`` builds the LLM summary string.
@@ -908,6 +914,7 @@ def list_assets_query(
         sort_dir=sort_dir if sort_dir in ("asc", "desc") else "desc",
         filters=parsed_filters,
         logic=logic,
+        confidence_thresholds=confidence_thresholds,
     )
     # Project encoded FieldId keys to snake-case so the chat binding
     # (which feeds the result into build_table_from_assets) and any

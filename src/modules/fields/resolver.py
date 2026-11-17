@@ -80,6 +80,12 @@ class FieldResolver:
     def catalog(self) -> FieldCatalog:
         return self._catalog
 
+    def catalog_entry(self, field_id: FieldId) -> Optional[CatalogEntry]:
+        """The live catalog entry ``field_id`` names, or None — the lookup
+        resolve() runs, for callers that need the entry's own metadata
+        (operator allow-list, filter_only) rather than its SQL."""
+        return self._find_entry(field_id)
+
     def resolve(self, field_id: FieldId) -> ResolvedField:
         entry = self._find_entry(field_id)
         if entry is None:

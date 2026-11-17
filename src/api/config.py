@@ -173,6 +173,13 @@ class BaseConfig:
         os.getenv('EXTERNAL_API_INVENTORY_RATE_LIMIT', '600')
     )
 
+    # Per-key budget for the search route (GET /api/v1/assets/search). An LLM
+    # agent issues a few searches per question and pages short result sets, so
+    # this sits between the 60/min default and the inventory pull's 600/min.
+    EXTERNAL_API_SEARCH_RATE_LIMIT = int(
+        os.getenv('EXTERNAL_API_SEARCH_RATE_LIMIT', '300')
+    )
+
     # Monitoring overlay — opt-in
     ALERTMANAGER_WEBHOOK_SECRET = os.getenv('ALERTMANAGER_WEBHOOK_SECRET', '')
     MONITORING_ENABLED = os.getenv('MONITORING_ENABLED', 'false').lower() == 'true'

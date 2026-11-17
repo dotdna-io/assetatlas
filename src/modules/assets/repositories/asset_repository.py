@@ -67,6 +67,12 @@ _ASSET_SEARCH_EXPR = (
 )
 
 
+# Whitespace-separated keyword terms _build_search_clause keeps (AND-ed). Terms
+# past this cap are dropped, so a caller that must not silently widen its result
+# (GET /api/v1/assets/search) rejects a longer query instead.
+SEARCH_MAX_TOKENS = 8
+
+
 class AssetRepository:
     """Repository for asset data access"""
 
@@ -528,7 +534,7 @@ class AssetRepository:
         1-2 character tokens have no trigrams and still fall back to a scan
         (results stay correct, just not index-accelerated).
         """
-        tokens = [t for t in search.split() if t][:8]
+        tokens = [t for t in search.split() if t][:SEARCH_MAX_TOKENS]
         if not tokens:
             tokens = [search]
         clauses: List[str] = []

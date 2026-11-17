@@ -77,6 +77,7 @@ ENDPOINT_TO_TOOL = {
     "asset_edit.get_tags": "get_asset",  # get_asset renders the asset's tags
     "external_assets.query_assets": "query_assets",      # /api/v1 (same data)
     "external_assets.inventory_assets": "query_assets",  # /api/v1 inventory
+    "external_assets.search_assets": "query_assets",     # /api/v1 search (same engine)
     "external_assets.list_fields": "describe_catalog",   # /api/v1 field catalog
     # --- Analytics / charts ---
     "charts.get_fields": "describe_catalog",
