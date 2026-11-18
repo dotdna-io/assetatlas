@@ -6725,31 +6725,10 @@ CREATE INDEX idx_providers_history_archived ON public.asset_providers_history US
 
 
 --
--- Name: idx_providers_history_asset_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_providers_history_asset_id ON public.asset_providers_history USING btree (asset_id);
-
-
---
 -- Name: idx_providers_history_data_source; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_providers_history_data_source ON public.asset_providers_history USING btree (data_source);
-
-
---
--- Name: idx_providers_history_generation; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_providers_history_generation ON public.asset_providers_history USING btree (generation_run_id);
-
-
---
--- Name: idx_providers_history_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_providers_history_id ON public.asset_providers_history USING btree (id);
 
 
 --
@@ -6830,20 +6809,6 @@ CREATE INDEX idx_raw_asset_sn ON public.raw_asset_data USING gin (sn);
 
 
 --
--- Name: idx_raw_data_batch; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_raw_data_batch ON public.raw_source_data USING btree (batch_id);
-
-
---
--- Name: idx_raw_data_integration; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_raw_data_integration ON public.raw_source_data USING btree (integration_id);
-
-
---
 -- Name: idx_raw_data_source_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6869,13 +6834,6 @@ CREATE INDEX idx_raw_source_ingested ON public.raw_source_data USING btree (inge
 --
 
 CREATE INDEX idx_raw_source_integration ON public.raw_source_data USING btree (integration_id);
-
-
---
--- Name: idx_raw_source_payload; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_raw_source_payload ON public.raw_source_data USING gin (raw_payload);
 
 
 --
@@ -8232,5 +8190,6 @@ INSERT INTO public.schema_migrations (filename) VALUES
     ('146_archive_and_drop_auth_audit_log.sql'),
     ('147_revise_ootb_posture_rules.sql'),
     ('148_add_assets_sort_indexes.sql'),
-    ('149_add_unified_values_materialization.sql')
+    ('149_add_unified_values_materialization.sql'),
+    ('150_drop_unused_raw_and_history_indexes.sql')
 ON CONFLICT DO NOTHING;

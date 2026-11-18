@@ -8,6 +8,21 @@ number within that week. See [CONTRIBUTING.md](CONTRIBUTING.md#versioning).
 Release notes for each version are also on the
 [Releases](https://github.com/dotdna-io/assetatlas/releases) page.
 
+## 2026.47.3 — 2026-11-18
+
+### Fixed
+- The nightly data retention task no longer removes recent asset change
+  history along with expired entries; only history older than the configured
+  retention period is deleted.
+- Asset change history on large installations is now trimmed to the
+  configured retention period, where the nightly cleanup previously timed out
+  and kept every entry.
+
+### Improved
+- Ingestion and pipeline runs maintain fewer database indexes, reclaiming
+  several gigabytes of storage on large installations and reducing the write
+  work done on every run.
+
 ## 2026.47.2 — 2026-11-18
 
 ### Fixed

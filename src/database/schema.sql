@@ -135,7 +135,6 @@ CREATE TABLE raw_source_data (
 CREATE INDEX idx_raw_source_integration ON raw_source_data(integration_id);
 CREATE INDEX idx_raw_source_batch ON raw_source_data(batch_id);
 CREATE INDEX idx_raw_source_ingested ON raw_source_data(ingested_at);
-CREATE INDEX idx_raw_source_payload ON raw_source_data USING GIN(raw_payload);
 
 -- Partition by ingestion time for efficient cleanup
 -- Note: Implement partitioning in separate migration when data volume grows

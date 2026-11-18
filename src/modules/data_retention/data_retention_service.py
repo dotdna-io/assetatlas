@@ -8,7 +8,7 @@ configurable retention settings.
 
 import logging
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -345,6 +345,12 @@ class DataRetentionService:
         total_deleted = 0
 
         try:
+            time_column = self._hypertable_time_column(table)
+            if time_column:
+                return self._cleanup_hypertable(
+                    table, ts_col, retention_days,
+                    drop_whole_chunks=(time_column == ts_col))
+
             while True:
                 result = self.db_adapter.execute_query(
                     f"""
@@ -380,3 +386,104 @@ class DataRetentionService:
             return -1
 
         return total_deleted
+
+    def _hypertable_time_column(self, table: str) -> Optional[str]:
+        """The time-partitioning column if ``table`` is a TimescaleDB
+        hypertable (asset_chronicle), else None.
+
+        The extension check comes first: ``timescaledb_information`` does not
+        exist without it, and querying it would fail the whole cleanup.
+        """
+        rows = self.db_adapter.execute_query(
+            "SELECT EXISTS (SELECT 1 FROM pg_extension "
+            "WHERE extname = 'timescaledb') AS present",
+            {}
+        )
+        if not (rows and rows[0].get('present')):
+            return None
+        rows = self.db_adapter.execute_query(
+            """
+            SELECT column_name FROM timescaledb_information.dimensions
+            WHERE hypertable_schema = 'public' AND hypertable_name = %(table)s
+              AND dimension_type = 'Time'
+            ORDER BY dimension_number
+            LIMIT 1
+            """,
+            {'table': table}
+        )
+        return rows[0].get('column_name') if rows else None
+
+    def _cleanup_hypertable(self, table: str, ts_col: str, retention_days: int,
+                            drop_whole_chunks: bool) -> int:
+        """Age out a hypertable without ever matching rows by ctid alone.
+
+        A ctid is unique only within one chunk, so the plain-table
+        ``ctid IN (SELECT ctid … LIMIT n)`` delete matches the same ctid in
+        EVERY chunk and removes recent rows along with expired ones.
+
+        When ``ts_col`` is the partitioning column, whole chunks past the
+        cutoff are dropped (metadata-only, no dead tuples — the ctid scan of a
+        large chronicle never finished inside the pool's 60 s
+        statement_timeout). What is left past the cutoff — the one chunk
+        straddling it, or everything when ``ts_col`` is some other column —
+        is deleted in batches keyed by ``(tableoid, ctid)``, which does name a
+        single row; the outer range predicate keeps each batch's scan to the
+        chunks that can hold expired rows. The cutoff comes from the database
+        clock, once, so no step can disagree about the boundary.
+
+        Returns rows removed; the dropped-chunk share is the planner's row
+        estimate (pg_class.reltuples), since counting them exactly would scan
+        the very data being discarded.
+        """
+        cutoff = self.db_adapter.execute_query(
+            "SELECT NOW() - INTERVAL '1 day' * %(days)s AS cutoff",
+            {'days': retention_days}
+        )[0]['cutoff']
+
+        dropped_rows = 0
+        dropped_chunks = 0
+        if drop_whole_chunks:
+            estimate = self.db_adapter.execute_query(
+                """
+                SELECT COALESCE(SUM(GREATEST(c.reltuples, 0)), 0)::bigint AS n
+                FROM timescaledb_information.chunks ch
+                JOIN pg_namespace ns ON ns.nspname = ch.chunk_schema
+                JOIN pg_class c ON c.relnamespace = ns.oid AND c.relname = ch.chunk_name
+                WHERE ch.hypertable_schema = 'public'
+                  AND ch.hypertable_name = %(table)s
+                  AND ch.range_end <= %(cutoff)s
+                """,
+                {'table': table, 'cutoff': cutoff}
+            )
+            dropped_rows = int(estimate[0]['n']) if estimate else 0
+            dropped = self.db_adapter.execute_query(
+                "SELECT drop_chunks(%(relation)s::regclass, older_than => %(cutoff)s)",
+                {'relation': f'public.{table}', 'cutoff': cutoff}
+            )
+            dropped_chunks = len(dropped or [])
+
+        boundary_rows = 0
+        while True:
+            result = self.db_adapter.execute_query(
+                f"""
+                DELETE FROM {table} WHERE {ts_col} < %(cutoff)s
+                  AND (tableoid, ctid) IN (
+                      SELECT tableoid, ctid FROM {table}
+                      WHERE {ts_col} < %(cutoff)s
+                      LIMIT %(batch_size)s
+                  )
+                RETURNING 1
+                """,
+                {'cutoff': cutoff, 'batch_size': BATCH_SIZE}
+            )
+            rows_deleted = len(result) if result else 0
+            boundary_rows += rows_deleted
+            if rows_deleted < BATCH_SIZE:
+                break
+
+        logger.info(
+            f"Retention cleanup: {table} dropped {dropped_chunks} chunk(s) "
+            f"(~{dropped_rows} rows) and deleted {boundary_rows} rows "
+            f"(retention: {retention_days} days)"
+        )
+        return dropped_rows + boundary_rows
