@@ -586,7 +586,13 @@ class AssetEnricher:
                         return {k: None for k in keys_to_extract}
                     return {k: extended_fields.get(k) for k in keys_to_extract}
 
-                extracted_df = df['extended_fields'].apply(extract_all_fields).apply(pd.Series)
+                # dtype=object: left to inference, pandas makes a key float64
+                # when it is all-missing (while a sibling key has values) or
+                # numeric, and the text field then reads as 7.0 / 0.0 on assets.
+                extracted_df = pd.DataFrame(
+                    [extract_all_fields(ef) for ef in df['extended_fields']],
+                    index=df.index, columns=sorted(keys_to_extract), dtype=object,
+                )
 
                 # Assign directly-named extractable fields
                 for field_name in fields_needing_extraction:
@@ -596,15 +602,22 @@ class AssetEnricher:
                         if field_count > 0:
                             extracted_fields.append(f"{field_name}({field_count})")
 
-                # Handle field mappings (e.g., 'user' in dict -> 'user_field' column)
-                # Only apply if the target column is still empty after direct extraction
+                # Handle field mappings (e.g., 'user' in dict -> 'user_field' column).
+                # Fill only the rows direct extraction left empty: one source
+                # mapping a custom 'user_field' must not void every other
+                # source's 'user' (clean_extended_fields drops it below).
                 for target_field, source_field in mapped_targets_needing.items():
-                    if target_field not in df.columns or df[target_field].isna().all():
-                        if source_field in extracted_df.columns:
-                            df[target_field] = extracted_df[source_field]
-                            field_count = df[target_field].notna().sum()
-                            if field_count > 0:
-                                extracted_fields.append(f"{target_field}({field_count})")
+                    if source_field not in extracted_df.columns:
+                        continue
+                    if target_field in df.columns:
+                        df[target_field] = df[target_field].where(
+                            df[target_field].notna(), extracted_df[source_field]
+                        )
+                    else:
+                        df[target_field] = extracted_df[source_field]
+                    field_count = df[target_field].notna().sum()
+                    if field_count > 0:
+                        extracted_fields.append(f"{target_field}({field_count})")
 
             if extracted_fields:
                 logger.info(f"Extracted {len(extracted_fields)} fields from extended_fields: {', '.join(extracted_fields)}")
@@ -743,13 +756,10 @@ class AssetEnricher:
 
         # DO NOT fill with "unknown" - keep NULL/None values
         # This makes data lineage clear and improves data quality
-        # Enrichment functions will handle missing values appropriately
-
-        # Only fill numeric columns with 0 if needed
-        for col in df.columns:
-            if pd.api.types.is_float_dtype(df[col]):
-                # Fill numeric columns with 0
-                df[col] = df[col].fillna(0.0)
+        # Enrichment functions will handle missing values appropriately.
+        # That includes numeric gaps: raw_asset_data carries no numeric
+        # columns, and the zero-fill that used to run here only ever hit text
+        # fields pandas had typed float64, writing {0.0} as their value.
 
         elapsed = time.time() - start_time
         logger.info(f"Preprocessing completed in {elapsed:.2f}s")

@@ -49,6 +49,13 @@ class FieldMapper:
     # Identifier fields always stored as arrays (multi-source capable)
     IDENTIFIER_FIELDS = {'hostname', 'fqdn', 'ip', 'mac', 'sn'}
 
+    # Framework fields with no raw_asset_data column. They stay top-level (the
+    # mapping preview reads them there) and are ALSO carried in extended_fields,
+    # the only place RawAssetRepository persists them; asset_enricher.preprocess
+    # lifts extended_fields['user'] into assets.user_field. Without this a mapped
+    # user was silently discarded at insert.
+    EXTENDED_FRAMEWORK_FIELDS = ('user',)
+
     def __init__(self, field_mapping: Dict[str, Any], transformations: Dict[str, Any] = None):
         """
         Initialize field mapper.
@@ -145,7 +152,10 @@ class FieldMapper:
                 mapped[framework_field] = None
 
         # Collect unmapped fields for extended_fields
-        extended_fields = self._collect_extended_fields(raw_payload, mapped)
+        extended_fields = self._collect_extended_fields(raw_payload, mapped) or {}
+        for field in self.EXTENDED_FRAMEWORK_FIELDS:
+            if mapped.get(field) is not None:
+                extended_fields[field] = mapped[field]
         mapped['extended_fields'] = extended_fields if extended_fields else None
 
         return mapped

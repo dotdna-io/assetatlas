@@ -8,6 +8,16 @@ number within that week. See [CONTRIBUTING.md](CONTRIBUTING.md#versioning).
 Release notes for each version are also on the
 [Releases](https://github.com/dotdna-io/assetatlas/releases) page.
 
+## 2026.47.2 — 2026-11-18
+
+### Fixed
+- The user field mapped from a data source, such as the last logged-in user
+  reported by an endpoint agent or device-management platform, is recorded on
+  the asset again instead of being discarded during ingestion; values return
+  after each source's next synchronisation.
+- Asset fields that no data source supplied, such as user and owner, are left
+  empty instead of showing a value of 0.0.
+
 ## 2026.47.1 — 2026-11-17
 
 ### Added
